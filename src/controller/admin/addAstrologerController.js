@@ -6,6 +6,7 @@ import { getDefaultLanguageId } from '../../utils/assistingFunction.js';
 import { User } from '../../models/user.model.js';
 import { uploadOnCloudinary } from "../../middlewares/cloudinary.setup.js";
 import PendingAstrologerRequest from '../../models/pendingAstrologerRequest.js';
+import { validatePhoneNumber } from '../../utils/validatePhoneNumber.js';
 
 // Register Astrologer Controller
 export const registerAstrologer = asyncHandler(async (req, res) => {
@@ -41,6 +42,10 @@ export const registerAstrologer = asyncHandler(async (req, res) => {
       return res.status(400).json(new ApiResponse(400, null, "User already registered with this phone number."));
     }
 
+    if (!validatePhoneNumber(phone)) {
+      return res.status(400).json(new ApiResponse(400, null, 'Invalid phone number format.'));
+    }
+
     // Hash the password
     const saltRounds = 10;
     if (!password) {
@@ -52,7 +57,7 @@ export const registerAstrologer = asyncHandler(async (req, res) => {
     // Default language (English) will be assigned if no languages are provided
     const languageId = languages && languages.length > 0 ? languages : [await getDefaultLanguageId()];
 
-    const pendingRequest = await PendingAstrologerRequest.findOne({ phoneNumber:phone, isApproved: false });
+    const pendingRequest = await PendingAstrologerRequest.findOne({ phoneNumber: phone, isApproved: false });
     if (pendingRequest) {
       // Approve the pending astrologer request by calling the method
       await pendingRequest.updateOne({ isApproved: true });

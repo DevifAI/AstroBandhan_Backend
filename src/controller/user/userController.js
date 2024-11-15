@@ -2,6 +2,10 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 import { User } from "../../models/user.model.js";
 import bcrypt from 'bcrypt';
+import { validatePhoneNumber } from '../../utils/validatePhoneNumber.js';
+import { sendOTP } from '../../utils/sendOtp.js';
+import { validateOTP } from '../../utils/validateOtp.js';
+import { Astrologer } from "../../models/astrologer.model.js";
 
 export const registerUser = asyncHandler(async (req, res) => {
   try {
@@ -11,12 +15,19 @@ export const registerUser = asyncHandler(async (req, res) => {
       return res.status(400).json(new ApiResponse(400, null, "Phone number is required"));
     }
 
+    if (!validatePhoneNumber(phone)) {
+      return res.status(400).json(new ApiResponse(400, null, 'Invalid phone number format.'));
+    }
+
     // Check if user already exists
     const existingUser = await User.findOne({ phone });
     if (existingUser) {
       return res.status(400).json(new ApiResponse(400, null, "User already registered"));
     }
-
+    const existingAstrologer = await Astrologer.findOne({ phone });
+    if (existingAstrologer) {
+      return res.status(400).json(new ApiResponse(400, null, "This number is already used by an astrologer"));
+    }
     // Hash the password
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);  // Correct usage of bcrypt.hash
@@ -57,6 +68,9 @@ export const userLogin = async (req, res) => {
     // Check if both fields are provided
     if (!phone || !password) {
       return res.status(400).json({ message: 'Phone and password are required.' });
+    }
+    if (!validatePhoneNumber(phone)) {
+      return res.status(400).json(new ApiResponse(400, null, 'Invalid phone number format.'));
     }
 
     // Find astrologer by phone
@@ -159,3 +173,102 @@ export const changePassword = async (req, res) => {
     return res.status(500).json(new ApiResponse(500, null, "Something went wrong. Please try again."));
   }
 };
+
+export const forgetPassword = asyncHandler(async (req, res) => {
+  try {
+    const { phone, role } = req.body;
+    if (role !== "user") {
+      return res.status(400).json(new ApiResponse(400, null, 'Invalid user'));
+    }
+    // Validate the phone number
+    if (!validatePhoneNumber(phone)) {
+      return res.status(400).json(new ApiResponse(400, null, 'Invalid phone number format.'));
+    }
+
+    // Check if an astrologer exists with the given phone number
+    const user = await User.findOne({ phone });
+
+    if (!user) {
+      return res.status(404).json(new ApiResponse(404, null, 'No User found with this phone number.'));
+    }
+
+    // If astrologer exists, send OTP
+    const otpResponse = await sendOTP(phone);
+
+    if (!otpResponse) {
+      return res.status(500).json(new ApiResponse(500, null, 'Failed to send OTP.'));
+    }
+
+    console.log(otpResponse)
+
+    // Return success response with ApiResponse
+    return res.status(200).json(new ApiResponse(otpResponse.data.responseCode, otpResponse.data, otpResponse.data.message));
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(new ApiResponse(500, null, 'An error occurred while processing the request.'));
+  }
+});
+export const validateOtp = asyncHandler(async (req, res) => {
+  try {
+    const { phone, verificationId, code } = req.body;
+
+    // Ensure all necessary data is provided
+    if (!phone || !verificationId || !code) {
+      return res.status(400).json(new ApiResponse(400, null, 'Phone, verificationId, and code are required.'));
+    }
+
+    // Call the validateOTP function
+    const response = await validateOTP(phone, verificationId, code);
+
+    // Check the response and return appropriate message
+    if (response.success) {
+      return res.status(200).json(new ApiResponse(200, response.data, 'OTP validated successfully.'));
+    } else {
+      return res.status(400).json(new ApiResponse(400, response.data, 'OTP validation failed.'));
+    }
+  } catch (error) {
+    console.error('Error in OTP validation controller:', error);
+    return res.status(500).json(new ApiResponse(500, null, 'An error occurred while validating OTP.'));
+  }
+});
+export const updatePassword_user = asyncHandler(async (req, res) => {
+  try {
+    const { phone, newPassword } = req.body;
+
+    // Check if phone and newPassword are provided
+    if (!phone || !newPassword) {
+      return res.status(400).json(new ApiResponse(400, null, 'Phone number and new password are required.'));
+    }
+
+    // Find astrologer by phone number
+    const user = await User.findOne({ phone });
+    console.log(user)
+    // If astrologer not found
+    if (!user) {
+      return res.status(404).json(new ApiResponse(404, null, 'User not found.'));
+    }
+
+    // Check if the new password is the same as the old password
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      return res.status(400).json(new ApiResponse(400, null, 'New password cannot be the same as the old0 password.'));
+    }
+
+    // Hash the new password using bcrypt
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update astrologer's password with the hashed password
+    user.password = hashedPassword;
+
+    // Save the updated astrologer
+    await user.save();
+
+    // Send success response
+    return res.status(200).json(new ApiResponse(200, null, 'Password updated successfully.'));
+  } catch (error) {
+    console.error('Error updating password:', error);
+    return res.status(500).json(new ApiResponse(500, null, 'An error occurred while updating the password.'));
+  }
+});

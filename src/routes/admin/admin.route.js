@@ -9,6 +9,7 @@ import { updateAstrologerFields } from '../../controller/admin/updateAstrologerF
 import { getAstrologers } from '../../controller/admin/findAstrologerBy_id_name_specialities.js';
 import { addAstrologerToCategory, addCategory, deleteAstrologerFromCategory, deleteCategory, getAstrologersByCategoryName } from '../../controller/admin/AstrologerCategory.js';
 import { getPendingAstrologerRequests } from '../../controller/admin/getPendingAstrologerRequest.js'
+import { addAstrologer, editAstrologer } from '../../controller/admin/ai_astrologerController.js';
 const router = express.Router();
 
 // Route to create a language
@@ -31,5 +32,10 @@ router.post('/add/astrologer/category', addAstrologerToCategory);
 router.delete('/delete/astrologer/category', deleteAstrologerFromCategory);
 router.get('/astrologers/by-category/:categoryName', getAstrologersByCategoryName);
 router.get('/pending-astrologer-requests', getPendingAstrologerRequests);
+
+//need to check all this api, in progress
+router.post('/add/ai/astrologer', addAstrologer);
+router.post('/edit/ai/astrologer/:astrologerId', editAstrologer);
+router.delete('/delete/ai/astrologer/:astrologerId', editAstrologer);
 
 export default router;
