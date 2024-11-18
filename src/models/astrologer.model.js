@@ -17,14 +17,26 @@ const astrologerSchema = new mongoose.Schema(
     languages: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Language',
-
       required: [true, 'At least one language must be specified.']  // Custom error message
     }],
     rating: { type: Number, default: 0 },  // This will be dynamically calculated
     totalRatingsCount: { type: Number, default: 0 },
     pricePerCallMinute: { type: Number, required: true },  // Price per minute for calls
     pricePerChatMinute: { type: Number, required: true },  // Price per minute for chat
-    available: { type: Boolean, default: false },
+    available: {
+      type: {
+        isAvailable: { type: Boolean, default: false },
+        isCallAvailable: { type: Boolean, default: false },
+        isChatAvailable: { type: Boolean, default: false },
+        isVideoCallAvailable: { type: Boolean, default: false }
+      },
+      default: {
+        isAvailable: false,
+        isCallAvailable: false,
+        isChatAvailable: false,
+        isVideoCallAvailable: false
+      }
+    },
     isVerified: { type: Boolean, default: false },
     avatar: {
       type: String,
@@ -75,8 +87,6 @@ astrologerSchema.pre('save', async function (next) {
   }
   next(); // Proceed with saving the document after setting values
 });
-
-
 
 astrologerSchema.methods.generateAccessToken = function () {
   return jwt.sign(

@@ -2,6 +2,7 @@ import xlsx from 'xlsx';
 import { Astrologer } from '../../models/astrologer.model.js'; // Import your Astrologer model
 import fs from "fs";
 import { Language } from '../../models/language.model.js';
+import { ApiResponse } from '../../utils/apiResponse.js';
 
 
 // Define your expected headers (schema fields)
@@ -63,14 +64,13 @@ export const uploadAstrologerData = async (req, res) => {
                     fs.unlinkSync(req?.file?.path);
 
 
-                    return res.status(200).json(new ApiResponse(200, {}, "Profile photo updated successfully."));
+                    return res.status(200).json(new ApiResponse(200, {}, "Excel sheet  uploaded successfully."));
                 } else {
                     return res.status(200).json(new ApiResponse(400, {}, "Invalid headers in sheet ${sheetName}"));
                 }
             }
         }
         return res.status(400).json(new ApiResponse(400, {}, "No valid sheets found"));
-        res.status(400).json({ error: 'No valid sheets found' });
     } catch (error) {
         console.error(error);
         return res.status(400).json(new ApiResponse(400, {}, "Server Error"));

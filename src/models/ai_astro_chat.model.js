@@ -10,7 +10,6 @@ const ask_ai_astro_schema = new mongoose.Schema({
     },
     answer: { type: String, required: true },
     astrologyType: { type: String, required: true },
-    language: { type: String, required: true },
     timestamp: { type: Date, default: Date.now }
 });
 

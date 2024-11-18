@@ -51,3 +51,28 @@ export const deleteLanguage = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, null, 'Language deleted successfully'));
 });
+
+// Controller to get all languages
+export const getAllLanguages = asyncHandler(async (req, res) => {
+  try {
+    // Fetch all languages from the database
+    const languages = await Language.find();
+
+    // If no languages found, return a message
+    if (languages.length === 0) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, 'No languages found'));
+    }
+
+    // Return the list of languages
+    return res
+      .status(200)
+      .json(new ApiResponse(200, languages, 'Languages retrieved successfully'));
+  } catch (error) {
+    console.error("Error fetching languages:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, 'An error occurred while fetching languages'));
+  }
+});

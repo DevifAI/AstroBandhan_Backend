@@ -15,12 +15,6 @@ const ai_astrologerSchema = new mongoose.Schema(
                 type: String,
             },
         ],
-        languages: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'Language', // Assuming you have a Language model
-            },
-        ],
         rating: {
             type: Number,
             default: 0,
@@ -37,18 +31,6 @@ const ai_astrologerSchema = new mongoose.Schema(
             type: Number,
             required: true,
         },
-        available: {
-            type: Boolean,
-            default: true,
-        },
-        isVerified: {
-            type: Boolean,
-            default: false,
-        },
-        isFeatured: {
-            type: Boolean,
-            default: false,
-        },
         gender: {
             type: String,
             enum: ['Male', 'Female'],
@@ -57,6 +39,10 @@ const ai_astrologerSchema = new mongoose.Schema(
         walletBalance: {
             type: Number,
             default: 0,
+        },
+        bio: {
+            type: String,
+            requird: true
         },
         avatar: {
             type: String,
@@ -76,6 +62,6 @@ const ai_astrologerSchema = new mongoose.Schema(
     }
 );
 
-export const AI_Astrologer = mongoose.model('Astrologer', ai_astrologerSchema);
+export const AI_Astrologer = mongoose.model('AI_Astrologer', ai_astrologerSchema);
 
 

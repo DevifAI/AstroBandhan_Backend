@@ -10,16 +10,15 @@ const uploadOnCloudinary = async (localFilePath) => {
   try {
     if (!localFilePath) return null;
     // upload fileon cloud
-    console.log('kkk', localFilePath)
+
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto",
       folder: 'astrologer-avatars',
     });
-    console.log("abcd", response)
+   
     return response;
 
   } catch (error) {
-    console.log(error)
   }
 };
 

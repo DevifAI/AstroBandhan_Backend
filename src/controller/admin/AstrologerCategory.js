@@ -34,7 +34,6 @@ export const addCategory = asyncHandler(async (req, res) => {
 export const deleteCategory = asyncHandler(async (req, res) => {
     try {
         const { categoryId } = req.params; // Get category ID from route parameters
-        console.log(categoryId)
         // Find and delete the category by ID
         const category = await Category.findByIdAndDelete(categoryId);
         if (!category) {

@@ -4,7 +4,6 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 
 export const updateAstrologerFields = asyncHandler(async (req, res, next) => {
     const { astrologerId, ...fieldsToUpdate } = req.body;
-console.log(req,b)
     // Check if astrologerId is provided
     if (!astrologerId) {
         return res.status(400).json(new ApiResponse(400, null, "Astrologer ID is required."));
@@ -44,3 +43,5 @@ console.log(req,b)
         return res.status(500).json(new ApiResponse(500, null, "An error occurred while updating the astrologer."));
     }
 });
+
+

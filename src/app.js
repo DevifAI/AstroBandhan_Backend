@@ -5,12 +5,11 @@ import errorHandler from "../src/middlewares/error.middleware.js";
 import userRouter from "../src/routes/users/user.route.js";
 import adminRouter from "../src/routes/admin/admin.route.js";
 import astrologerRouter from "../src/routes/astrologer/astrologer.route.js";
+import { initSocket } from "./utils/sockets/socket.js";
 
 // Initialize Express app
 const app = express();
 
-// Create HTTP server and attach Express app
-const server = http.createServer(app);
 
 app.use(
   cors({
@@ -18,6 +17,12 @@ app.use(
     credentials: true,
   })
 );
+
+// Create HTTP server and attach Socket.IO
+const server = http.createServer(app);
+
+// Initialize Socket.IO with the server
+initSocket(server); // Call initSocket here to initialize Socket.IO
 
 
 // Other middleware and route setup
@@ -39,10 +44,11 @@ app.use("/astrobandhan/v1/astrologer", astrologerRouter);
 // Error handling middleware
 app.use(errorHandler);
 
-export { app };
 
 // Start the server
-const PORT = 8080;
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Astrobandhan is running on http://localhost:${PORT}`);
 });
+
+export { app };

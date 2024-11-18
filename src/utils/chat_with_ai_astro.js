@@ -1,31 +1,67 @@
 import axios from 'axios';
+import { getCoordinates } from './get_lat&long.js';
+import { parseDateTime } from './parsed_date&time.js';
+import { fetchPlanetData } from './astro_api/rasiChart.js';
 
-export const chat_with_ai_astro = async (question, astrologyType, language, userDetails) => {
-    return await getAstrologyResponse(question, astrologyType, language, userDetails);
-}
+export const chat_with_ai_astro = async (question, astrologyType, userDetails) => {
+    return await getAstrologyResponse(question, astrologyType, userDetails);
+};
 
-async function getAstrologyResponse(question, astrologyType, language, userDetails) {
+async function getAstrologyResponse(question, astrologyType, userDetails) {
     let astrologerPersona;
 
-    // Extract user details (name, dateofbirth, timeofbirth)
-    const { dateofbirth, timeofbirth, name } = userDetails;
+    // Extract user details (name, dateOfBirth, timeOfBirth, placeofbirth)
+   
+    const { dateOfBirth, timeOfBirth, name, placeOfBirth } = userDetails;
+    const get_lat_long = await getCoordinates(placeOfBirth);
+    const { lat, lng } = get_lat_long
 
-    // Set the astrologer persona based on astrology type and include user details for personalization
-    switch (astrologyType.toLowerCase()) {
-        case "vedic":
-            astrologerPersona = `You are an experienced Vedic astrologer who provides deep insights based on Vedic principles. The user's name is ${name}, their date of birth is ${dateofbirth} and time of birth is ${timeofbirth}. Respond concisely in ${language}, no longer than 3-4 lines.`;
-            break;
-        case "numerology":
-            astrologerPersona = `You are a numerologist who interprets life through the power of numbers. The user's name is ${name}, their date of birth is ${dateofbirth} and time of birth is ${timeofbirth}. Respond concisely in ${language}, no longer than 3-4 lines.`;
-            break;
-        case "tarot":
-            astrologerPersona = `You are a tarot card reader who provides intuitive guidance. The user's name is ${name}, their date of birth is ${dateofbirth} and time of birth is ${timeofbirth}. Respond concisely in ${language}, no longer than 3-4 lines.`;
-            break;
-        default:
-            astrologerPersona = `You are an experienced astrologer who answers questions in a mystical and empathetic tone. The user's name is ${name}, their date of birth is ${dateofbirth} and time of birth is ${timeofbirth}. Respond concisely in ${language}, no longer than 3-4 lines.`;
+    const { year, month, date, hours, minutes, seconds } = parseDateTime(
+        userDetails.dateOfBirth,
+        userDetails.timeOfBirth
+    );
+
+    let data = {
+        year,
+        month,
+        date,
+        hours,
+        minutes,
+        seconds,
+        latitude: lat,
+        longitude: lng,
+        timezone: 5.5,
+        observation_point: 'topocentric',
+        ayanamsha: 'lahiri',
     }
 
-    // Now we create the request payload and make the OpenAI API call
+    const kundli_chart_json = await fetchPlanetData(data)
+    
+    // Assuming the output is an array and we need the first object in the array
+    const filteredOutput = kundli_chart_json.output[0] ?
+        Object.values(kundli_chart_json.output[0]).filter(planet => planet.current_sign !== undefined).map(planet => ({
+            name: planet.name,
+            current_sign: planet.current_sign
+        })) : [];
+
+
+
+    // Set the astrologer persona based on astrology type
+    switch (astrologyType.toLowerCase()) {
+        case "vedic":
+            astrologerPersona = `You are an experienced Vedic astrologer who provides deep insights based on Vedic principles. The user's name is ${name}, their date of birth is ${dateOfBirth}, and time of birth is ${timeOfBirth}.Response like a human being with good knowledge and deep insight about things.This is the user planet sign ${filteredOutput} . Respond in the same language or transliteration style as the question, and keep the response concise, no longer than 3-5 lines.`;
+            break;
+        case "numerology":
+            astrologerPersona = `You are a numerologist who interprets life through the power of numbers. The user's name is ${name}, their date of birth is ${dateOfBirth}, and time of birth is ${timeOfBirth}.This is the user planet sign ${filteredOutput} . Respond in the same language or transliteration style as the question, and keep the response concise, no longer than 3-5 lines.`;
+            break;
+        case "tarot":
+            astrologerPersona = `You are a tarot card reader who provides intuitive guidance. The user's name is ${name}, their date of birth is ${dateOfBirth}, and time of birth is ${timeOfBirth}.This is the user planet sign ${filteredOutput} . Respond in the same language or transliteration style as the question, and keep the response concise, no longer than 3-4 lines.`;
+            break;
+        default:
+            astrologerPersona = `You are an experienced astrologer who answers questions in a mystical and empathetic tone. The user's name is ${name}, their date of birth is ${dateOfBirth}, and time of birth is ${timeOfBirth}. Respond in the same language or transliteration style as the question, and keep the response concise, no longer than 3-4 lines.`;
+    }
+
+    // Make the OpenAI API call
     try {
         const response = await axios.post(
             'https://api.openai.com/v1/chat/completions',
@@ -38,7 +74,7 @@ async function getAstrologyResponse(question, astrologyType, language, userDetai
                     },
                     {
                         role: "user",
-                        content: question // Send the question directly in the user's preferred language
+                        content: question // The question directly determines the language of the response
                     }
                 ],
             },
@@ -50,12 +86,10 @@ async function getAstrologyResponse(question, astrologyType, language, userDetai
             }
         );
 
-        // Return the AI's concise response
+        // Return the AI's response in the same language or transliteration style as the question
         return response.data.choices[0].message.content;
     } catch (error) {
         console.error("Error fetching AI response:", error?.response?.data || error.message);
         return "I'm unable to answer your question right now. Please try again later.";
     }
 }
-
-

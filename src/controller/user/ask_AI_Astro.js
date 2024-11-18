@@ -8,7 +8,7 @@ import { ApiResponse } from "../../utils/apiResponse.js";
 
 async function getUserDetails(userId) {
     try {
-        const user = await User.findById(userId).select('dateOfBirth timeOfBirth, name'); // Fetch dateofbirth and timeofbirth
+        const user = await User.findById(userId).select('dateOfBirth timeOfBirth name placeOfBirth'); // Fetch dateofbirth and timeofbirth
         return user; // Return the user details (you can customize this based on what is returned)
     } catch (error) {
         console.error("Error fetching user details:", error);
@@ -17,8 +17,8 @@ async function getUserDetails(userId) {
 }
 
 export const ask_ai_astro = asyncHandler(async (req, res) => {
-    const { question, astrologyType, language, userId } = req.body;
-    if (!question || !astrologyType || !language || !userId) {
+    const { question, astrologyType, userId } = req.body;
+    if (!question || !astrologyType || !userId) {
         return res.status(400).json({ error: "Please provide question, astrology type, language and User Information." });
     }
 
@@ -29,14 +29,15 @@ export const ask_ai_astro = asyncHandler(async (req, res) => {
     }
 
 
-    const answer = await chat_with_ai_astro(question, astrologyType, language, userDetails);
+
+
+    const answer = await chat_with_ai_astro(question, astrologyType, userDetails);
 
     // Save chat in MongoDB
     const chatRecord = new ai_astro_chat({
         question,
         answer,
         astrologyType,
-        language,
         userId
     });
 
