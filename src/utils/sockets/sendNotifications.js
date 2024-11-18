@@ -1,6 +1,6 @@
 // controllers/notificationController.js
-import Notification from "../../models/notificationSchema"; // Import the Notification model
-import { users, io } from "../socket.js"; // Import the users object and io from socket.js
+import { Notification } from "../../models/notificationSchema.js";
+import { users, io } from "../sockets/socket.js"; // Import the users object and io from socket.js
 
 // Function to send notification to a specific user
 export const sendNotificationToUser = async (userId, message) => {

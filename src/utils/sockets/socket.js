@@ -1,4 +1,5 @@
 import { Server as socketIo } from "socket.io"; // Named import for socket.io
+import { sendNotificationToUser } from "./sendNotifications.js";
 
 // Store connected users
 export let users = {}; // Export users object
