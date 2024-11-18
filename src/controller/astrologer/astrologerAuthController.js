@@ -143,7 +143,7 @@ export const forgetPassword = asyncHandler(async (req, res) => {
             return res.status(500).json(new ApiResponse(500, null, 'Failed to send OTP.'));
         }
 
-        console.log(otpResponse)
+        // console.log(otpResponse)
 
         // Return success response with ApiResponse
         return res.status(200).json(new ApiResponse(otpResponse.data.responseCode, otpResponse.data, otpResponse.data.message));
