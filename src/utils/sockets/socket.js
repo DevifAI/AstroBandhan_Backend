@@ -16,7 +16,7 @@ export const initSocket = (server) => {
         },
     });
 
-    console.log({ io })
+    // console.log({ io })
     // Socket connection handling
     io.on("connection", (socket) => {
         console.log("A user connected");

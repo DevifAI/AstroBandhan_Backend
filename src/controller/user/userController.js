@@ -204,7 +204,7 @@ export const forgetPassword = asyncHandler(async (req, res) => {
       return res.status(500).json(new ApiResponse(500, null, 'Failed to send OTP.'));
     }
 
-    console.log(otpResponse)
+    // console.log(otpResponse)
 
     // Return success response with ApiResponse
     return res.status(200).json(new ApiResponse(otpResponse.data.responseCode, otpResponse.data, otpResponse.data.message));
@@ -214,6 +214,7 @@ export const forgetPassword = asyncHandler(async (req, res) => {
     return res.status(500).json(new ApiResponse(500, null, 'An error occurred while processing the request.'));
   }
 });
+
 export const validateOtp = asyncHandler(async (req, res) => {
   try {
     const { phone, verificationId, code } = req.body;
@@ -237,6 +238,7 @@ export const validateOtp = asyncHandler(async (req, res) => {
     return res.status(500).json(new ApiResponse(500, null, 'An error occurred while validating OTP.'));
   }
 });
+
 export const updatePassword_user = asyncHandler(async (req, res) => {
   try {
     const { phone, newPassword } = req.body;
