@@ -1,3 +1,4 @@
+#######Completed by me today (09-12-2024)##################
 add category for admin
 realtime notification via socket
 notification fetch by user Id,
@@ -6,6 +7,7 @@ mark notification as read
 delete notifications
 real time chat , tracking wallet balance with chat duration
 real time money transfer from user to astrologer only for chat 
+#######Completed by me today##################
 
 ------------PENDING(NITIN)------- BY 10-12-2024-----------------------------------
 1. Full Authentication part, login,signupo, forgot password
