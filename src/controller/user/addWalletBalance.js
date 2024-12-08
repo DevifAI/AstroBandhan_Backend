@@ -106,17 +106,23 @@ export const find_transaction_history_by_category = asyncHandler(async (req, res
             );
         }
 
+
         // Find wallet transactions
         let transactions;
-        if (amount_type === "credit") {
-            transactions = await Wallet.find({ user_id: userId, amount_type }).exec(); // Execute query
+        if (amount_type === "all") {
+            transactions = await Wallet.find({ user_id: userId}).sort({ createdAt: -1 }).exec(); // Execute query
+        }else if (amount_type === "credit") {
+            transactions = await Wallet.find({ user_id: userId, amount_type }).sort({ createdAt: -1 }).exec(); // Execute query
         } else {
-            transactions = await Wallet.find({ user_id: userId, amount_type, debit_type }).exec(); // Execute query
+            transactions = await Wallet.find({ user_id: userId, amount_type, debit_type }).sort({ createdAt: -1 }).exec(); // Execute query
         }
-
+        const response = {
+            transactions,
+            balance: user.walletBalance, // Add the balance here
+        };
         // Send response
         return res.status(200).json(
-            new ApiResponse(200, transactions, `Operation successfully done.`)
+            new ApiResponse(200, response, `Operation successfully done.`)
         );
 
     } catch (error) {
