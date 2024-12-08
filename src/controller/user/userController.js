@@ -6,8 +6,7 @@ import { validatePhoneNumber } from '../../utils/validatePhoneNumber.js';
 import { sendOTP } from '../../utils/sendOtp.js';
 import { validateOTP } from '../../utils/validateOtp.js';
 import { Astrologer } from "../../models/astrologer.model.js";
-import { sendNotificationToUser } from "../../utils/sockets/sendNotifications.js";
-import { io } from "../../utils/sockets/socket.js";
+
 
 
 export const registerUser = asyncHandler(async (req, res) => {
@@ -100,7 +99,8 @@ export const userLogin = async (req, res) => {
     await user.save();
 
 
-    sendNotificationToUser("67319e91c3eac8726fef8933","yess!!!")
+    
+
     // Respond with tokens and success message
     res.status(200).json(new ApiResponse(200, {
       message: 'Login successful',

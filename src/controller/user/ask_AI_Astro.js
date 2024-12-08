@@ -4,6 +4,8 @@ import { ai_astro_chat } from "../../models/ai_astro_chat.model.js"
 import { User } from "../../models/user.model.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 
+// import { sendNotificationToUser } from "../../utils/sockets/sendNotifications.js";
+
 
 
 async function getUserDetails(userId) {
@@ -43,6 +45,7 @@ export const ask_ai_astro = asyncHandler(async (req, res) => {
 
     try {
         await chatRecord.save();
+       
         return res.json(new ApiResponse(200, answer, "Chat record saved successfully."));
     } catch (error) {
         console.error("Error saving chat to MongoDB:", error);
@@ -61,6 +64,8 @@ export const fetch_ai_astro_chat = asyncHandler(async (req, res) => {
     const skip = (parseInt(page) - 1) * limit; // Number of records to skip
 
     try {
+
+
         const user_chats = await ai_astro_chat.find({ userId })
             .skip(skip)
             .limit(limit);
@@ -70,6 +75,9 @@ export const fetch_ai_astro_chat = asyncHandler(async (req, res) => {
             return res.status(404).json(new ApiResponse(404, null, "Chat record not found."));
         }
 
+
+
+        // sendNotificationToUser(userId, 'You have successfully fetched chats of AI!'); // Send notification t
         // Optional: Get total count for pagination info
         const totalRecords = await ai_astro_chat.countDocuments({ userId });
         const totalPages = Math.ceil(totalRecords / limit);

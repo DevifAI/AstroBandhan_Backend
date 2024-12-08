@@ -10,6 +10,7 @@ import { getAstrologers } from '../../controller/admin/findAstrologerBy_id_name_
 import { addAstrologerToCategory, addCategory, deleteAstrologerFromCategory, deleteCategory, getAstrologersByCategoryName } from '../../controller/admin/AstrologerCategory.js';
 import { getPendingAstrologerRequests } from '../../controller/admin/getPendingAstrologerRequest.js'
 import { addAstrologer, editAstrologer,deleteAstrologer } from '../../controller/admin/ai_astrologerController.js';
+import { addProductCategory, deleteProductCategory, editProductCategory } from '../../controller/admin/addProductCategoryController.js';
 const router = express.Router();
 
 // Route to create a language
@@ -37,5 +38,8 @@ router.get('/pending-astrologer-requests', getPendingAstrologerRequests);
 router.post('/add/ai/astrologer', addAstrologer);
 router.post('/edit/ai/astrologer/:astrologerId', editAstrologer);
 router.delete('/delete/ai/astrologer/:astrologerId', deleteAstrologer);
+router.post('/add/product/category', addProductCategory);
+router.post('/edit/product/category/:id', editProductCategory);
+router.delete('/delete/product/category/:id', deleteProductCategory);
 
 export default router;

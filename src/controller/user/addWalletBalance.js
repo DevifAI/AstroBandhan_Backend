@@ -1,7 +1,8 @@
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { User } from "../../models/user.model.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
-import { wallet } from "../../models/walletSchema.model.js";
+import { Wallet } from "../../models/walletSchema.model.js";
+import { activeUsers, io } from "../../utils/sockets/socket.js";
 
 export const add_wallet_balance = asyncHandler(async (req, res) => {
     try {
@@ -23,8 +24,7 @@ export const add_wallet_balance = asyncHandler(async (req, res) => {
             );
         }
 
-        const transaction_id_exist = await wallet.findOne({ transaction_id })
-        console.log({ transaction_id_exist })
+        const transaction_id_exist = await Wallet.findOne({ transaction_id })
 
 
         if (transaction_id_exist) {
@@ -49,7 +49,7 @@ export const add_wallet_balance = asyncHandler(async (req, res) => {
         }
 
         // Create and save the new review
-        const add_wallet_doc = new wallet({ user_id: userId, amount, amount_type, transaction_id, debit_type });
+        const add_wallet_doc = new Wallet({ user_id: userId, amount, amount_type, transaction_id, debit_type });
         await add_wallet_doc.save();
 
         if (amount_type === "credit") {
@@ -61,6 +61,13 @@ export const add_wallet_balance = asyncHandler(async (req, res) => {
         // else {
         //    
         // }
+
+        const userSocketId = activeUsers[userId]; // Retrieve the socketId for the user from activeUsers
+        if (userSocketId) {
+            const message = `Your wallet has been ${amount_type === "credit" ? 'credited' : 'debited'} with ${amount}.`;
+            io.to(userSocketId).emit('notification', { message });
+            console.log(`Notification sent to user ${userId} with socket ID ${userSocketId}`);
+        }
 
 
         return res.status(201).json(
@@ -102,9 +109,9 @@ export const find_transaction_history_by_category = asyncHandler(async (req, res
         // Find wallet transactions
         let transactions;
         if (amount_type === "credit") {
-            transactions = await wallet.find({ user_id: userId, amount_type }).exec(); // Execute query
+            transactions = await Wallet.find({ user_id: userId, amount_type }).exec(); // Execute query
         } else {
-            transactions = await wallet.find({ user_id: userId, amount_type, debit_type }).exec(); // Execute query
+            transactions = await Wallet.find({ user_id: userId, amount_type, debit_type }).exec(); // Execute query
         }
 
         // Send response

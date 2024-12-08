@@ -10,6 +10,7 @@ import { forgetPassword, updatePassword_user, validateOtp } from "../../controll
 import { ask_ai_astro, fetch_ai_astro_chat } from "../../controller/user/ask_AI_Astro.js";
 import { getAllLanguages } from "../../controller/admin/LanguageController.js";
 import { add_wallet_balance, find_transaction_history_by_category } from "../../controller/user/addWalletBalance.js";
+import { deleteNotifications, getAllNotificationsByUserId, markNotificationsAsRead } from "../../controller/user/NotificationHandler.js";
 const router = Router();
 
 router.route("/signup").post(registerUser);
@@ -25,4 +26,7 @@ router.get('/get/languages', getAllLanguages)
 router.post('/get/ai/chats', fetch_ai_astro_chat)
 router.post('/add/balance', add_wallet_balance)
 router.post('/get/balance/history', find_transaction_history_by_category)
+router.put('/notifications/:userId/read', markNotificationsAsRead);
+router.delete('/notifications/:userId', deleteNotifications);
+router.get('/notifications/:userId', getAllNotificationsByUserId);
 export default router;

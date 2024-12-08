@@ -12,9 +12,17 @@ const walletSchema = new mongoose.Schema({
     },
     debit_type: {
         type: String,
-        enum: ['Ecom', 'chat', 'call', 'video_call', 'palm_reading', 'gifting', 'horroscope_reading'],
+        enum: ['Ecom', 'chat', 'call', 'video_call', 'palm_reading', 'gifting', 'others'],
+        default: null
+    },
+    chatRoomId: { // New field to track chat room ID
+        type: String,
+        ref: 'Chat',
+        required: function () {
+            return this.debit_type === 'chat'; // Only required if debit_type is 'chat'
+        },
         default: null
     }
 }, { timestamps: true });
 
-export const wallet = mongoose.model("walletSchema", walletSchema);
+export const Wallet = mongoose.model("wallet", walletSchema);

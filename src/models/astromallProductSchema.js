@@ -53,7 +53,7 @@ const astroMallProductSchema = new mongoose.Schema(
     },
     reviews: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Review', // Referencing the Review collection
+      ref: 'ProductReviews', // Referencing the Review collection
     }],
     createdAt: {
       type: Date,
