@@ -12,8 +12,11 @@ real time money transfer from user to astrologer only for chat
 ------------PENDING(NITIN)------- BY 10-12-2024-----------------------------------
 1. Full Authentication part, login,signupo, forgot password
 2. After sign up directly free chat with AI
-3. write api to add/edit/delete product in astromall {name, description, quantity, price, images[string], rating, category: ObjectID from Category collection}
 4. Connect Socket for Realtime Notification event lister is added go through the code
 
 
 ----------------------all this by 10-12-2024---------------------------
+
+
+subho------
+1. write api to add/edit/delete product in astromall {name, description, quantity, price, images[string], rating, category: ObjectID from Category collection}

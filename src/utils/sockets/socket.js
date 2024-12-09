@@ -243,7 +243,7 @@ export const initSocket = (server) => {
                                     });
                                     await astrologerTransaction.save();
 
-                                    console.log(`Deducted ${minuteCost} from user's wallet and added to astrologer's wallet.`);
+                                    // console.log(`Deducted ${minuteCost} from user's wallet and added to astrologer's wallet.`);
 
                                     // Update the chat duration in the database
                                     await Chat.findOneAndUpdate(
@@ -254,7 +254,7 @@ export const initSocket = (server) => {
                                 }
 
                                 // Emit message periodically (every minute)
-                                socket.emit('intervalMessage', { message: 'This is a periodic message from the server.' });
+                                socket.emit('intervalMessage', { message: `Deducted ${minuteCost} from user's wallet and added to astrologer's wallet.` });
 
                             } catch (error) {
                                 console.error("Error during interval message or money deduction:", error);
