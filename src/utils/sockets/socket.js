@@ -27,7 +27,7 @@ const isAllUsersJoined = (chatRoomId, userId, astrologerId) => {
 
 // Function to handle socket connections and events
 export const initSocket = (server) => {
-    console.log({ server });
+    // console.log({ server });
 
     // Initialize socket.io with the provided server
     io = new socketIo(server, {
