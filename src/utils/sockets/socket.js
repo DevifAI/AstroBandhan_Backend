@@ -72,9 +72,14 @@ export const initSocket = (server) => {
             try {
                 const result = await createChatRoom(userId, role, astrologerId);
                 if (result.success) {
+
                     const chatRoomId = result.chatRoomId;
                     socket.join(chatRoomId);
                     socket.emit('chatRoomCreated', { chatRoomId, totalChatDuration: totalTime });
+                    if (!chatRoomParticipants[result.chatRoomId]) {
+                        chatRoomParticipants[result.chatRoomId] = new Set(); // Initialize the set for new chat room
+                    }
+                    chatRoomParticipants[result.chatRoomId].add(userId);
 
                     // Notify the astrologer of the incoming chat request
                     socket.to(astrologer.socketId).emit('incomingChatRequest', {
@@ -123,17 +128,20 @@ export const initSocket = (server) => {
                     socket.emit('error', 'Chat room not found or inactive.');
                     return;
                 }
-
                 // Step 2: Join the chat room
                 socket.join(chatRoomId);
                 socket.emit('chatRoomJoined', { chatRoomId, message: 'Successfully joined the chat room.' });
+                    // Initialize participants if it's a new chat room
+                    if (!chatRoomParticipants[chatRoomId]) {
+                        chatRoomParticipants[chatRoomId] = new Set();
+                    }
+                    hitBy == "user" ?
+                    chatRoomParticipants[chatRoomId].add(userId)
+                    :
+                    chatRoomParticipants[chatRoomId].add(astrologerId)
 
                 // Step 3: Initialize chat room participants if it's a new chat room
-                if (!chatRoomParticipants[chatRoomId]) {
-                    chatRoomParticipants[chatRoomId] = new Set();
-                }
-                chatRoomParticipants[chatRoomId].add(astrologerId);
-                chatRoomParticipants[chatRoomId].add(userId);
+               
 
                 // Step 4: Track if both the user and astrologer are in the room
                 if (isAllUsersJoined(chatRoomId, userId, astrologerId)) {
@@ -281,9 +289,7 @@ export const initSocket = (server) => {
                 socket.emit('error', 'An error occurred while joining the chat.');
             }
         });
-
-
-        // Event for when a user wants to end the chat
+        // Event for when a user wants to ends a chat
         socket.on('endChat', async ({ userId, astrologerId, chatRoomId }) => {
             console.log({ userId, astrologerId, chatRoomId });
 

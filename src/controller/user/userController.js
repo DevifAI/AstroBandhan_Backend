@@ -7,8 +7,6 @@ import { sendOTP } from '../../utils/sendOtp.js';
 import { validateOTP } from '../../utils/validateOtp.js';
 import { Astrologer } from "../../models/astrologer.model.js";
 
-
-
 export const registerUser = asyncHandler(async (req, res) => {
   try {
     const { name, email, phone, dateOfBirth, timeOfBirth, placeOfBirth, gender, password } = req.body;
@@ -110,6 +108,7 @@ export const userLogin = async (req, res) => {
         id: user._id,
         name: user.name,
         phone: user.phone,
+        Free_Chat_Available:user.Free_Chat_Available
         // Include other public details if necessary
       },
     }, "User Login Successfully"));
