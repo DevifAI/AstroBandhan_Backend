@@ -56,8 +56,9 @@ export const initSocket = (server) => {
                 // console.log({ result })
                 if (result.success) {
                     console.log(result.chatRoomId)
-                    socket.join(result.chatRoomId); // Join the chat room
-                    socket.emit('chatRoomCreated', result.chatRoomId); // Notify client that the room is created
+                    socket.join(result.chatRoomId); 
+
+                    socket.emit('chatRoomCreated', result); // Notify client that the room is created
                     if (!chatRoomParticipants[result.chatRoomId]) {
                         chatRoomParticipants[result.chatRoomId] = new Set(); // Initialize the set for new chat room
                     }
@@ -87,8 +88,10 @@ export const initSocket = (server) => {
                     if (!chatRoomParticipants[chatRoomId]) {
                         chatRoomParticipants[chatRoomId] = new Set();
                     }
-                    chatRoomParticipants[chatRoomId].add(astrologerId);
-                    chatRoomParticipants[chatRoomId].add(userId);
+                    hitBy == "user" ?  
+                    chatRoomParticipants[chatRoomId].add(userId)
+                    :
+                    chatRoomParticipants[chatRoomId].add(astrologerId)
 
                     // Track if both the user and astrologer are in the room
                     if (isAllUsersJoined(chatRoomId, userId, astrologerId)) {
@@ -272,8 +275,8 @@ export const initSocket = (server) => {
                 socket.emit('error', 'An error occurred while joining the chat.');
             }
         });
-
-
+        
+        
         // Event for when a user wants to ends a chat
         socket.on('endChat', async ({ userId, astrologerId, chatRoomId }) => {
             console.log({ userId, astrologerId, chatRoomId });
@@ -312,7 +315,7 @@ export const initSocket = (server) => {
                 socket.emit('error', 'An error occurred while ending the chat.');
             }
         });
-
+            
 
 
         // Handle sending a message from user or astrologer

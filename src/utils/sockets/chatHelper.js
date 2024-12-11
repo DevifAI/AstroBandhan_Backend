@@ -125,7 +125,7 @@ export const createChatRoom = async (userId, role, astrologerId) => {
         await room.save();
 
         // Return the success response with the generated chat room ID
-        return { success: true, chatRoomId: room.chatRoomId };  // Return the generated chatRoomId
+        return { success: true, chatRoomId: room.chatRoomId,astrologerId: astrologerId };  // Return the generated chatRoomId
 
     } catch (error) {
         console.error("Error creating chat room:", error);
