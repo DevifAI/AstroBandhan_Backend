@@ -79,6 +79,7 @@ export const joinChatRoom = async (userId, astrologerId, chatRoomId, hitBy) => {
 
         // Save the updated chat room
         await chatRoom.save();
+        
         return true;
     } else {
         // No matching chat room found
@@ -149,7 +150,7 @@ export const saveChatMessage = async ({ senderType, senderId, message, chatRoomI
 };
 
 
-export const deductMoney = async({userId, astrologerId})=>{
+export const deductMoney = async ({ userId, astrologerId }) => {
 
 }
 

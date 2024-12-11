@@ -49,232 +49,241 @@ export const initSocket = (server) => {
         });
 
         // Event for when a user wants to start a chat
+        // Event for when a user wants to start a chat
         socket.on('startChat', async ({ userId, role, astrologerId }) => {
-            console.log({ astrologerId, userId, role })
+            const user = await User.findById(userId);
+            const astrologer = await Astrologer.findById(astrologerId);
+
+            if (!user || !astrologer) {
+                console.error('User or astrologer not found.');
+                return;
+            }
+
+            const per_min_cost = astrologer.pricePerChatMinute;
+            if (user.walletBalance < per_min_cost) {
+                return socket.emit('error', "Insufficient Funds, Please Recharge");
+            }
+
+            const totalSeconds = Math.floor((user.walletBalance / per_min_cost) * 60);
+            const totalMinutes = Math.floor(totalSeconds / 60);
+            const remainingSeconds = totalSeconds % 60;
+            const totalTime = `${totalMinutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+
             try {
                 const result = await createChatRoom(userId, role, astrologerId);
-                // console.log({ result })
                 if (result.success) {
-                    console.log(result.chatRoomId)
-                    socket.join(result.chatRoomId); // Join the chat room
-                    socket.emit('chatRoomCreated', result.chatRoomId); // Notify client that the room is created
-                    if (!chatRoomParticipants[result.chatRoomId]) {
-                        chatRoomParticipants[result.chatRoomId] = new Set(); // Initialize the set for new chat room
-                    }
-                    chatRoomParticipants[result.chatRoomId].add(userId);
+                    const chatRoomId = result.chatRoomId;
+                    socket.join(chatRoomId);
+                    socket.emit('chatRoomCreated', { chatRoomId, totalChatDuration: totalTime });
 
+                    // Notify the astrologer of the incoming chat request
+                    socket.to(astrologer.socketId).emit('incomingChatRequest', {
+                        userId,
+                        chatRoomId,
+                        message: 'Incoming chat request',
+                    });
+
+                    // Handle astrologer's response
+                    socket.on('astrologerResponse', async ({ chatRoomId, response }) => {
+                        if (response === 'approve') {
+                            console.log('Astrologer approved the chat');
+                            socket.emit('chatApproved', { chatRoomId, message: 'Chat approved by astrologer' });
+                        } else if (response === 'deny') {
+                            console.log('Astrologer denied the chat');
+
+                            // Notify the user and force them to leave the chat room
+                            socket.to(chatRoomId).emit('chatDenied', { message: 'Chat request denied by astrologer' });
+                            socket.leave(chatRoomId);
+
+                            // Remove the chat room from active sessions
+                            delete chatRoomParticipants[chatRoomId];
+
+                            // Optionally clean up the chat room data in the database
+                            await ChatRoom.findByIdAndUpdate(chatRoomId, { status: 'inactive' });
+                        }
+                    });
                 } else {
-                    socket.emit('error', result.message); // Send error message if astrologer is busy
+                    socket.emit('error', result.message);
                 }
             } catch (error) {
                 console.error("Error starting chat:", error);
                 socket.emit('error', 'An error occurred while starting the chat.');
             }
         });
+
+        // Event for when a user wants to resume/join a chat
         // Event for when a user wants to resume/join a chat
         socket.on('joinChat', async ({ userId, astrologerId, chatRoomId, hitBy }) => {
             console.log({ userId, astrologerId, chatRoomId, hitBy });
 
-            const isJoinedChat = await joinChatRoom(userId, astrologerId, chatRoomId, hitBy);
-
             try {
-                if (isJoinedChat) {
-                    // Join the chat room
-                    socket.join(chatRoomId);
-                    socket.emit('chatRoomJoined', { chatRoomId, message: 'Successfully joined the chat room.' });
+                // Step 1: Ensure that both users can join the chat room
+                const isJoinedChat = await joinChatRoom(userId, astrologerId, chatRoomId, hitBy);
+                if (!isJoinedChat) {
+                    socket.emit('error', 'Chat room not found or inactive.');
+                    return;
+                }
 
-                    // Initialize participants if it's a new chat room
-                    if (!chatRoomParticipants[chatRoomId]) {
-                        chatRoomParticipants[chatRoomId] = new Set();
-                    }
-                    chatRoomParticipants[chatRoomId].add(astrologerId);
-                    chatRoomParticipants[chatRoomId].add(userId);
+                // Step 2: Join the chat room
+                socket.join(chatRoomId);
+                socket.emit('chatRoomJoined', { chatRoomId, message: 'Successfully joined the chat room.' });
 
-                    // Track if both the user and astrologer are in the room
-                    if (isAllUsersJoined(chatRoomId, userId, astrologerId)) {
-                        console.log("Both users are in the chat room:", chatRoomParticipants);
+                // Step 3: Initialize chat room participants if it's a new chat room
+                if (!chatRoomParticipants[chatRoomId]) {
+                    chatRoomParticipants[chatRoomId] = new Set();
+                }
+                chatRoomParticipants[chatRoomId].add(astrologerId);
+                chatRoomParticipants[chatRoomId].add(userId);
 
-                        // Store start time of the chat session for calculating time and deducting cost
-                        chatStartTimes[chatRoomId] = Date.now();
+                // Step 4: Track if both the user and astrologer are in the room
+                if (isAllUsersJoined(chatRoomId, userId, astrologerId)) {
+                    console.log("Both users are in the chat room:", chatRoomParticipants);
 
-                        // Create a new chat document
-                        const newChat = new Chat({
-                            chatRoomId,
-                            duration: "0:00",  // Initially set duration to 0:00
-                        });
-                        await newChat.save();
+                    // Step 5: Store start time of the chat session
+                    chatStartTimes[chatRoomId] = Date.now();
 
-                        // Deduct the cost for the first minute immediately
-                        const user = await User.findById(userId);
-                        const astrologer = await Astrologer.findById(astrologerId);
+                    // Step 6: Begin database transaction for atomicity
+                    const session = await mongoose.startSession();
+                    session.startTransaction();
+
+                    try {
+                        // Step 7: Find user and astrologer in a single database call
+                        const [user, astrologer] = await Promise.all([
+                            User.findById(userId).session(session),
+                            Astrologer.findById(astrologerId).session(session)
+                        ]);
 
                         if (!user || !astrologer) {
-                            console.error('User or astrologer not found.');
-                            return;
+                            throw new Error('User or astrologer not found.');
                         }
 
-                        const minuteCost = astrologer.pricePerChatMinute; // Assuming `pricePerMinute` is stored in astrologer schema
+                        const minuteCost = astrologer.pricePerChatMinute;
 
-                        if (user.walletBalance < minuteCost) {
-                            // Send a low balance warning and check after 1 minute
+                        // Deduct for the whole session based on expected duration
+                        const totalCost = minuteCost * calculateExpectedDuration(userId, astrologerId);  // Implement logic to calculate duration based on expected chat length
+
+                        // Check if the user has enough balance for the total cost
+                        if (user.walletBalance < totalCost) {
                             socket.emit('warning', 'Your balance is low. Please recharge before the next minute.');
-
                             setTimeout(async () => {
                                 const updatedUser = await User.findById(userId);
-                                if (updatedUser.walletBalance < minuteCost) {
+                                if (updatedUser.walletBalance < totalCost) {
                                     socket.emit('error', 'Insufficient balance. Chat session is ending.');
                                     socket.leave(chatRoomId); // Force leave the chat room
                                     await Chat.findOneAndUpdate(
                                         { chatRoomId },
                                         { $set: { duration: "0:00" } },
                                         { new: true }
-                                    );
+                                    ).session(session);
                                     clearInterval(chatIntervals[chatRoomId]); // Stop the interval
                                 }
                             }, 60000); // Wait for 1 minute before forcibly ending the session
                         } else {
-                            // Deduct the cost for the first minute from the user
-                            user.walletBalance -= minuteCost;
+                            // Deduct the full amount at once from user's wallet
+                            user.walletBalance -= totalCost;
                             await user.save();
 
-                            // Add the transaction for the user to the wallet
+                            // Create a single transaction for the full amount
                             const userTransaction = new Wallet({
                                 user_id: userId,
-                                amount: minuteCost,
-                                transaction_id: `TXN-${Date.now()}`, // Generate a unique transaction ID
+                                amount: totalCost,
+                                transaction_id: `TXN-${Date.now()}`,
                                 amount_type: 'debit',
                                 debit_type: 'chat',
-                                chatRoomId: chatRoomId, // Link the transaction to the chat room
-                            });
+                                chatRoomId: chatRoomId,
+                            }).session(session);
                             await userTransaction.save();
 
-                            socket.emit('intervalMessage', { chatRoomId, message: `Deducted ${minuteCost} from user's wallet. Remaining balance: ${user.walletBalance}` });
-                            console.log(`Deducted ${minuteCost} from user's wallet. Remaining balance: ${user.walletBalance}`);
+                            // Increment the astrologer's wallet balance by the full cost
+                            astrologer.walletBalance += totalCost;
+                            await astrologer.save();
+
+                            // Create a transaction for the astrologer
+                            const astrologerTransaction = new Wallet({
+                                user_id: astrologerId,
+                                amount: totalCost,
+                                transaction_id: `TXN-${Date.now()}`,
+                                amount_type: 'credit',
+                                debit_type: 'chat',
+                                chatRoomId: chatRoomId,
+                            }).session(session);
+                            await astrologerTransaction.save();
+
+                            // Commit the transaction to the database
+                            await session.commitTransaction();
+
+                            // Emit initial message and start tracking time
+                            socket.emit('intervalMessage', { chatRoomId, message: `Total of ${totalCost} deducted from user's wallet. Remaining balance: ${user.walletBalance}` });
+                            console.log(`Total of ${totalCost} deducted from user's wallet. Remaining balance: ${user.walletBalance}`);
                         }
 
-                        // Increment the astrologer's wallet balance
-                        astrologer.walletBalance += minuteCost;
-                        await astrologer.save();
-
-                        // Create a transaction for the astrologer
-                        const astrologerTransaction = new Wallet({
-                            user_id: astrologerId,
-                            amount: minuteCost,
-                            transaction_id: `TXN-${Date.now()}`, // Generate a unique transaction ID
-                            amount_type: 'credit',
-                            debit_type: 'chat',
-                            chatRoomId: chatRoomId, // Link the transaction to the chat room
-                        });
-                        await astrologerTransaction.save();
-
-                        console.log(`Added ${minuteCost} to astrologer's wallet. Total balance: ${astrologer.walletBalance}`);
-
-                        // Start emitting every 1 minute
+                        // Step 8: Start emitting every 1 minute for chat duration updates
                         chatIntervals[chatRoomId] = setInterval(async () => {
                             try {
                                 const currentTime = Date.now();
                                 const startTime = chatStartTimes[chatRoomId];
-                                const elapsedSeconds = Math.floor((currentTime - startTime) / 1000); // Elapsed time in seconds
-                                const minutes = Math.floor(elapsedSeconds / 60); // Calculate the number of minutes
-                                const seconds = elapsedSeconds % 60; // Calculate the remaining seconds
-
-                                // Format the time in `minutes:seconds` format (e.g., 1:05 or 0:45)
+                                const elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+                                const minutes = Math.floor(elapsedSeconds / 60);
+                                const seconds = elapsedSeconds % 60;
                                 const elapsedTime = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
 
-                                // Check if there's enough balance to deduct for the current minute
-                                const user = await User.findById(userId); // Get user details
-                                const astrologer = await Astrologer.findById(astrologerId); // Get astrologer details
+                                const user = await User.findById(userId);
+                                const astrologer = await Astrologer.findById(astrologerId);
 
                                 if (!user || !astrologer) {
-                                    console.error('User or astrologer not found.');
-                                    return;
+                                    throw new Error('User or astrologer not found.');
                                 }
 
-                                const minuteCost = astrologer.pricePerChatMinute; // Assuming `pricePerMinute` is stored in astrologer schema
+                                const minuteCost = astrologer.pricePerChatMinute;
 
+                                // Check if the user has enough balance each minute
                                 if (user.walletBalance < minuteCost) {
-                                    // Send a low balance warning before the last minute
-                                    if (minutes >= (Math.floor((currentTime - chatStartTimes[chatRoomId]) / 60000) - 1)) {
-                                        socket.emit('warning', 'Your balance is low. Please recharge before the next minute.');
-
-                                        // After 1 minute, end the chat if balance is still low
-                                        setTimeout(() => {
-                                            if (user.walletBalance < minuteCost) {
-                                                socket.emit('error', 'Insufficient balance. Chat session is ending.');
-                                                socket.leave(chatRoomId); // Force leave the chat room
-                                                // Update the chat session in the database to reflect the total duration
-                                                Chat.findOneAndUpdate(
-                                                    { chatRoomId },
-                                                    { $set: { duration: elapsedTime } },
-                                                    { new: true }
-                                                );
-                                                clearInterval(chatIntervals[chatRoomId]); // Stop the interval
-                                            }
-                                        }, 60000); // Wait for 1 more minute before forcibly ending the session
-                                    }
-                                } else {
-                                    // Deduct the cost for the current minute
-                                    user.walletBalance -= minuteCost;
-                                    await user.save();
-
-                                    // Create a transaction for the user
-                                    const userTransaction = new Wallet({
-                                        user_id: userId,
-                                        amount: minuteCost,
-                                        transaction_id: `TXN-${Date.now()}`,
-                                        amount_type: 'debit',
-                                        debit_type: 'chat',
-                                        chatRoomId: chatRoomId,
-                                    });
-                                    await userTransaction.save();
-
-                                    // Add the cost to astrologer's wallet
-                                    astrologer.walletBalance += minuteCost;
-                                    await astrologer.save();
-
-                                    // Create a transaction for the astrologer
-                                    const astrologerTransaction = new Wallet({
-                                        user_id: astrologerId,
-                                        amount: minuteCost,
-                                        transaction_id: `TXN-${Date.now()}`,
-                                        amount_type: 'credit',
-                                        debit_type: 'chat',
-                                        chatRoomId: chatRoomId,
-                                    });
-                                    await astrologerTransaction.save();
-
-                                    // console.log(`Deducted ${minuteCost} from user's wallet and added to astrologer's wallet.`);
-
-                                    // Update the chat duration in the database
-                                    await Chat.findOneAndUpdate(
-                                        { chatRoomId },
-                                        { $set: { duration: elapsedTime } },
-                                        { new: true }
-                                    );
+                                    socket.emit('warning', 'Your balance is low. Please recharge before the next minute.');
+                                    setTimeout(async () => {
+                                        if (user.walletBalance < minuteCost) {
+                                            socket.emit('error', 'Insufficient balance. Chat session is ending.');
+                                            socket.leave(chatRoomId);
+                                            await Chat.findOneAndUpdate(
+                                                { chatRoomId },
+                                                { $set: { duration: elapsedTime } },
+                                                { new: true }
+                                            );
+                                            clearInterval(chatIntervals[chatRoomId]);
+                                        }
+                                    }, 60000);
                                 }
 
-                                // Emit message periodically (every minute)
-                                socket.emit('intervalMessage', { message: `Deducted ${minuteCost} from user's wallet and added to astrologer's wallet.` });
+                                // Update the chat duration
+                                await Chat.findOneAndUpdate(
+                                    { chatRoomId },
+                                    { $set: { duration: elapsedTime } },
+                                    { new: true }
+                                );
+                                socket.emit('intervalMessage', { message: `Chat duration: ${elapsedTime}` });
 
                             } catch (error) {
                                 console.error("Error during interval message or money deduction:", error);
-                                clearInterval(chatIntervals[chatRoomId]); // Stop the interval
+                                clearInterval(chatIntervals[chatRoomId]);
                                 socket.emit('error', 'An error occurred while processing the chat.');
                             }
-                        }, 60000); // 1 minute interval for checking and deducting money
+                        }, 60000); // 1-minute interval
 
+                    } catch (error) {
+                        console.error("Error in chat session setup:", error);
+                        await session.abortTransaction(); // Rollback in case of error
+                        socket.emit('error', 'An error occurred while joining the chat.');
+                    } finally {
+                        session.endSession();
                     }
-                } else {
-                    socket.emit('error', 'Chat room not found or inactive.');
                 }
             } catch (error) {
-                console.error("Error joining chat:", error);
+                console.error("Error in joining chat:", error);
                 socket.emit('error', 'An error occurred while joining the chat.');
             }
         });
 
 
-        // Event for when a user wants to ends a chat
+        // Event for when a user wants to end the chat
         socket.on('endChat', async ({ userId, astrologerId, chatRoomId }) => {
             console.log({ userId, astrologerId, chatRoomId });
 
@@ -297,6 +306,7 @@ export const initSocket = (server) => {
 
                 if (chatRoom) {
                     // Notify both the user and astrologer
+                    clearInterval(chatIntervals[chatRoomId]);
                     socket.emit('chatEnded', { chatRoomId, message: 'Chat has ended.' });
                     socket.to(chatRoomId).emit('chatEnded', { chatRoomId, message: 'The chat has ended.' });
 
@@ -312,6 +322,7 @@ export const initSocket = (server) => {
                 socket.emit('error', 'An error occurred while ending the chat.');
             }
         });
+
 
 
 
