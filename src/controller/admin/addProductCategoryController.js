@@ -1,4 +1,4 @@
-import {product_category} from '../../models/addProductCategory.model.js';
+import { product_category } from '../../models/addProductCategory.model.js';
 import {ApiResponse} from '../../utils/apiResponse.js'; // Assuming ApiResponse is a utility class for standardized responses
 
 // Add a new product category
