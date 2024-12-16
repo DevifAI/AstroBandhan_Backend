@@ -128,10 +128,7 @@ export const initSocket = (server) => {
             }
         });
 
-<<<<<<< HEAD
-        // Event for when a user wants to resume/join a chat
-=======
->>>>>>> 46ab128 (nitinchanges)
+ 
         // Event for when a user wants to resume/join a chat
         socket.on('joinChat', async ({ userId, astrologerId, chatRoomId, hitBy }) => {
             console.log({ userId, astrologerId, chatRoomId, hitBy });
@@ -344,13 +341,7 @@ export const initSocket = (server) => {
                 socket.emit('error', 'An error occurred while ending the chat.');
             }
         });
-
-<<<<<<< HEAD
-
-=======
->>>>>>> 46ab128 (nitinchanges)
-
-
+ 
         // Handle sending a message from user or astrologer
         socket.on('sendMessage', async ({ message, senderId,chatRoomId ,senderType}) => {
             try {
