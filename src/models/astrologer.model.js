@@ -9,20 +9,23 @@ const astrologerSchema = new mongoose.Schema(
     experience: {
       type: Number,
       required: true,
-      default: 0,
-      min: [1, 'Experience must be at least 1 year'], // Minimum experience of 1 year
-      max: [100, 'Experience cannot exceed 100 years'] // Maximum experience of 50 years
+      default: 1,
+      min: [1, 'Experience must be at least 1 year'],
+      max: [50, 'Experience cannot exceed 50 years']
     },
-    specialities: [String], // e.g., ["Vedic Astrology", "Palmistry"]
-    languages: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Language',
-      required: [true, 'At least one language must be specified.']  // Custom error message
-    }],
-    rating: { type: Number, default: 0 },  // This will be dynamically calculated
+    specialities: [String],
+    languages: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Language',
+        required: [true, 'At least one language must be specified.']
+      }
+    ],
+    rating: { type: Number, default: 0 },
     totalRatingsCount: { type: Number, default: 0 },
-    pricePerCallMinute: { type: Number, required: true },  // Price per minute for calls
-    pricePerChatMinute: { type: Number, required: true },  // Price per minute for chat
+    pricePerCallMinute: { type: Number, required: true }, //10 * 10 = 100
+    pricePerVideoCallMinute: { type: Number, required: true },
+    pricePerChatMinute: { type: Number, required: true },
     available: {
       type: {
         isAvailable: { type: Boolean, default: false },
@@ -41,25 +44,36 @@ const astrologerSchema = new mongoose.Schema(
     avatar: {
       type: String,
       default: function () {
-        // Default avatar URL based on gender
         if (this.gender === 'Male') {
-          return 'https://ibb.co/C5mCpXV'; // Replace with your male avatar URL
+          return 'https://ibb.co/C5mCpXV'; // Replace with actual male avatar URL
         } else if (this.gender === 'Female') {
-          return 'https://ibb.co/x5rDjrM'; // Replace with your female avatar URL
+          return 'https://ibb.co/x5rDjrM'; // Replace with actual female avatar URL
         }
-        return ''; // If no gender is set, return empty string
-      },
+        return '';
+      }
     },
     isFeatured: { type: Boolean, default: false },
     password: { type: String, required: true },
     gender: {
       type: String,
       required: true,
-      enum: ['Male', 'Female'], // Restrict to only Male or Female
-      message: 'Gender must be either Male or Female' // Custom error message if value is invalid
+      enum: ['Male', 'Female'],
+      message: 'Gender must be either Male or Female'
     },
     phone: { type: String, required: true, unique: true },
     walletBalance: { type: Number, default: 0 },
+    chatCommission: {
+      type: Number, //10
+      required: [true, 'Chat commission is required'] // 
+    },
+    callCommission: {
+      type: Number,
+      required: [true, 'Call commission is required']
+    },
+    videoCallCommission: {
+      type: Number,
+      required: [true, 'Video call commission is required']
+    },
     selected_language_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Language'

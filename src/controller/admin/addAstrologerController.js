@@ -18,12 +18,16 @@ export const registerAstrologer = asyncHandler(async (req, res) => {
       specialities,
       languages,
       pricePerCallMinute,
+      pricePerVideoCallMinute,
       pricePerChatMinute,
       gender,
       phone,
       password,
       isFeatured,
       isVerified,
+      chatCommission,
+      callCommission,
+      videoCallCommission,
       available,  // directly destructure available object from the payload
     } = req.body;
 
@@ -71,14 +75,17 @@ export const registerAstrologer = asyncHandler(async (req, res) => {
       name,
       experience,
       specialities,
-      languages: languageId, // Set provided languages or default English
+      languages,
       pricePerCallMinute,
+      pricePerVideoCallMinute,
       pricePerChatMinute,
       gender,
       phone,
-      available,  // directly use available object from the payload
       isFeatured,
       isVerified,
+      chatCommission,
+      callCommission,
+      videoCallCommission,
       password: hashedPassword,
     });
 
