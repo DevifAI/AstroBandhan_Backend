@@ -32,8 +32,8 @@ export const astrologerLogin = asyncHandler(async (req, res) => {
             return res.status(401).json({ message: 'Incorrect password.' });
         }
 
-        // Set available to true on login
-        astrologer.available = true;
+        // // Set available to true on login
+        // astrologer.available = "true";
 
         // Generate access and refresh tokens
         const accessToken = astrologer.generateAccessToken();
@@ -41,7 +41,9 @@ export const astrologerLogin = asyncHandler(async (req, res) => {
 
         // Save the refresh token to the database (optional but recommended)
         astrologer.refreshToken = refreshToken;
+
         await astrologer.save();
+        // console.log(astrologer);
 
         // Respond with tokens and success message
         res.status(200).json({

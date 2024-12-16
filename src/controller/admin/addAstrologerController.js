@@ -33,23 +33,23 @@ export const registerAstrologer = asyncHandler(async (req, res) => {
 
     // Validate required fields
     if (!name || !experience || !pricePerCallMinute || !pricePerChatMinute || !phone || !password || !gender || !isFeatured || !isVerified || !available) {
-      return res.status(400).json(new ApiResponse(400, null, "Please provide all required fields."));
+      return res.status(201).json(new ApiResponse(201, null, "Please provide all required fields."));
     }
 
     // Check if astrologer already exists with the same phone number
     const existingAstrologer = await Astrologer.findOne({ phone });
     if (existingAstrologer) {
-      return res.status(400).json(new ApiResponse(400, null, "Astrologer already registered with this phone number."));
+      return res.status(201).json(new ApiResponse(201, null, "Astrologer already registered with this phone number."));
     }
 
     // Check if phone number exists in User model
     const Check_Phone_Exist_In_User = await User.findOne({ phone });
     if (Check_Phone_Exist_In_User) {
-      return res.status(400).json(new ApiResponse(400, null, "User already registered with this phone number."));
+      return res.status(201).json(new ApiResponse(201, null, "User already registered with this phone number."));
     }
 
     if (!validatePhoneNumber(phone)) {
-      return res.status(400).json(new ApiResponse(400, null, 'Invalid phone number format.'));
+      return res.status(201).json(new ApiResponse(201, null, 'Invalid phone number format.'));
     }
 
     // Hash the password
@@ -62,14 +62,14 @@ export const registerAstrologer = asyncHandler(async (req, res) => {
 
     // Default language (English) will be assigned if no languages are provided
     const languageId = languages && languages.length > 0 ? languages : [await getDefaultLanguageId()];
-
+    
     const pendingRequest = await PendingAstrologerRequest.findOne({ phoneNumber: phone, isApproved: false });
     if (pendingRequest) {
       // Approve the pending astrologer request by calling the method
       await pendingRequest.updateOne({ isApproved: true });
       console.log("Pending astrologer request approved for phone number:", phone);
     }
-
+    
     // Create a new astrologer document
     const newAstrologer = new Astrologer({
       name,
@@ -93,10 +93,10 @@ export const registerAstrologer = asyncHandler(async (req, res) => {
     await newAstrologer.save();
 
     // Respond with success
-    return res.status(201).json(new ApiResponse(201, newAstrologer, "Astrologer registered successfully."));
+    return res.status(200).json(new ApiResponse(201, newAstrologer, "Astrologer registered successfully."));
   } catch (error) {
     console.error("Error during astrologer registration:", error);
-    return res.status(500).json(new ApiResponse(500, null, "An error occurred during the registration process."));
+    return res.status(201).json(new ApiResponse(201, null, "An error occurred during the registration process."));
   }
 });
 

@@ -47,7 +47,7 @@ export const initSocket = (server) => {
             activeUsers[userId] = socket.id;  // Store the socketId associated with the userId
             console.log(`User ID ${userId} is connected with socket ID: ${socket.id}`);
         });
-
+    
         // Event for when a user wants to start a chat
         // Event for when a user wants to start a chat
         socket.on('startChat', async ({ userId, role, astrologerId }) => {
@@ -80,6 +80,18 @@ export const initSocket = (server) => {
                         chatRoomParticipants[result.chatRoomId] = new Set(); // Initialize the set for new chat room
                     }
                     chatRoomParticipants[result.chatRoomId].add(userId);
+                    
+                    const astrologerSocketId = activeUsers[astrologerId];
+                    if (astrologerSocketId) {
+                        io.to(astrologerSocketId).emit('newChatRoom', {
+                            chatRoomId: result.chatRoomId,
+                            userId,
+                            astrologerId,
+                            message: `A user has created a chat room with you.`,
+                        });
+                    }
+
+
 
                     // Notify the astrologer of the incoming chat request
                     socket.to(astrologer.socketId).emit('incomingChatRequest', {
@@ -116,7 +128,10 @@ export const initSocket = (server) => {
             }
         });
 
+<<<<<<< HEAD
         // Event for when a user wants to resume/join a chat
+=======
+>>>>>>> 46ab128 (nitinchanges)
         // Event for when a user wants to resume/join a chat
         socket.on('joinChat', async ({ userId, astrologerId, chatRoomId, hitBy }) => {
             console.log({ userId, astrologerId, chatRoomId, hitBy });
@@ -291,14 +306,15 @@ export const initSocket = (server) => {
         });
         // Event for when a user wants to ends a chat
         socket.on('endChat', async ({ userId, astrologerId, chatRoomId }) => {
-            console.log({ userId, astrologerId, chatRoomId });
 
+            console.log({ userId, astrologerId, chatRoomId });
+            console.log("usersmkdjkdsnvjdvn");
             try {
                 // Find the chat room and ensure the user/astrologer is part of it, then update status to 'inactive'
                 const chatRoom = await ChatRoom.findOneAndUpdate(
                     {
-                        _id: chatRoomId,
                         $or: [
+                            { chatRoomId: chatRoomId },      
                             { user: userId },
                             { astrologer: astrologerId }
                         ],
@@ -329,26 +345,34 @@ export const initSocket = (server) => {
             }
         });
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 46ab128 (nitinchanges)
 
 
         // Handle sending a message from user or astrologer
-        socket.on('sendMessage', async ({ message, chatRoomId }) => {
+        socket.on('sendMessage', async ({ message, senderId,chatRoomId ,senderType}) => {
             try {
+                console.log(message);
+                console.log(senderId);
+                console.log(chatRoomId);
+                console.log(senderType);    
+
                 const chatMessage = {
-                    senderType: message[0].senderType,
-                    senderId: ObjectId.createFromHexString(message[0].senderId),
-                    message: message[0].message,
+                    senderType: senderType, 
+                    senderId: ObjectId.createFromHexString(senderId),
+                    message: message,
                     timestamp: moment().tz('Asia/Kolkata').toDate()  // Correctly using moment for local timezone
                 };
-
+                
                 // Find the existing chat room and update it, or create a new one if it doesn't exist
                 const chat = await Chat.findOneAndUpdate(
                     { chatRoomId },  // Find chat by chatRoomId
                     { $push: { messages: chatMessage } },  // Push the new message to the 'messages' array
                     { new: true, upsert: true }  // If no chat found, create a new one; return the updated document
                 );
-
+                
                 // Broadcast the message to everyone in the room
                 socket.to(chatRoomId).emit('chatMessage', chat);
             } catch (error) {
