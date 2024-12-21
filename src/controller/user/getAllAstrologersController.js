@@ -1,6 +1,10 @@
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 import { Astrologer } from '../../models/astrologer.model.js'; // Path to your astrologer model
+import ChatRoom from "../../models/chatRoomSchema.js";
+import mongoose from "mongoose";
+import moment from 'moment-timezone';
+
 
 // Controller to get all astrologers with pagination
 export const getAllAstrologers = asyncHandler(async (req, res) => {
@@ -44,3 +48,64 @@ export const getAllAstrologers = asyncHandler(async (req, res) => {
         return res.status(500).json(new ApiResponse(500, null, 'Server error while fetching astrologers.'));
     }
 });
+
+export const getActiveById = async (req, res) => {
+    try {
+      const { astrologerId } = req.body;
+      
+      // Check if both fields are provided
+      if (!astrologerId) {
+        return res.status(400).json({ message: 'astrologerId  are required.' });
+      }
+      
+      // Find astrologer by phone
+    //   const chatrooms = await ChatRoom.find({ astrologer: astrologerId,status: "active" });
+
+const chatrooms = await ChatRoom.aggregate([
+  {
+    $match: {
+      astrologer: new mongoose.Types.ObjectId(astrologerId),
+      status: "active",
+    },
+  },
+  {
+    $lookup: {
+      from: "users", // Name of the User collection
+      localField: "user", // Field in ChatRoom to match
+      foreignField: "_id", // Field in User to match
+      as: "userDetails", // Output array field
+    },
+  },
+  {
+    $project: {
+      _id: 1,
+      astrologer: 1,
+      status: 1,
+      user: 1,
+      isUserJoined:1,
+      chatRoomId:1,
+      createdAt: 1,
+      isAstrologerJoined:1,
+      username: {
+        $arrayElemAt: ["$userDetails.name", 0],
+        },
+ 
+    },
+  },
+]);
+
+
+      if (!chatrooms) {
+        return res.status(404).json({ message: 'chatrooms not found.' });
+      }
+      
+      // Respond with tokens and success message
+      res.status(200).json(new ApiResponse(200, chatrooms, "chatrooms List Successfully"));
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json(
+        new ApiResponse(500, {}, "Server error. Please try again later.")
+      );
+  
+    }
+  };

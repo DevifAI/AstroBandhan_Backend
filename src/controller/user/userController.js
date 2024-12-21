@@ -277,3 +277,29 @@ export const updatePassword_user = asyncHandler(async (req, res) => {
     return res.status(500).json(new ApiResponse(500, null, 'An error occurred while updating the password.'));
   }
 });
+
+export const getuserById = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    
+    // Check if both fields are provided
+    if (!userId) {
+      return res.status(400).json({ message: 'userId  are required.' });
+    }
+    
+    // Find astrologer by phone
+    const user = await User.findById({ userId });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    
+    // Respond with tokens and success message
+    res.status(200).json(new ApiResponse(200, user, "User Login Successfully"));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json(
+      new ApiResponse(500, {}, "Server error. Please try again later.")
+    );
+
+  }
+};

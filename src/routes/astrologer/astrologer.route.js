@@ -4,6 +4,7 @@ import { editProfilePhoto } from '../../controller/admin/editAstrologerProfilePh
 import { upload } from '../../middlewares/multer.middlewre.js';
 import { addPendingAstrologerRequest } from '../../controller/astrologer/createPendingRequest.js';
 import { update_availability } from '../../controller/astrologer/updateAvailability.js';
+import { getActiveById } from '../../controller/user/getAllAstrologersController.js';
 
 
 const router = express.Router();
@@ -17,6 +18,7 @@ router.post('/send/otp', forgetPassword)
 router.post('/validate/otp', validateOtp)
 router.post('/update/password', updatePassword)
 router.post('/update/availability/:astrologerId', update_availability)
+router.post('/activechatroom',getActiveById);
 
 
 export default router;

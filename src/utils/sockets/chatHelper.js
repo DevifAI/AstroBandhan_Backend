@@ -59,17 +59,18 @@ export const getUserStatus = async (userId) => {
     }
 };
 
-// Function to create a new chat room or notify if astrologer or user is busy
 export const joinChatRoom = async (userId, astrologerId, chatRoomId, hitBy) => {
+    
     const chatRoom = await ChatRoom.findOne({
         chatRoomId: chatRoomId,  // Check for the provided chatRoomId
         user: ObjectId.createFromHexString(userId),            // Convert userId to ObjectId
+        astrologer: ObjectId.createFromHexString(astrologerId),            // Convert userId to ObjectId
         status: 'active'         // Ensure the chat room status is 'active'
     });
 
     if (chatRoom) {
         // Update the 'isUserJoined' or 'isAstrologerJoined' field based on the 'hitBy' value
-        if (hitBy === 'astrologer' && chatRoom.astrologer === null) {
+        if (hitBy === 'astrologer') {
             // If hitBy is 'astrologer' and astrologer is null, update the astrologerId
             chatRoom.astrologer = ObjectId.createFromHexString(astrologerId);
             chatRoom.isAstrologerJoined = true; // Mark astrologer as joined
@@ -79,13 +80,41 @@ export const joinChatRoom = async (userId, astrologerId, chatRoomId, hitBy) => {
 
         // Save the updated chat room
         await chatRoom.save();
-        
+
         return true;
     } else {
         // No matching chat room found
         return false;
     }
 };
+
+// Function to create a new chat room or notify if astrologer or user is busy
+// export const joinChatRoom = async (userId, astrologerId, chatRoomId, hitBy) => {
+//     const chatRoom = await ChatRoom.findOne({
+//         chatRoomId: chatRoomId,  // Check for the provided chatRoomId
+//         user: ObjectId.createFromHexString(userId),            // Convert userId to ObjectId
+//         status: 'active'         // Ensure the chat room status is 'active'
+//     });
+
+//     if (chatRoom) {
+//         // Update the 'isUserJoined' or 'isAstrologerJoined' field based on the 'hitBy' value
+//         if (hitBy === 'astrologer' && chatRoom.astrologer === null) {
+//             // If hitBy is 'astrologer' and astrologer is null, update the astrologerId
+//             chatRoom.astrologer = ObjectId.createFromHexString(astrologerId);
+//             chatRoom.isAstrologerJoined = true; // Mark astrologer as joined
+//         } else if (hitBy === 'user') {
+//             chatRoom.isUserJoined = true; // Mark user as joined
+//         }
+
+//         // Save the updated chat room
+//         await chatRoom.save();
+        
+//         return true;
+//     } else {
+//         // No matching chat room found
+//         return false;
+//     }
+// };
 
 // Function to create a new chat room
 // Function to create a new chat room or notify if astrologer or user is busy
@@ -112,7 +141,7 @@ export const createChatRoom = async (userId, role, astrologerId) => {
             // Create a new chat room for the user and assign the astrologer
             room = new ChatRoom({
                 user: userId,  // Only one user in the chat room
-                astrologer: null,  // Assign the astrologer to the chat room
+                astrologer: astrologerId,  // Assign the astrologer to the chat room
                 status: 'active',
                 isUserJoined: true,
                 isAstrologerJoined: false,
