@@ -9,8 +9,9 @@ import { updateAstrologerFields } from '../../controller/admin/updateAstrologerF
 import { getAstrologers } from '../../controller/admin/findAstrologerBy_id_name_specialities.js';
 import { addAstrologerToCategory, addCategory, deleteAstrologerFromCategory, deleteCategory, getAstrologersByCategoryName } from '../../controller/admin/AstrologerCategory.js';
 import { getPendingAstrologerRequests } from '../../controller/admin/getPendingAstrologerRequest.js'
-import { addAstrologer, editAstrologer,deleteAstrologer } from '../../controller/admin/ai_astrologerController.js';
+import { addAstrologer, editAstrologer, deleteAstrologer } from '../../controller/admin/ai_astrologerController.js';
 import { addProductCategory, deleteProductCategory, editProductCategory } from '../../controller/admin/addProductCategoryController.js';
+import { get_total_astrologers, get_total_completed_chat, get_total_Order, get_total_users, get_unverified_astrologers } from '../../controller/admin/dashboard/manageDashboard.js';
 const router = express.Router();
 
 // Route to create a language
@@ -41,5 +42,10 @@ router.delete('/delete/ai/astrologer/:astrologerId', deleteAstrologer);
 router.post('/add/product/category', addProductCategory);
 router.post('/edit/product/category/:id', editProductCategory);
 router.delete('/delete/product/category/:id', deleteProductCategory);
+router.get('/totalastrologers', get_total_astrologers);
+router.get('/totalusers', get_total_users);
+router.get('/totalchats', get_total_completed_chat);
+router.get('/totalorders', get_total_Order);
+router.get('/unverified/astrologers', get_unverified_astrologers);
 
 export default router;

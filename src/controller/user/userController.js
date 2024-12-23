@@ -6,6 +6,8 @@ import { validatePhoneNumber } from '../../utils/validatePhoneNumber.js';
 import { sendOTP } from '../../utils/sendOtp.js';
 import { validateOTP } from '../../utils/validateOtp.js';
 import { Astrologer } from "../../models/astrologer.model.js";
+import { uploadOnCloudinary } from "../../middlewares/cloudinary.setup.js";
+import fs from "fs";
 
 export const registerUser = asyncHandler(async (req, res) => {
   try {
@@ -32,6 +34,22 @@ export const registerUser = asyncHandler(async (req, res) => {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);  // Correct usage of bcrypt.hash
 
+    const avatarLocalPath = req.file.path;
+
+    // Upload new avatar to Cloudinary
+    let avatarUrl;
+    try {
+      const uploadResult = await uploadOnCloudinary(avatarLocalPath);
+      avatarUrl = uploadResult.url;
+
+      // Delete the locally saved file after successful upload
+      fs.unlinkSync(avatarLocalPath);
+    } catch (error) {
+      console.log(error)
+      return res.status(500).json(new ApiResponse(500, null, "Failed to upload photo."));
+    }
+
+
     // Create new user
     const newUser = await User.create({
       name,
@@ -41,6 +59,7 @@ export const registerUser = asyncHandler(async (req, res) => {
       timeOfBirth,
       placeOfBirth,
       gender,
+      photo: avatarUrl,
       password: hashedPassword,  // Save hashed password
     });
 
@@ -97,7 +116,7 @@ export const userLogin = async (req, res) => {
     await user.save();
 
 
-    
+
 
     // Respond with tokens and success message
     res.status(200).json(new ApiResponse(200, {
@@ -108,7 +127,7 @@ export const userLogin = async (req, res) => {
         id: user._id,
         name: user.name,
         phone: user.phone,
-        Free_Chat_Available:user.Free_Chat_Available
+        Free_Chat_Available: user.Free_Chat_Available
         // Include other public details if necessary
       },
     }, "User Login Successfully"));
@@ -281,18 +300,18 @@ export const updatePassword_user = asyncHandler(async (req, res) => {
 export const getuserById = async (req, res) => {
   try {
     const { userId } = req.body;
-    
+
     // Check if both fields are provided
     if (!userId) {
       return res.status(400).json({ message: 'userId  are required.' });
     }
-    
+
     // Find astrologer by phone
     const user = await User.findById({ userId });
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
     }
-    
+
     // Respond with tokens and success message
     res.status(200).json(new ApiResponse(200, user, "User Login Successfully"));
   } catch (error) {

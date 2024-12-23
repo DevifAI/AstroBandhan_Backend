@@ -21,7 +21,6 @@ export const getAstrologerStatus = async (astrologerId) => {
         // Query the database
         const chatRoom = await ChatRoom.findOne({ astrologer: astrologerObjectId, status: 'active' });
 
-        console.log({ chatRoom });
 
         // Return a boolean value indicating if an active chat room is found
         return !!chatRoom;

@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema({
     gender: { type: String, required: true },
     phone: { type: String, required: true, unique: true },
     walletBalance: { type: Number, default: 0 },
+    photo: { type: String, required: true },
     Free_Chat_Available: { type: Boolean, default: true },
     followed_astrologers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Astrologer', default: [] }],
     consultations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Consultation', default: [] }],

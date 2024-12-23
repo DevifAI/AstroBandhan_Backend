@@ -1,4 +1,4 @@
-import {Notification} from '../../models/notificationSchema.js';  // Assuming this is your notification model
+import Notification from "../../models/notifications.model.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 import { asyncHandler } from '../../utils/asyncHandler.js';
 

@@ -11,9 +11,11 @@ import { ask_ai_astro, fetch_ai_astro_chat } from "../../controller/user/ask_AI_
 import { getAllLanguages } from "../../controller/admin/LanguageController.js";
 import { add_wallet_balance, find_transaction_history_by_category } from "../../controller/user/addWalletBalance.js";
 import { deleteNotifications, getAllNotificationsByUserId, markNotificationsAsRead } from "../../controller/user/NotificationHandler.js";
+import { upload } from "../../middlewares/multer.middlewre.js";
+import { start_call } from "../../controller/user/callController.js";
 const router = Router();
 
-router.route("/signup").post(registerUser);
+router.route("/signup", upload.single('photo')).post(registerUser);
 router.route("/changepassword/:userId").post(changePassword);
 router.route("/login").post(userLogin);
 router.route("/addreview").post(addReview);
@@ -29,4 +31,5 @@ router.post('/get/balance/history', find_transaction_history_by_category)
 router.put('/notifications/:userId/read', markNotificationsAsRead);
 router.delete('/notifications/:userId', deleteNotifications);
 router.get('/notifications/:userId', getAllNotificationsByUserId);
+router.post('/start/call', start_call);
 export default router;

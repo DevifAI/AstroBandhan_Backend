@@ -13,6 +13,8 @@ const ai_astrologerSchema = new mongoose.Schema(
         specialities: [
             {
                 type: String,
+                enum: ['tarot', 'numerology', 'vedic'], // Allowed values
+                required: true, // Ensure at least one speciality is provided
             },
         ],
         rating: {
@@ -22,10 +24,6 @@ const ai_astrologerSchema = new mongoose.Schema(
         totalRatingsCount: {
             type: Number,
             default: 0,
-        },
-        pricePerCallMinute: {
-            type: Number,
-            required: true,
         },
         pricePerChatMinute: {
             type: Number,

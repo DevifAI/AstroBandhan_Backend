@@ -75,11 +75,13 @@ export const initSocket = (server) => {
 
                     const chatRoomId = result.chatRoomId;
                     socket.join(chatRoomId);
-                    socket.emit('chatRoomCreated', {"success":true, chatRoomId, astrologerId : astrologerId,userId:userId,totalChatDuration: totalTime });
+                    socket.emit('chatRoomCreated', { "success": true, chatRoomId, astrologerId: astrologerId, userId: userId, totalChatDuration: totalTime });
                     if (!chatRoomParticipants[result.chatRoomId]) {
                         chatRoomParticipants[result.chatRoomId] = new Set(); // Initialize the set for new chat room
                     }
                     chatRoomParticipants[result.chatRoomId].add(userId);
+
+                    socket.to(chatRoomId).emit('system_message', `Astrologer will join soon !`);
 
                     const astrologerSocketId = activeUsers[astrologerId];
                     if (astrologerSocketId) {
@@ -89,6 +91,7 @@ export const initSocket = (server) => {
                             astrologerId,
                             message: `A user has created a chat room with you.`,
                         });
+
                     }
 
 
@@ -99,6 +102,8 @@ export const initSocket = (server) => {
                         chatRoomId,
                         message: 'Incoming chat request',
                     });
+
+
 
                     // Handle astrologer's response
                     socket.on('astrologerResponse', async ({ chatRoomId, response }) => {
@@ -111,10 +116,8 @@ export const initSocket = (server) => {
                             // Notify the user and force them to leave the chat room
                             socket.to(chatRoomId).emit('chatDenied', { message: 'Chat request denied by astrologer' });
                             socket.leave(chatRoomId);
-
                             // Remove the chat room from active sessions
                             delete chatRoomParticipants[chatRoomId];
-
                             // Optionally clean up the chat room data in the database
                             await ChatRoom.findByIdAndUpdate(chatRoomId, { status: 'inactive' });
                         }
@@ -148,9 +151,9 @@ export const initSocket = (server) => {
 
                 // Step 3: Check if both participants have joined
                 if (isAllUsersJoined(chatRoomId, userId, astrologerId)) {
-                    joinChatRoom(userId,astrologerId,chatRoomId,hitBy);
+                    joinChatRoom(userId, astrologerId, chatRoomId, hitBy);
                     console.log("Both users are in the chat room:", chatRoomParticipants);
-
+                    socket.to(chatRoomId).emit('system_message', `Astrologer Joined !`);
                     // Step 4: Store the start time of the chat session
                     chatStartTimes[chatRoomId] = Date.now();
 
@@ -308,9 +311,6 @@ export const initSocket = (server) => {
 
         // Event for when a user wants to ends a chat
         socket.on('endChat', async ({ userId, astrologerId, chatRoomId }) => {
-
-            console.log({ userId, astrologerId, chatRoomId });
-            console.log("usersmkdjkdsnvjdvn");
             try {
                 // Find the chat room and ensure the user/astrologer is part of it, then update status to 'inactive'
                 const chatRoom = await ChatRoom.findOneAndUpdate(
@@ -350,10 +350,6 @@ export const initSocket = (server) => {
         // Handle sending a message from user or astrologer
         socket.on('sendMessage', async ({ message, senderId, chatRoomId, senderType }) => {
             try {
-                console.log(message);
-                console.log(senderId);
-                console.log(chatRoomId);
-                console.log(senderType);
 
                 const chatMessage = {
                     senderType: senderType,
