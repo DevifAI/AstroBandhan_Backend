@@ -97,7 +97,7 @@ export const userLogin = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
     }
-
+    
     // Check if password matches
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -113,11 +113,13 @@ export const userLogin = async (req, res) => {
 
     // Save the refresh token to the database (optional but recommended)
     user.refreshToken = refreshToken;
+    user.photo = "https://www.google.com/";
+
+
     await user.save();
 
-
-
-
+ 
+    
     // Respond with tokens and success message
     res.status(200).json(new ApiResponse(200, {
       message: 'Login successful',
