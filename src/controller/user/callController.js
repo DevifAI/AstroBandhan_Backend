@@ -60,7 +60,7 @@ const acquireRecordingResource = async (channelName, randomNumber, username, pas
 
 
 // API to start the recording
-const startRecording = async (resourceId, channelName, uid, token) => {
+const startRecording = async (resourceId, channelName, uid, token,publisherUid,JoinedId) => {
     const startParams = {
         cname: channelName,
         uid: "589517928",
@@ -72,8 +72,8 @@ const startRecording = async (resourceId, channelName, uid, token) => {
                 "streamMode": "original",
                 "channelType": 0,
                 "subscribeAudioUids": [
-                    "589517928",
-                    "589517926"
+                    publisherUid,
+                    JoinedId
                 ],
                 "subscribeUidGroup": 0
             },
@@ -109,6 +109,7 @@ const startRecording = async (resourceId, channelName, uid, token) => {
 
 // API to stop the recording
 const stopRecording = async (resourceId, sid, channelName, uid) => {
+
     const stopParams = {
         cname: channelName,
         uid: "589517928",
@@ -141,10 +142,13 @@ const stopRecording = async (resourceId, sid, channelName, uid) => {
 // Function to start the call and record it
 export const start_call = asyncHandler(async (req, res) => {
     try {
-        const { userId, astrologerId, channelName } = req.body;
+
+
+        console.log("callComming");
+        const { userId, astrologerId, channelName,publisherUid,JoinedId } = req.body;
         const user = await User.findById(userId);
         const astrologer = await Astrologer.findById(astrologerId);
-
+        
         if (!user || !astrologer) {
             return res.status(404).json({ message: "User or Astrologer not found" });
         }
@@ -169,13 +173,13 @@ export const start_call = asyncHandler(async (req, res) => {
         const { resourceId } = await acquireRecordingResource(channelName, randomNumber);
 
         // Start recording
-        const resCall = await startRecording(resourceId, channelName, Math.floor(Math.random() * 100), token);
+        const resCall = await startRecording(resourceId, channelName, Math.floor(Math.random() * 100), token,publisherUid,JoinedId);
 
         // Create the Call document in the database
         const newCall = new Call({
             userId,
             astrologerId,
-            channelName,
+            channelName: resCall.cname,
             startedAt: new Date(),
             totalAmount: pricePerMinute,
             sid: resCall.sid,
@@ -220,9 +224,12 @@ export const start_call = asyncHandler(async (req, res) => {
     }
 });
 
-// Function to stop the recording and log the transaction
-const endCallAndLogTransaction = async (callId) => {
+
+
+export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
+
     try {
+        const { callId } = req.body;
         const call = await Call.findById(callId).populate("userId astrologerId");
         if (!call || !call.startedAt) return;
 
@@ -266,4 +273,8 @@ const endCallAndLogTransaction = async (callId) => {
     } catch (error) {
         console.error("Error ending the call:", error);
     }
-};
+});
+ 
+
+// Function to stop the recording and log the transaction
+ 

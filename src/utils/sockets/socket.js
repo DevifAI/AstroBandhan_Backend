@@ -7,7 +7,8 @@ import moment from "moment-timezone";
 import { User } from "../../models/user.model.js";
 import { Astrologer } from "../../models/astrologer.model.js";
 import { Wallet } from "../../models/walletSchema.model.js";
-import { AdminWallet } from "../../models/adminWallet.js";
+import {  start_call } from "../../controller/user/callController.js";
+import axios from "axios";
 
 // Store connected users (active users map)
 export let activeUsers = {};  // Store users by userId and socketId
@@ -131,6 +132,72 @@ export const initSocket = (server) => {
                 socket.emit('error', 'An error occurred while starting the chat.');
             }
         });
+        
+        socket.on('startaudiocall', async ({ userId, channleid, astrologerId}) => {
+            
+            // Send POST request using axios
+            // const response = await axios.post('http://localhost:6000/astrobandhan/v1/user/start/call', payload);
+            // console.log(response);
+            
+            const astrologerSocketId = activeUsers[astrologerId];
+            
+            io.to(astrologerSocketId).emit('startaudiocall', {
+                channleid: channleid,
+                userId,
+                astrologerId,
+                // callId:response.data["callId"],
+                // response:response.data,
+                message: `A user has created a chat room with you.`,
+            });
+            
+        });
+
+        socket.on('joinedaudiocall', async ({ userId, channleid, astrologerId,publisherUid, JoinedId  }) => {
+            console.log({publisherUid, JoinedId});
+            const payload = {
+                userId: userId,        // Replace with actual userId
+                astrologerId: astrologerId,  // Replace with actual astrologerId
+                channelName: channleid ,
+                publisherUid,
+                JoinedId // Replace with actual channelName
+            };
+
+            console.log("payload");
+            console.log(payload);
+            
+            // Send POST request using axios
+            // const response = await axios.post('http://localhost:6000/astrobandhan/v1/user/start/call', payload);
+            // console.log(response);
+
+            const astrologerSocketId = activeUsers[astrologerId];
+            
+            io.to(astrologerSocketId).emit('startaudiocall', {
+                channleid: channleid,
+                userId,
+                astrologerId,
+                // callId:response.data["callId"],
+                // response:response.data,
+                message: `A user has created a chat room with you.`,
+            });
+            
+        });
+
+        socket.on('endaudiocall', async ({ userId, astrologerId, callId }) => {
+            
+            // const payload = {
+            //     callId  // Replace with actual channelName
+            // };
+            // const response = await axios.post('http://localhost:6000/astrobandhan/v1/user/end/call', payload);
+            // console.log(response);
+
+            const astrologerSocketId = activeUsers[astrologerId];
+
+            io.to(astrologerSocketId).emit('endaudiocall', { 
+                userId,
+                astrologerId,
+                message: `Audio Call Ended.`,
+            });
+        });
 
 
         // Event for when a user wants to resume/join a chat
@@ -168,7 +235,6 @@ export const initSocket = (server) => {
                     }
 
                     const minuteCost = astrologer.pricePerChatMinute;
-                    const chat_commission = astrologer.chatCommission;
 
                     // Step 6: Check user's wallet balance
                     if (user.walletBalance < minuteCost) {
@@ -192,10 +258,29 @@ export const initSocket = (server) => {
                         await user.save();
 
                         // Increment astrologer's wallet balance
-                        astrologer.walletBalance += minuteCost - chat_commission;
+                        astrologer.walletBalance += minuteCost;
                         await astrologer.save();
 
+                        // Log the transaction
+                        const userTransaction = new Wallet({
+                            user_id: userId,
+                            amount: minuteCost,
+                            transaction_id: `TXN-${Date.now()}`,
+                            amount_type: 'debit',
+                            debit_type: 'chat',
+                            chatRoomId: chatRoomId,
+                        });
+                        await userTransaction.save();
 
+                        const astrologerTransaction = new Wallet({
+                            user_id: astrologerId,
+                            amount: minuteCost,
+                            transaction_id: `TXN-${Date.now()}`,
+                            amount_type: 'credit',
+                            debit_type: 'chat',
+                            chatRoomId: chatRoomId,
+                        });
+                        await astrologerTransaction.save();
 
                         // Emit success message
                         socket.emit('intervalMessage', { chatRoomId, message: `Total of ${minuteCost} deducted from user's wallet. Remaining balance: ${user.walletBalance}` });
@@ -260,6 +345,8 @@ export const initSocket = (server) => {
                 socket.emit('error', 'An error occurred while joining the chat.');
             }
         });
+
+
         socket.on('resumeChat', async ({ chatRoomId, userId, astrologerId }) => {
             try {
                 // Ensure the chat room exists in participants list
@@ -313,48 +400,8 @@ export const initSocket = (server) => {
                     },
                     { new: true } // Return the updated document
                 );
+
                 if (chatRoom) {
-
-                    const chat = Chat.findOne({ chatRoomId })
-                    const totalDuration = chat.duration
-                    const astrologer = Astrologer.findOne({ astrologerId })
-                    const minuteCost = astrologer.pricePerChatMinute;
-                    const chat_commission = astrologer.chatCommission;
-
-                    // Calculate the total amounts
-                    const userAmount = minuteCost * totalDuration;
-                    const astrologerAmount = (minuteCost - chat_commission) * totalDuration;
-                    // Log the transaction
-                    if (totalDuration !== "Not Started") {
-                        const userTransaction = new Wallet({
-                            user_id: userId,
-                            amount: userAmount,
-                            transaction_id: `TXN-+${chatRoomId}+${Date.now()}`,
-                            transaction_type: 'debit',
-                            debit_type: 'chat',
-                            service_reference_id: chatRoomId,
-                        });
-                        await userTransaction.save();
-
-                        const astrologerTransaction = new Wallet({
-                            user_id: astrologerId,
-                            amount: astrologerAmount,
-                            transaction_id: `TXN-+${chatRoomId}+${Date.now()}`,
-                            transaction_type: 'credit',
-                            credit_type: 'chat',
-                            service_reference_id: chatRoomId,
-                        });
-                        await astrologerTransaction.save();
-
-                        const admin_wallet = new AdminWallet({
-                            amount: chat_commission * totalDuration,
-                            transaction_id: `TXN-+${chatRoomId}+${Date.now()}`,
-                            transaction_type: 'credit',
-                            credit_type: 'chat',
-                            service_reference_id: chatRoomId,
-                        });
-                        await admin_wallet.save();
-                    }
                     // Notify both the user and astrologer
                     clearInterval(chatIntervals[chatRoomId]);
                     socket.emit('chatEnded', { chatRoomId, message: 'Chat has ended.' });
@@ -366,11 +413,9 @@ export const initSocket = (server) => {
                             astrologerId,
                             message: `A user has created a chat room with you.`,
                         });
-
                     }
                     socket.to(chatRoomId).emit('chatEnded', { chatRoomId, message: 'The chat has ended.' });
                     
-
                     // Optionally, leave the chat room
                     socket.leave(chatRoomId);
                     // Remove the participants from the chat room

@@ -12,7 +12,7 @@ import { getAllLanguages } from "../../controller/admin/LanguageController.js";
 import { add_wallet_balance, find_transaction_history_by_category } from "../../controller/user/addWalletBalance.js";
 import { deleteNotifications, getAllNotificationsByUserId, markNotificationsAsRead } from "../../controller/user/NotificationHandler.js";
 import { upload } from "../../middlewares/multer.middlewre.js";
-import { start_call } from "../../controller/user/callController.js";
+import { endCallAndLogTransaction, start_call } from "../../controller/user/callController.js";
 const router = Router();
 
 router.route("/signup", upload.single('photo')).post(registerUser);
@@ -32,4 +32,5 @@ router.put('/notifications/:userId/read', markNotificationsAsRead);
 router.delete('/notifications/:userId', deleteNotifications);
 router.get('/notifications/:userId', getAllNotificationsByUserId);
 router.post('/start/call', start_call);
+router.post('/end/call', endCallAndLogTransaction);
 export default router;
