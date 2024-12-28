@@ -292,6 +292,11 @@ export const initSocket = (server) => {
 
         // Event for when a user wants to ends a chat
         socket.on('endChat', async ({ userId, astrologerId, chatRoomId }) => {
+            console.log("userId");
+            console.log(userId);
+            console.log(astrologerId);
+            console.log(chatRoomId);
+
             try {
                 // Find the chat room and ensure the user/astrologer is part of it, then update status to 'inactive'
                 const chatRoom = await ChatRoom.findOneAndUpdate(
@@ -353,7 +358,18 @@ export const initSocket = (server) => {
                     // Notify both the user and astrologer
                     clearInterval(chatIntervals[chatRoomId]);
                     socket.emit('chatEnded', { chatRoomId, message: 'Chat has ended.' });
+                    const astrologerSocketId = activeUsers[astrologerId];
+                    if (astrologerSocketId) {
+                        io.to(astrologerSocketId).emit('chatEnded_XX', {
+                            chatRoomId: chatRoomId,
+                            userId,
+                            astrologerId,
+                            message: `A user has created a chat room with you.`,
+                        });
+
+                    }
                     socket.to(chatRoomId).emit('chatEnded', { chatRoomId, message: 'The chat has ended.' });
+                    
 
                     // Optionally, leave the chat room
                     socket.leave(chatRoomId);
