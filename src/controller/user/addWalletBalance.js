@@ -3,13 +3,14 @@ import { User } from "../../models/user.model.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 import { Wallet } from "../../models/walletSchema.model.js";
 import { activeUsers, io } from "../../utils/sockets/socket.js";
+import { AdminWallet } from "../../models/adminWallet.js";
 
 export const add_wallet_balance = asyncHandler(async (req, res) => {
     try {
 
-        const { userId, transaction_id, amount, amount_type, debit_type } = req.body
+        const { userId, transaction_id, amount, amount_type } = req.body
 
-        console.log({ userId, transaction_id, amount, amount_type, debit_type })
+        console.log({ userId, transaction_id, amount, amount_type })
 
         if (!userId || !transaction_id || !amount || !amount_type) {
             return res.status(400).json(
@@ -32,35 +33,16 @@ export const add_wallet_balance = asyncHandler(async (req, res) => {
                 new ApiResponse(201, {}, `Invalid  Transaction Id !!`)
             );
         }
-
-        if (amount_type === "debit") {
-            if (user.walletBalance >= amount) {
-                await User.findByIdAndUpdate(
-                    userId, // The ID of the user
-                    { $inc: { walletBalance: -amount } }, // Increment the wallet balance by the specified amount
-                );
-            }
-            else {
-                return res.status(201).json(
-                    new ApiResponse(201, {}, `Low Balance !!`)
-                );
-            }
-
-        }
-
-        // Create and save the new review
-        const add_wallet_doc = new Wallet({ user_id: userId, amount, amount_type, transaction_id, debit_type });
-        await add_wallet_doc.save();
-
         if (amount_type === "credit") {
             await User.findByIdAndUpdate(
                 userId, // The ID of the user
                 { $inc: { walletBalance: amount } }, // Increment the wallet balance by the specified amount
             );
         }
-        // else {
-        //    
-        // }
+        const add_wallet_doc = new Wallet({ user_id: userId, amount, transaction_id, transaction_type: amount_type, credit_type: "wallet_recharge" });
+        const add_admin_wallet_doc = new AdminWallet({ amount, transaction_id, transaction_type: amount_type, credit_type: "wallet_recharge" });
+        await add_wallet_doc.save();
+        await add_admin_wallet_doc.save();
 
         const userSocketId = activeUsers[userId]; // Retrieve the socketId for the user from activeUsers
         if (userSocketId) {
@@ -110,11 +92,11 @@ export const find_transaction_history_by_category = asyncHandler(async (req, res
         // Find wallet transactions
         let transactions;
         if (amount_type === "all") {
-            transactions = await Wallet.find({ user_id: userId}).sort({ createdAt: -1 }).exec(); // Execute query
-        }else if (amount_type === "credit") {
-            transactions = await Wallet.find({ user_id: userId, amount_type }).sort({ createdAt: -1 }).exec(); // Execute query
+            transactions = await Wallet.find({ user_id: userId }).sort({ createdAt: -1 }).exec(); // Execute query
+        } else if (amount_type === "credit") {
+            transactions = await Wallet.find({ user_id: userId, transaction_type: amount_type }).sort({ createdAt: -1 }).exec(); // Execute query
         } else {
-            transactions = await Wallet.find({ user_id: userId, amount_type, debit_type }).sort({ createdAt: -1 }).exec(); // Execute query
+            transactions = await Wallet.find({ user_id: userId, transaction_type: amount_type, debit_type }).sort({ createdAt: -1 }).exec(); // Execute query
         }
         const response = {
             transactions,

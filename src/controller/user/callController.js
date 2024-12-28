@@ -247,16 +247,18 @@ const endCallAndLogTransaction = async (callId) => {
             user_id: call.userId,
             amount: call.totalAmount,
             transaction_id: `CALL-${call._id}+${Date.now()}`,
-            amount_type: "debit",
+            transaction_type: "debit",
             debit_type: "call",
+            service_reference_id: call._id
         });
 
         await Wallet.create({
             user_id: call.astrologerId,
             amount: call.totalAmount,
-            transaction_id: `CALL-${call._id}`,
-            amount_type: "credit",
-            debit_type: "call",
+            transaction_id: `CALL-${call._id}+${Date.now()}`,
+            transaction_type: "credit",
+            credit_type: "call",
+            service_reference_id: call._id
         });
 
         await call.save();

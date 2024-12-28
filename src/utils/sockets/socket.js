@@ -7,6 +7,7 @@ import moment from "moment-timezone";
 import { User } from "../../models/user.model.js";
 import { Astrologer } from "../../models/astrologer.model.js";
 import { Wallet } from "../../models/walletSchema.model.js";
+import { AdminWallet } from "../../models/adminWallet.js";
 
 // Store connected users (active users map)
 export let activeUsers = {};  // Store users by userId and socketId
@@ -167,6 +168,7 @@ export const initSocket = (server) => {
                     }
 
                     const minuteCost = astrologer.pricePerChatMinute;
+                    const chat_commission = astrologer.chatCommission;
 
                     // Step 6: Check user's wallet balance
                     if (user.walletBalance < minuteCost) {
@@ -190,29 +192,10 @@ export const initSocket = (server) => {
                         await user.save();
 
                         // Increment astrologer's wallet balance
-                        astrologer.walletBalance += minuteCost;
+                        astrologer.walletBalance += minuteCost - chat_commission;
                         await astrologer.save();
 
-                        // Log the transaction
-                        const userTransaction = new Wallet({
-                            user_id: userId,
-                            amount: minuteCost,
-                            transaction_id: `TXN-${Date.now()}`,
-                            amount_type: 'debit',
-                            debit_type: 'chat',
-                            chatRoomId: chatRoomId,
-                        });
-                        await userTransaction.save();
 
-                        const astrologerTransaction = new Wallet({
-                            user_id: astrologerId,
-                            amount: minuteCost,
-                            transaction_id: `TXN-${Date.now()}`,
-                            amount_type: 'credit',
-                            debit_type: 'chat',
-                            chatRoomId: chatRoomId,
-                        });
-                        await astrologerTransaction.save();
 
                         // Emit success message
                         socket.emit('intervalMessage', { chatRoomId, message: `Total of ${minuteCost} deducted from user's wallet. Remaining balance: ${user.walletBalance}` });
@@ -277,8 +260,6 @@ export const initSocket = (server) => {
                 socket.emit('error', 'An error occurred while joining the chat.');
             }
         });
-
-
         socket.on('resumeChat', async ({ chatRoomId, userId, astrologerId }) => {
             try {
                 // Ensure the chat room exists in participants list
@@ -327,8 +308,48 @@ export const initSocket = (server) => {
                     },
                     { new: true } // Return the updated document
                 );
-
                 if (chatRoom) {
+
+                    const chat = Chat.findOne({ chatRoomId })
+                    const totalDuration = chat.duration
+                    const astrologer = Astrologer.findOne({ astrologerId })
+                    const minuteCost = astrologer.pricePerChatMinute;
+                    const chat_commission = astrologer.chatCommission;
+
+                    // Calculate the total amounts
+                    const userAmount = minuteCost * totalDuration;
+                    const astrologerAmount = (minuteCost - chat_commission) * totalDuration;
+                    // Log the transaction
+                    if (totalDuration !== "Not Started") {
+                        const userTransaction = new Wallet({
+                            user_id: userId,
+                            amount: userAmount,
+                            transaction_id: `TXN-+${chatRoomId}+${Date.now()}`,
+                            transaction_type: 'debit',
+                            debit_type: 'chat',
+                            service_reference_id: chatRoomId,
+                        });
+                        await userTransaction.save();
+
+                        const astrologerTransaction = new Wallet({
+                            user_id: astrologerId,
+                            amount: astrologerAmount,
+                            transaction_id: `TXN-+${chatRoomId}+${Date.now()}`,
+                            transaction_type: 'credit',
+                            credit_type: 'chat',
+                            service_reference_id: chatRoomId,
+                        });
+                        await astrologerTransaction.save();
+
+                        const admin_wallet = new AdminWallet({
+                            amount: chat_commission * totalDuration,
+                            transaction_id: `TXN-+${chatRoomId}+${Date.now()}`,
+                            transaction_type: 'credit',
+                            credit_type: 'chat',
+                            service_reference_id: chatRoomId,
+                        });
+                        await admin_wallet.save();
+                    }
                     // Notify both the user and astrologer
                     clearInterval(chatIntervals[chatRoomId]);
                     socket.emit('chatEnded', { chatRoomId, message: 'Chat has ended.' });
