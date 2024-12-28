@@ -1,10 +1,10 @@
 import axios from 'axios';
 
 export const validateOTP = async (phoneNumber, verificationId, code) => {
-    const url = `https://cpaas.messagecentral.com/verification/v3/validateOtp?countryCode=91&mobileNumber=${phoneNumber}&verificationId=${verificationId}&customerId=C-7813E9FA1B89403&code=${code}`;
+    const url = `https://cpaas.messagecentral.com/verification/v3/validateOtp?countryCode=91&mobileNumber=${phoneNumber}&verificationId=${verificationId}&customerId=C-7BD3A60091FE4B3&code=${code}`;
 
     // Replace with the actual token you use for authorization
-    const authToken = 'eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJDLTc4MTNFOUZBMUI4OTQwMyIsImlhdCI6MTczMTMwMjU1MywiZXhwIjoxODg4OTgyNTUzfQ.4gP9TVP4I29CkFG1uUL9uZMvcy9irRPFFO0XstWUAavOQ5vQpW1bqXYVtRJqkcrggCqVACIfLHnLqfpMrltM2Q';
+    const authToken = 'eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJDLTdCRDNBNjAwOTFGRTRCMyIsImlhdCI6MTczNTQxMzAyOCwiZXhwIjoxODkzMDkzMDI4fQ.PvNxYNbu01sgMIqQMvPqdaaXSksPtxIocrSzDEvVlTmcXrTyNYSrJ3Oo4bD-fFmsRyMJRem59CNUEraUxNXAxQ';
 
     try {
         const response = await axios.get(url, {
