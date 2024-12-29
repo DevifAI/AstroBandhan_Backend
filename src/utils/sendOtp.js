@@ -1,10 +1,10 @@
 import axios from 'axios';
 
 export const sendOTP = async (phoneNumber) => {
-    const url = `https://cpaas.messagecentral.com/verification/v3/send?countryCode=91&customerId=C-7813E9FA1B89403&flowType=SMS&mobileNumber=${phoneNumber}`;
+    const url = `https://cpaas.messagecentral.com/verification/v3/send?countryCode=91&customerId=C-7BD3A60091FE4B3&flowType=SMS&mobileNumber=${phoneNumber}`;
 
     // Replace this with your actual token
-    const authToken = 'eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJDLTc4MTNFOUZBMUI4OTQwMyIsImlhdCI6MTczMTMwMjU1MywiZXhwIjoxODg4OTgyNTUzfQ.4gP9TVP4I29CkFG1uUL9uZMvcy9irRPFFO0XstWUAavOQ5vQpW1bqXYVtRJqkcrggCqVACIfLHnLqfpMrltM2Q';
+    const authToken = 'eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJDLTdCRDNBNjAwOTFGRTRCMyIsImlhdCI6MTczNTQxMzAyOCwiZXhwIjoxODkzMDkzMDI4fQ.PvNxYNbu01sgMIqQMvPqdaaXSksPtxIocrSzDEvVlTmcXrTyNYSrJ3Oo4bD-fFmsRyMJRem59CNUEraUxNXAxQ';
 
     try {
         // Send the request to the API to send OTP

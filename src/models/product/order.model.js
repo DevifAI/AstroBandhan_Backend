@@ -44,16 +44,16 @@ const orderSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    cancel_order: {
-      isCancel: {
-        type: Boolean,
-        default: false,
-      },
-      cancel_date_time: {
-        type: Date,
-        default: null,
-      },
-    },
+    // cancel_order: {
+    //   isCancel: {
+    //     type: Boolean,
+    //     default: false,
+    //   },
+    //   cancel_date_time: {
+    //     type: Date,
+    //     default: null,
+    //   },
+    // },
     quantity: {
       type: Number,
       default: 1,

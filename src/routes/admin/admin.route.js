@@ -12,7 +12,17 @@ import { getPendingAstrologerRequests } from '../../controller/admin/getPendingA
 import { addAstrologer, editAstrologer, deleteAstrologer } from '../../controller/admin/ai_astrologerController.js';
 import { addProductCategory, deleteProductCategory, editProductCategory } from '../../controller/admin/addProductCategoryController.js';
 import { get_total_astrologers, get_total_completed_chat, get_total_Order, get_total_users, get_unverified_astrologers } from '../../controller/admin/dashboard/manageDashboard.js';
+import { changePasswordAdmin, forgotPasswordAdmin, getAdminById, loginAdmin, registerAdmin, validateOtpAdmin } from '../../controller/admin/admin.controller.js';
 const router = express.Router();
+
+// ===============================Authentication routes start===============================
+router.post('/signup', registerAdmin);
+router.post('/login', loginAdmin);
+router.patch('/change-password/:adminId', changePasswordAdmin);
+router.post('/forgot-password', forgotPasswordAdmin);
+router.post('/validate-otp', validateOtpAdmin);
+router.get('/profile/:id', getAdminById);
+
 
 // Route to create a language
 router.post('/add/language', createLanguage);

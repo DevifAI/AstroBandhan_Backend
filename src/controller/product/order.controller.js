@@ -5,6 +5,8 @@ import { User } from "../../models/user.model.js";
 import { ApiError } from "../../utils/apiError.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
+import { AdminWallet } from "../../models/adminWallet.js";
+import { Admin } from "../../models/adminModel.js";
 
 // Create Order
 export const createOrder = asyncHandler(async (req, res) => {
@@ -21,6 +23,7 @@ export const createOrder = asyncHandler(async (req, res) => {
       total_price,
     } = req.body;
 
+    // Validate required fields
     const requiredFields = [
       { name: "name", message: "Name is required" },
       { name: "city", message: "City name is required" },
@@ -43,8 +46,14 @@ export const createOrder = asyncHandler(async (req, res) => {
       );
     }
 
+    // Fetch user, admin and product details
     const user = await User.findById(userId);
     const product = await Product.findById(order_details);
+    const admin = await Admin.findOne();
+
+    if (!admin) {
+      throw new ApiError(404, "Admin not found");
+    }
 
     if (!user) {
       throw new ApiError(404, "User not found");
@@ -54,13 +63,7 @@ export const createOrder = asyncHandler(async (req, res) => {
       throw new ApiError(404, "Product not found");
     }
 
-    // Check user wallet balance
-    const wallet = await Wallet.findOne({ user_id: userId });
-
-    if (!wallet) {
-      throw new ApiError(404, "Wallet not found for the user");
-    }
-
+    // Ensure sufficient wallet balance
     if (user.walletBalance < total_price) {
       throw new ApiError(
         400,
@@ -68,23 +71,36 @@ export const createOrder = asyncHandler(async (req, res) => {
       );
     }
 
-    // Deduct the amount from wallet if the payment is through wallet
+    // Deduct balance from user's wallet
     user.walletBalance -= total_price;
-    wallet.amount -= total_price;
-    await wallet.save();
     await user.save();
 
-    // Create a wallet transaction for the deduction
-    const transaction = new Wallet({
+    // Create a wallet transaction for the user
+    const userTransaction = new Wallet({
       user_id: userId,
       amount: total_price,
       transaction_id: `TXN_${Date.now()}`,
-      amount_type: "debit",
+      transaction_type: "debit",
       debit_type: "Ecom",
     });
 
-    await transaction.save();
+    await userTransaction.save();
 
+    // Add the total price to the admin wallet
+    const adminTransaction = new AdminWallet({
+      amount: total_price,
+      transaction_id: `ADMIN_TXN_${Date.now()}`,
+      transaction_type: "credit",
+      credit_type: "service_commission",
+    });
+
+    await adminTransaction.save();
+
+    // Add the amount to the admin wallet balance
+    admin.adminWalletBalance += total_price;
+    await admin.save();
+
+    // Create the order
     const newOrder = new Order({
       userId,
       name,
@@ -96,11 +112,12 @@ export const createOrder = asyncHandler(async (req, res) => {
       quantity,
       total_price,
       is_payment_done: true,
-      transaction_id: transaction.transaction_id,
+      transaction_id: userTransaction.transaction_id,
     });
 
     await newOrder.save();
 
+    // Respond with success
     return res
       .status(201)
       .json(new ApiResponse(201, newOrder, "Order created successfully"));
