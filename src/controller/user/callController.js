@@ -7,6 +7,7 @@ import Call from '../../models/call.model.js';
 import { Wallet } from '../../models/walletSchema.model.js';
 import { Admin } from '../../models/adminModel.js';
 import { AdminWallet } from '../../models/adminWallet.js';
+ 
 
 // key：608f211d904e4ee8bd7fa43571906fba
 // secret：cdd5b28810f245e08d1ed395c2c3f3d1
@@ -62,6 +63,8 @@ const acquireRecordingResource = async (channelName, uid,) => {
 
 // API to start the recording
 const startRecording = async (resourceId, channleid, uid, token, publisherUid, JoinedId) => {
+    
+
     const startParams = {
         cname: channleid,
         uid: uid.toString(),
@@ -82,8 +85,8 @@ const startRecording = async (resourceId, channleid, uid, token, publisherUid, J
                     mixedVideoLayout: 1, // Layout for mixed video streams
                     backgroundColor: "#FF0000" // Background color (Hex)
                 },
-                subscribeAudioUids: [publisherUid, joinedId], // UIDs to subscribe to audio
-                subscribeVideoUids: [publisherUid, joinedId], // UIDs to subscribe to video
+                subscribeAudioUids: [publisherUid.toString(), JoinedId.toString()],
+                subscribeVideoUids: [publisherUid.toString(), JoinedId.toString()],
                 subscribeUidGroup: 0 // Group for subscribing to the UIDs
             },
             "recordingFileConfig": {
@@ -100,12 +103,15 @@ const startRecording = async (resourceId, channleid, uid, token, publisherUid, J
             }
         }
     };
+    
+ 
 
     const authHeader = 'Basic ' + btoa("608f211d904e4ee8bd7fa43571906fba" + ':' + "cdd5b28810f245e08d1ed395c2c3f3d1");
+    
 
     try {
         const response = await axios.post(
-            `https://api.agora.io/v1/apps/${appID}/cloud_recording/resourceid/${resourceId}/mode/individual/start`,
+            `https://api.agora.io/v1/apps/${appID}/cloud_recording/resourceid/${resourceId}/mode/mix/start`,
             startParams,
             {
                 headers: {
@@ -114,6 +120,7 @@ const startRecording = async (resourceId, channleid, uid, token, publisherUid, J
                 }
             }
         );
+     
         return response.data; // Return recording start data
     } catch (error) {
         console.error("Error starting Agora recording:", error);
@@ -134,7 +141,7 @@ const stopRecording = async (resourceId, sid, channelName, recordingUID) => {
     const authHeader = 'Basic ' + btoa("608f211d904e4ee8bd7fa43571906fba" + ':' + "cdd5b28810f245e08d1ed395c2c3f3d1");
     try {
         const response = await axios.post(
-            `https://api.agora.io/v1/apps/${appID}/cloud_recording/resourceid/${resourceId}/sid/${sid}/mode/individual/stop`,
+            `https://api.agora.io/v1/apps/${appID}/cloud_recording/resourceid/${resourceId}/sid/${sid}/mode/mix/stop`,
             stopParams,
             {
                 headers: {
@@ -146,7 +153,7 @@ const stopRecording = async (resourceId, sid, channelName, recordingUID) => {
         console.log({ response })
         return response.data; // Return stop recording data
     } catch (error) {
-        console.log(`https://api.agora.io/v1/apps/${appID}/cloud_recording/resourceid/${resourceId}/sid/${sid}/mode/individual/stop`,)
+        console.log(`https://api.agora.io/v1/apps/${appID}/cloud_recording/resourceid/${resourceId}/sid/${sid}/mode/mix/stop`,)
         console.log({ stopParams })
         console.error("Error stopping Agora recording:", error);
         throw new Error("Failed to stop recording");
@@ -158,7 +165,7 @@ export const start_call = asyncHandler(async (req, res) => {
     try {
 
 
-        console.log("callComming");
+        // console.log("callComming");
         const { userId,        // Replace with actual userId
             astrologerId,  // Replace with actual astrologerId
             channleid,
@@ -182,15 +189,15 @@ export const start_call = asyncHandler(async (req, res) => {
         user.walletBalance -= pricePerMinute;
         astrologer.walletBalance += (pricePerMinute - commissionPerMinute); // Add the balance after commission
 
-        const admins = await Admin.findAll();  // Or Astrologer.findAll() if you're working with astrologers
-
+        const admins = await Admin.find({});  // Or Astrologer.findAll() if you're working with astrologers
+        // console.log(admins);
         if (admins.length === 0) {
             return res.status(404).json({ message: "No Admin found" });
         }
 
         // Take the first user/astrologer document
         const adminUser = admins[0]; // Change this to astrologer if working with astrologers
-        adminUser.walletBalance += commissionPerMinute;
+        adminUser.adminWalletBalance += commissionPerMinute;
 
         await user.save();
         await astrologer.save();
@@ -200,30 +207,36 @@ export const start_call = asyncHandler(async (req, res) => {
         const token = generateAgoraToken(channleid, uid);
         // Acquire recording resource
         const { resourceId } = await acquireRecordingResource(channleid, uid,);
-
-        // Start recording
+        // console.log({resourceId});
+        // console.log({token});
         const resCall = await startRecording(resourceId, channleid, uid, token, publisherUid, JoinedId);
-
-        // Create the Call document in the database
-        const newCall = new Call({
-            userId,
+      
+        const abc = {
+            userId, // Log as key-value pair in an object
             astrologerId,
-            channelName: resCall.cname,
+            channelName: resCall['cname'],
             startedAt: new Date(),
             totalAmount: pricePerMinute,
-            sid: resCall.sid,
+            sid: resCall['sid'],
             resourceId,
-            recordingUID: uid,
-            recordingToken, token,
-            recordingStarted: true, // Mark the recording as started
-        });
-
+            recordingUID: uid.toString(),
+            recordingToken: token, // Proper key-value pair
+            recordingStarted: true // Proper key-value pair
+        };
+        
+        // if(!resCall){
+        //     return true;
+        // }
+        // // // Create the Call document in the database
+        const newCall = new Call(abc);
         await newCall.save();
-
+        console.log({newCall});
         // Start a timer to deduct money every minute
         const intervalId = setInterval(async () => {
+            // console.log("testingcccc");
             try {
                 const updatedUser = await User.findById(userId);
+                console.log({updatedUser,pricePerMinute});
                 if (updatedUser.walletBalance < pricePerMinute) {
                     clearInterval(intervalId);
                     const payload = {
@@ -231,13 +244,13 @@ export const start_call = asyncHandler(async (req, res) => {
                     }
                     await axios.post('http://localhost:6000/astrobandhan/v1/user/end/call', payload);
                 } else {
-                    updatedUser.walletBalance -= pricePerMinute;
+                    // console.log({newCall});
+                    updatedUser.walletBalance -= pricePerMinute; 
                     astrologer.walletBalance += (pricePerMinute - commissionPerMinute); // Add the balance after commission
-                    adminUser.walletBalance += commissionPerMinute;
+                    adminUser.adminWalletBalance += commissionPerMinute;
                     newCall.totalAmount += pricePerMinute;
-
-
                     await updatedUser.save();
+                    await newCall.save();
                     await astrologer.save();
                     await adminUser.save()
 
@@ -246,18 +259,20 @@ export const start_call = asyncHandler(async (req, res) => {
                 console.error("Error during per-minute deduction:", error);
                 clearInterval(intervalId);
             }
-        }, 60000);
+        }, 6000);
 
+ 
         res.status(200).json({
             message: "Call started successfully",
             callId: newCall._id,
             token,
-            channelName,
+            channelName:channleid,
             resourceId,
             resCall
         });
-    } catch (error) {
-        console.error(error);
+
+    } catch (error) { 
+        console.error(error.message);
         res.status(500).json({ message: "Server error" });
     }
 });
@@ -279,11 +294,13 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
         call.endedAt = new Date();
         call.duration = Math.floor((call.endedAt - call.startedAt) / 1000);
         call.recordingUrl = recordingData.url; // Store the recording URL
-
+        // await call.save();
+        console.log({recordingData});
+        
         const user = await User.findById(userId);
         const astrologer = await Astrologer.findById(astrologerId);
 
-        const admins = await Admin.findAll();  // Fetch all admins
+        const admins = await Admin.find({});  // Fetch all admins
 
         if (admins.length === 0) {
             return res.status(404).json({ message: "No Admin found" });
@@ -296,15 +313,16 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
             throw new Error("User or Astrologer not found during call end");
         }
 
+        console.log(call.duration);
+       
         await AdminWallet.create({
-            amount: call.duration * call.callCommission,
+            amount: Math.ceil((call.duration / 60) * astrologer.callCommission), // Convert duration to minutes and round off
             transaction_id: `ADMIN_TXN_${Date.now()}`,
             transaction_type: "credit",
             credit_type: "call",
             service_id: call._id
-        })
+        });
 
-        // Log wallet transactions
         const userDebit = await Wallet.create({
             user_id: call.userId,
             amount: call.totalAmount,
@@ -316,7 +334,7 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
 
         const astrologerCredit = await Wallet.create({
             user_id: call.astrologerId,
-            amount: call.totalAmount - astrologer.callCommission * call.duration,
+            amount: call.totalAmount - Math.ceil(astrologer.callCommission * (call.duration / 60)),
             transaction_id: `CALL-${call._id}+${Date.now()}`,
             transaction_type: "credit",
             credit_type: "call",

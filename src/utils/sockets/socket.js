@@ -163,7 +163,7 @@ export const initSocket = (server) => {
             // Get the active socket IDs for astrologer and client
             const astrologerSocketId = activeUsers[astrologerId];
             const userSocketId = activeUsers[userId];
-
+            
             // Emit the start call event to both users with their tokens and UIDs
             io.to(astrologerSocketId).emit('startaudiocall', {
                 channleid: channelName,
@@ -274,21 +274,21 @@ export const initSocket = (server) => {
             const astrologerSocketId = activeUsers[astrologerId];
             const userSocketId = activeUsers[userId];
 
-            io.to(astrologerSocketId).emit('startaudiocall', {
+            io.to(astrologerSocketId).emit('callid_audiocall', {
                 callId:response.data["callId"],
                 response:response.data,
                 message: `A user has created a chat room with you.`,
             });
-
-            io.to(userSocketId).emit('startaudiocall', {
+            
+            io.to(userSocketId).emit('callid_audiocall', {
                 callId:response.data["callId"],
                 response:response.data,
                 message: `A user has created a chat room with you.`,
             });
 
         });
-
-        socket.on('endaudiocall', async ({ callId }) => {
+        
+        socket.on('endaudiocall', async ({ callId,astrologerId,userId }) => {
 
             const payload = {
                 callId  // Replace with actual channelName
