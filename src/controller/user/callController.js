@@ -14,8 +14,8 @@ const appID = "69779ffdb88442ecb348ae75b0b3963d";
 const appCertificate = "e10b414d78c84ec9bcd1160d6fe0ef4c";
 
 // Function to generate Agora token for starting the call
-const generateAgoraToken = (channelName) => {
-    const uid = Math.floor(Math.random() * 100); // Random user ID
+const generateAgoraToken = (channelName, uid) => {
+
 
     const token = AgoraAccessToken.RtcTokenBuilder.buildTokenWithUid(
         appID,
@@ -29,11 +29,10 @@ const generateAgoraToken = (channelName) => {
 };
 
 // API to acquire recording resource
-const acquireRecordingResource = async (channelName, randomNumber, username, password) => {
-    console.log({ randomNumber })
+const acquireRecordingResource = async (channelName, uid,) => {
     const acquireParams = {
         cname: channelName,
-        uid: "589517928",
+        uid: uid.toString(),
         clientRequest: {}
     };
 
@@ -60,26 +59,39 @@ const acquireRecordingResource = async (channelName, randomNumber, username, pas
 
 
 // API to start the recording
-const startRecording = async (resourceId, channelName, uid, token,publisherUid,JoinedId) => {
+const startRecording = async (resourceId, channleid, uid, token, publisherUid, JoinedId) => {
     const startParams = {
-        cname: channelName,
-        uid: "589517928",
+        cname: channleid,
+        uid: uid.toString(),
         clientRequest: {
             token: token,
-            "recordingConfig": {
-                "maxIdleTime": 30,
-                "streamTypes": 0,
-                "streamMode": "original",
-                "channelType": 0,
-                "subscribeAudioUids": [
-                    publisherUid,
-                    JoinedId
-                ],
-                "subscribeUidGroup": 0
+            recordingConfig: {
+                maxIdleTime: 30, // Time in seconds to stop recording when no active streams
+                streamTypes: 2, // 2 = Record both audio and video
+                streamMode: "default",
+                audioProfile: 1, // Default audio profile (1 = high quality)
+                channelType: 0, // 0 = Communication channel
+                videoStreamType: 0, // 0 = High video quality
+                transcodingConfig: {
+                    height: 640, // Height of the video in the transcoded file
+                    width: 360,  // Width of the video in the transcoded file
+                    bitrate: 500, // Video bitrate in Kbps
+                    fps: 15, // Frames per second
+                    mixedVideoLayout: 1, // Layout for mixed video streams
+                    backgroundColor: "#FF0000" // Background color (Hex)
+                },
+                subscribeAudioUids: [publisherUid, joinedId], // UIDs to subscribe to audio
+                subscribeVideoUids: [publisherUid, joinedId], // UIDs to subscribe to video
+                subscribeUidGroup: 0 // Group for subscribing to the UIDs
+            },
+            "recordingFileConfig": {
+                "avFileType": [
+                    "hls", "mp4"
+                ]
             },
             storageConfig: {
                 vendor: 1, // Assume AWS for now
-                region: 1, // Default region
+                region: 14, // region AP_SOUTH_1
                 bucket: "astrobandhan", // Replace with actual bucket name
                 accessKey: "AKIAWIJIUQXXXWRGG6VY", // Replace with actual access key
                 secretKey: "8ginnGKGOGuaTj9Puh0STGQDcIsjpwZBCyFWqQJL" // Replace with actual secret key
@@ -108,11 +120,11 @@ const startRecording = async (resourceId, channelName, uid, token,publisherUid,J
 };
 
 // API to stop the recording
-const stopRecording = async (resourceId, sid, channelName, uid) => {
+const stopRecording = async (resourceId, sid, channelName, recordingUID) => {
 
     const stopParams = {
         cname: channelName,
-        uid: "589517928",
+        uid: recordingUID.toString(),
         clientRequest: {
             "async_stop": false
         }
@@ -145,15 +157,20 @@ export const start_call = asyncHandler(async (req, res) => {
 
 
         console.log("callComming");
-        const { userId, astrologerId, channelName,publisherUid,JoinedId } = req.body;
+        const { userId,        // Replace with actual userId
+            astrologerId,  // Replace with actual astrologerId
+            channleid,
+            publisherUid,
+            JoinedId, } = req.body;
         const user = await User.findById(userId);
         const astrologer = await Astrologer.findById(astrologerId);
-        
+
         if (!user || !astrologer) {
             return res.status(404).json({ message: "User or Astrologer not found" });
         }
 
         const pricePerMinute = astrologer.pricePerCallMinute;
+        const commissionPerMinute = astrologer.callCommission;
         // Check if user has enough balance to start the call
         if (user.walletBalance < pricePerMinute) {
             return res.status(400).json({ message: "Insufficient wallet balance" });
@@ -161,19 +178,18 @@ export const start_call = asyncHandler(async (req, res) => {
 
         // Deduct first minute from user's wallet and credit astrologer
         user.walletBalance -= pricePerMinute;
-        astrologer.walletBalance += pricePerMinute;
+        astrologer.walletBalance += (pricePerMinute - commissionPerMinute); // Add the balance after commission
 
         await user.save();
         await astrologer.save();
-
+        const uid = Math.floor(Math.random() * 100000); // Random unique UID for the recording bot
         // Generate Agora token
-        const token = generateAgoraToken(channelName);
-        const randomNumber = Number(Date.now().toString().slice(-9));
+        const token = generateAgoraToken(channleid, uid);
         // Acquire recording resource
-        const { resourceId } = await acquireRecordingResource(channelName, randomNumber);
+        const { resourceId } = await acquireRecordingResource(channleid, uid,);
 
         // Start recording
-        const resCall = await startRecording(resourceId, channelName, Math.floor(Math.random() * 100), token,publisherUid,JoinedId);
+        const resCall = await startRecording(resourceId, channleid, uid, token, publisherUid, JoinedId);
 
         // Create the Call document in the database
         const newCall = new Call({
@@ -184,6 +200,8 @@ export const start_call = asyncHandler(async (req, res) => {
             totalAmount: pricePerMinute,
             sid: resCall.sid,
             resourceId,
+            recordingUID: uid,
+            recordingToken, token,
             recordingStarted: true, // Mark the recording as started
         });
 
@@ -195,10 +213,13 @@ export const start_call = asyncHandler(async (req, res) => {
                 const updatedUser = await User.findById(userId);
                 if (updatedUser.walletBalance < pricePerMinute) {
                     clearInterval(intervalId);
-                    await endCallAndLogTransaction(newCall._id);
+                    const payload = {
+                        callId : newCall._id
+                    }
+                    await axios.post('http://localhost:6000/astrobandhan/v1/user/end/call', payload);
                 } else {
                     updatedUser.walletBalance -= pricePerMinute;
-                    astrologer.walletBalance += pricePerMinute;
+                    astrologer.walletBalance += (pricePerMinute - commissionPerMinute); // Add the balance after commission
                     newCall.totalAmount += pricePerMinute;
 
                     await updatedUser.save();
@@ -234,23 +255,23 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
         if (!call || !call.startedAt) return;
 
         // Stop recording
-        const { resourceId, sid } = call;
-        const recordingData = await stopRecording(resourceId, sid, call.channelName, Math.floor(Math.random() * 100));
+        const { resourceId, sid, recordingUID, channelName, userId, astrologerId } = call;
+        const recordingData = await stopRecording(resourceId, sid, channelName, recordingUID);
 
         // Update the call with recording URL
         call.endedAt = new Date();
         call.duration = Math.floor((call.endedAt - call.startedAt) / 1000);
         call.recordingUrl = recordingData.url; // Store the recording URL
 
-        const user = await User.findById(call.userId);
-        const astrologer = await Astrologer.findById(call.astrologerId);
+        const user = await User.findById(userId);
+        const astrologer = await Astrologer.findById(astrologerId);
 
         if (!user || !astrologer) {
             throw new Error("User or Astrologer not found during call end");
         }
 
         // Log wallet transactions
-        await Wallet.create({
+        const userDebit = await Wallet.create({
             user_id: call.userId,
             amount: call.totalAmount,
             transaction_id: `CALL-${call._id}+${Date.now()}`,
@@ -259,7 +280,7 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
             service_reference_id: call._id
         });
 
-        await Wallet.create({
+        const astrologerCredit = await Wallet.create({
             user_id: call.astrologerId,
             amount: call.totalAmount,
             transaction_id: `CALL-${call._id}+${Date.now()}`,
@@ -268,13 +289,17 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
             service_reference_id: call._id
         });
 
-        await call.save();
+        res.status(200).json({
+            message: "Call ended successfully",
+            astrologerCredit,
+            userDebit
+        });
         console.log(`Call ended. Total duration: ${call.duration} seconds. Total amount: ${call.totalAmount}`);
     } catch (error) {
         console.error("Error ending the call:", error);
     }
 });
- 
+
 
 // Function to stop the recording and log the transaction
- 
+

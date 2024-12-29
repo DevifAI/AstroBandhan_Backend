@@ -7,7 +7,7 @@ import moment from "moment-timezone";
 import { User } from "../../models/user.model.js";
 import { Astrologer } from "../../models/astrologer.model.js";
 import { Wallet } from "../../models/walletSchema.model.js";
-import {  start_call } from "../../controller/user/callController.js";
+import { start_call } from "../../controller/user/callController.js";
 import axios from "axios";
 import AgoraAccessToken from 'agora-access-token';
 
@@ -111,7 +111,7 @@ export const initSocket = (server) => {
                             socket.emit('chatApproved', { chatRoomId, message: 'Chat approved by astrologer' });
                         } else if (response === 'deny') {
                             console.log('Astrologer denied the chat');
-        
+
                             // Notify the user and force them to leave the chat room
                             socket.to(chatRoomId).emit('chatDenied', { message: 'Chat request denied by astrologer' });
                             socket.leave(chatRoomId);
@@ -129,15 +129,15 @@ export const initSocket = (server) => {
                 socket.emit('error', 'An error occurred while starting the chat.');
             }
         });
-        
+
         socket.on('startaudiocall', async ({ userId, channleid, astrologerId }) => {
             const appID = "69779ffdb88442ecb348ae75b0b3963d";
             const appCertificate = "e10b414d78c84ec9bcd1160d6fe0ef4c";
-        
+
             // Generate unique UIDs for both client and astrologer
             const userUid = Math.floor(Math.random() * 100000); // Unique UID for the client
             const astrologerUid = Math.floor(Math.random() * 100000); // Unique UID for the astrologer
-        
+
             // Function to generate Agora token with provided role (PUBLISHER or SUBSCRIBER)
             const generateAgoraToken = (channelName, appID, appCertificate, uid, role) => {
                 const token = AgoraAccessToken.RtcTokenBuilder.buildTokenWithUid(
@@ -150,29 +150,18 @@ export const initSocket = (server) => {
                 );
                 return token;
             };
-        
+
             // Define the channel name from the passed `channleid`
             let channelName = channleid;
-        
+
             // Generate tokens for both client (PUBLISHER) and astrologer (SUBSCRIBER)
             const clientToken = generateAgoraToken(channelName, appID, appCertificate, userUid, AgoraAccessToken.RtcRole.PUBLISHER);
             const astrologerToken = generateAgoraToken(channelName, appID, appCertificate, astrologerUid, AgoraAccessToken.RtcRole.PUBLISHER);
-        
+
             // Get the active socket IDs for astrologer and client
             const astrologerSocketId = activeUsers[astrologerId];
             const userSocketId = activeUsers[userId];
-        
-            console.log("AllLogs");
-            console.log("Astrologer ID:", astrologerId);
-            console.log("User ID:", userId);
-            console.log("Client Token:", clientToken);
-            console.log("Astrologer Token:", astrologerToken);
-            console.log("Astrologer Socket ID:", astrologerSocketId);
-            console.log("User Socket ID:", userSocketId);
-            console.log("Channel Name:", channelName);
-            console.log("User UID:", userUid);
-            console.log("Astrologer UID:", astrologerUid);
-        
+
             // Emit the start call event to both users with their tokens and UIDs
             io.to(astrologerSocketId).emit('startaudiocall', {
                 channleid: channelName,
@@ -182,7 +171,7 @@ export const initSocket = (server) => {
                 uid: astrologerUid,     // UID for astrologer
                 message: `A user has created a chat room with you.`
             });
-        
+
             io.to(userSocketId).emit('startaudiocall', {
                 channleid: channelName,
                 userId,
@@ -197,7 +186,7 @@ export const initSocket = (server) => {
         //     const appID = "69779ffdb88442ecb348ae75b0b3963d";
         //     const appCertificate = "e10b414d78c84ec9bcd1160d6fe0ef4c";
         //     const uid = Math.floor(Math.random() * 100000); // Random user ID
-        
+
         //     // Function to generate token for user (PUBLISHER role)
         //     const generateAgoraToken = (channelName, appID, appCertificate, uid) => {
         //         return AgoraAccessToken.RtcTokenBuilder.buildTokenWithUid(
@@ -209,7 +198,7 @@ export const initSocket = (server) => {
         //             Math.floor(Date.now() / 1000) + 3600 // Token expires in 1 hour
         //         );
         //     };
-        
+
         //     // Function to generate token for astrologer (SUBSCRIBER role)
         //     const generateAstrologerToken = (channelName, appID, appCertificate, uid) => {
         //         return AgoraAccessToken.RtcTokenBuilder.buildTokenWithUid(
@@ -221,18 +210,18 @@ export const initSocket = (server) => {
         //             Math.floor(Date.now() / 1000) + 3600 // Token expires in 1 hour
         //         );
         //     };
-        
+
         //     let channelName = channleid;
-        
+
         //     const userToken = generateAgoraToken(channelName, appID, appCertificate, uid);
         //     const astrologerToken = generateAstrologerToken(channelName, appID, appCertificate, uid + 1); // Different UID for astrologer
-        
+
         //     const astrologerSocketId = activeUsers[astrologerId];
         //     const userSocketId = activeUsers[userId];
-        
+
         //     console.log("Logs:");
         //     console.log({ astrologerId, userId, channelName, uid, userToken, astrologerSocketId, userSocketId });
-        
+
         //     // Emit event to astrologer with their unique token
         //     if (astrologerSocketId) {
         //         io.to(astrologerSocketId).emit('startaudiocall', {
@@ -246,7 +235,7 @@ export const initSocket = (server) => {
         //     } else {
         //         console.log(`Astrologer ${astrologerId} is not connected.`);
         //     }
-        
+
         //     // Emit event to user with their unique token
         //     if (userSocketId) {
         //         io.to(userSocketId).emit('startaudiocall', {
@@ -262,49 +251,49 @@ export const initSocket = (server) => {
         //     }
         // });
 
-        socket.on('joinedaudiocall', async ({ userId, channleid, astrologerId,publisherUid, JoinedId, token  }) => {
+        socket.on('joinedaudiocall', async ({ userId, channleid, astrologerId, publisherUid, JoinedId }) => {
 
-            console.log({publisherUid, JoinedId});
+            console.log({ publisherUid, JoinedId });
             const payload = {
-                userId: userId,        // Replace with actual userId
-                astrologerId: astrologerId,  // Replace with actual astrologerId
-                channelName: channleid ,
+                userId,        // Replace with actual userId
+                astrologerId,  // Replace with actual astrologerId
+                channleid,
                 publisherUid,
                 JoinedId,
             };
-        
+
             console.log("payload");
             console.log(payload);
             
             // Send POST request using axios
-            // const response = await axios.post('http://localhost:6000/astrobandhan/v1/user/start/call', payload);
-            // console.log(response);
+            const response = await axios.post('http://localhost:6000/astrobandhan/v1/user/start/call', payload);
+            console.log(response);
 
-            const astrologerSocketId = activeUsers[astrologerId];
-            
-            io.to(astrologerSocketId).emit('startaudiocall', {
-                channleid: channleid,
-                userId,
-                astrologerId,
-                token,
-                // callId:response.data["callId"],
-                // response:response.data,
-                message: `A user has created a chat room with you.`,
-            });
-            
+            // const astrologerSocketId = activeUsers[astrologerId];
+
+            // io.to(astrologerSocketId).emit('startaudiocall', {
+            //     channleid: channleid,
+            //     userId,
+            //     astrologerId,
+            //     token,
+            //     // callId:response.data["callId"],
+            //     // response:response.data,
+            //     message: `A user has created a chat room with you.`,
+            // });
+
         });
 
-        socket.on('endaudiocall', async ({ userId, astrologerId, callId }) => {
-            
-            // const payload = {
-            //     callId  // Replace with actual channelName
-            // };
-            // const response = await axios.post('http://localhost:6000/astrobandhan/v1/user/end/call', payload);
-            // console.log(response);
+        socket.on('endaudiocall', async ({callId }) => {
+
+            const payload = {
+                callId  // Replace with actual channelName
+            };
+            const response = await axios.post('http://localhost:6000/astrobandhan/v1/user/end/call', payload);
+            console.log(response);
 
             const astrologerSocketId = activeUsers[astrologerId];
 
-            io.to(astrologerSocketId).emit('endaudiocall', { 
+            io.to(astrologerSocketId).emit('endaudiocall', {
                 userId,
                 astrologerId,
                 message: `Audio Call Ended.`,
@@ -527,7 +516,7 @@ export const initSocket = (server) => {
                         });
                     }
                     socket.to(chatRoomId).emit('chatEnded', { chatRoomId, message: 'The chat has ended.' });
-                    
+
                     // Optionally, leave the chat room
                     socket.leave(chatRoomId);
                     // Remove the participants from the chat room
