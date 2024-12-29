@@ -46,11 +46,6 @@ const walletSchema = new mongoose.Schema({
         type: String,
         default: null
     },
-
-    admin_id: {
-        type: String,
-        default: null
-    }
 }, {
     timestamps: true
 });

@@ -10,6 +10,8 @@ import { Wallet } from "../../models/walletSchema.model.js";
 import { start_call } from "../../controller/user/callController.js";
 import axios from "axios";
 import AgoraAccessToken from 'agora-access-token';
+import { AdminWallet } from "../../models/adminWallet.js";
+import { Admin } from "../../models/adminModel.js";
 
 // Store connected users (active users map)
 export let activeUsers = {};  // Store users by userId and socketId
@@ -264,7 +266,7 @@ export const initSocket = (server) => {
 
             console.log("payload");
             console.log(payload);
-            
+
             // Send POST request using axios
             const response = await axios.post('http://localhost:6000/astrobandhan/v1/user/start/call', payload);
             console.log(response);
@@ -283,7 +285,7 @@ export const initSocket = (server) => {
 
         });
 
-        socket.on('endaudiocall', async ({callId }) => {
+        socket.on('endaudiocall', async ({ callId }) => {
 
             const payload = {
                 callId  // Replace with actual channelName
@@ -323,8 +325,6 @@ export const initSocket = (server) => {
                     joinChatRoom(userId, astrologerId, chatRoomId, hitBy);
                     console.log("Both users are in the chat room:", chatRoomParticipants);
                     socket.to(chatRoomId).emit('system_message', `Astrologer Joined !`);
-                    // Step 4: Store the start time of the chat session
-                    chatStartTimes[chatRoomId] = Date.now();
 
                     // Step 5: Fetch user and astrologer details
                     const user = await User.findById(userId);
@@ -336,32 +336,53 @@ export const initSocket = (server) => {
                     }
 
                     const minuteCost = astrologer.pricePerChatMinute;
+                    const minuteComission = astrologer.chatCommission;
 
                     // Step 6: Check user's wallet balance
                     if (user.walletBalance < minuteCost) {
                         socket.emit('warning', 'Your balance is low. Please recharge your wallet');
-                        setTimeout(async () => {
-                            const updatedUser = await User.findById(userId);
-                            if (updatedUser.walletBalance < minuteCost) {
-                                socket.emit('error', 'Insufficient balance. Chat session is ending.');
-                                socket.leave(chatRoomId); // Force leave the chat room
-                                await Chat.findOneAndUpdate(
-                                    { chatRoomId },
-                                    { $set: { duration: "0:00" } },
-                                    { new: true }
-                                );
-                                clearInterval(chatIntervals[chatRoomId]); // Stop the interval
-                            }
-                        }, 60000); // Wait for 1 minute before forcibly ending the session
+                        const updatedUser = await User.findById(userId);
+                        if (updatedUser.walletBalance < minuteCost) {
+                            socket.emit('error', 'Insufficient balance. Chat session is ending.');
+                            socket.leave(chatRoomId); // Force leave the chat room
+                            await Chat.findOneAndUpdate(
+                                { chatRoomId },
+                                { $set: { duration: "0:00" } },
+                                { new: true }
+                            );
+                            clearInterval(chatIntervals[chatRoomId]); // Stop the interval
+                        }
                     } else {
+                        // Step 4: Store the start time of the chat session
+                        chatStartTimes[chatRoomId] = Date.now();
+
+                        const admins = await Admin.findAll();  // Or Astrologer.findAll() if you're working with astrologers
+
+                        if (admins.length === 0) {
+                            return res.status(404).json({ message: "No Admin found" });
+                        }
+
+                        // Take the first user/astrologer document
+                        const adminUser = admins[0]; // Change this to astrologer if working with astrologers
+                        adminUser.walletBalance += minuteComission;
+                        await adminUser.save()
+
                         // Deduct the cost for 1 minute
                         user.walletBalance -= minuteCost;
                         await user.save();
 
                         // Increment astrologer's wallet balance
-                        astrologer.walletBalance += minuteCost;
+                        astrologer.walletBalance += (minuteCost - minuteComission);
                         await astrologer.save();
 
+                        const adminWalletTransaction = new AdminWallet.create({
+                            amount: minuteComission,
+                            transaction_id: `ADMIN_TXN_${Date.now()}`,
+                            transaction_type: "credit",
+                            credit_type: "chat",
+                            service_id: chatRoomId
+                        })
+                        await adminWalletTransaction.save()
                         // Log the transaction
                         const userTransaction = new Wallet({
                             user_id: userId,
@@ -369,17 +390,17 @@ export const initSocket = (server) => {
                             transaction_id: `TXN-${Date.now()}`,
                             amount_type: 'debit',
                             debit_type: 'chat',
-                            chatRoomId: chatRoomId,
+                            service_reference_id: chatRoomId,
                         });
                         await userTransaction.save();
 
                         const astrologerTransaction = new Wallet({
-                            user_id: astrologerId,
-                            amount: minuteCost,
+                            astrologer_id: astrologerId,
+                            amount: minuteCost - minuteComission,
                             transaction_id: `TXN-${Date.now()}`,
                             amount_type: 'credit',
                             debit_type: 'chat',
-                            chatRoomId: chatRoomId,
+                            service_reference_id: chatRoomId,
                         });
                         await astrologerTransaction.save();
 
@@ -420,6 +441,37 @@ export const initSocket = (server) => {
                                     }
                                 }, 60000);
                             }
+
+
+                            const userWallet = Wallet.findOne({ user_id: userId, amount_type: "debit", service_reference_id: chatRoomId })
+                            const astrologerWallet = Wallet.findOne({ astrologer_id: astrologerId, amount_type: "credit", service_reference_id: chatRoomId })
+                            const adminWallet = AdminWallet.findOne({ service_id: chatRoomId })
+                            if (adminWallet) {
+                                adminWallet.amount += minuteComission
+                                adminUser.wallet += minuteComission
+
+                                await adminUser.save()
+                                await adminWallet.save()
+                            }
+                            if (userWallet) {
+                                // Increment the wallet balance with the minuteCost
+                                user.walletBalance -= minuteCost; // Adding the minute cost to the wallet balance
+                                await user.save(); // Save the updated user balance
+
+                                userWallet.amount += minuteCost
+
+                                await userWallet.save()
+                            }
+
+                            if (astrologerWallet) {
+                                astrologer.walletBalance += (minuteCost - minuteComission);
+                                await astrologer.save();
+
+                                astrologerWallet.amount += (minuteCost - minuteComission)
+                                await astrologerWallet.save()
+                            }
+
+
 
                             // Update the chat duration
                             await Chat.findOneAndUpdate(
@@ -531,12 +583,13 @@ export const initSocket = (server) => {
         });
 
         // Handle sending a message from user or astrologer
-        socket.on('sendMessage', async ({ message, senderId, chatRoomId, senderType }) => {
+        socket.on('sendMessage', async ({ message, senderId, chatRoomId, senderType, messageType }) => {
             try {
 
                 const chatMessage = {
                     senderType: senderType,
                     senderId: ObjectId.createFromHexString(senderId),
+                    messageType,
                     message: message,
                     timestamp: moment().tz('Asia/Kolkata').toDate()  // Correctly using moment for local timezone
                 };

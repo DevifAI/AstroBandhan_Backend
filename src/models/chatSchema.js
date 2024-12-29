@@ -12,6 +12,12 @@ const chatSchema = new mongoose.Schema(
                     refPath: 'senderType',
                     required: function () { return this.senderType !== 'system'; },
                 },
+                messageType: {
+                    type: String,
+                    enum: ['text', 'image'],  // Enum for message types
+                    default: 'text',          // Default value is 'text'
+                    required: true            // Make messageType required
+                },
                 message: { type: String, required: true },
                 timestamp: {
                     type: Date,
@@ -22,7 +28,7 @@ const chatSchema = new mongoose.Schema(
                 }
             }
         ],
-        duration: { type: String, default: "Not Started"}
+        duration: { type: String, default: "Not Started" }
     },
     { timestamps: true }
 );

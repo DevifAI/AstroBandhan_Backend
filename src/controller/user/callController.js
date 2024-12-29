@@ -5,6 +5,8 @@ import { User } from '../../models/user.model.js';
 import { Astrologer } from "../../models/astrologer.model.js";
 import Call from '../../models/call.model.js';
 import { Wallet } from '../../models/walletSchema.model.js';
+import { Admin } from '../../models/adminModel.js';
+import { AdminWallet } from '../../models/adminWallet.js';
 
 // key：608f211d904e4ee8bd7fa43571906fba
 // secret：cdd5b28810f245e08d1ed395c2c3f3d1
@@ -180,8 +182,19 @@ export const start_call = asyncHandler(async (req, res) => {
         user.walletBalance -= pricePerMinute;
         astrologer.walletBalance += (pricePerMinute - commissionPerMinute); // Add the balance after commission
 
+        const admins = await Admin.findAll();  // Or Astrologer.findAll() if you're working with astrologers
+
+        if (admins.length === 0) {
+            return res.status(404).json({ message: "No Admin found" });
+        }
+
+        // Take the first user/astrologer document
+        const adminUser = admins[0]; // Change this to astrologer if working with astrologers
+        adminUser.walletBalance += commissionPerMinute;
+
         await user.save();
         await astrologer.save();
+        await adminUser.save()
         const uid = Math.floor(Math.random() * 100000); // Random unique UID for the recording bot
         // Generate Agora token
         const token = generateAgoraToken(channleid, uid);
@@ -214,16 +227,20 @@ export const start_call = asyncHandler(async (req, res) => {
                 if (updatedUser.walletBalance < pricePerMinute) {
                     clearInterval(intervalId);
                     const payload = {
-                        callId : newCall._id
+                        callId: newCall._id
                     }
                     await axios.post('http://localhost:6000/astrobandhan/v1/user/end/call', payload);
                 } else {
                     updatedUser.walletBalance -= pricePerMinute;
                     astrologer.walletBalance += (pricePerMinute - commissionPerMinute); // Add the balance after commission
+                    adminUser.walletBalance += commissionPerMinute;
                     newCall.totalAmount += pricePerMinute;
+
 
                     await updatedUser.save();
                     await astrologer.save();
+                    await adminUser.save()
+
                 }
             } catch (error) {
                 console.error("Error during per-minute deduction:", error);
@@ -266,9 +283,26 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
         const user = await User.findById(userId);
         const astrologer = await Astrologer.findById(astrologerId);
 
+        const admins = await Admin.findAll();  // Fetch all admins
+
+        if (admins.length === 0) {
+            return res.status(404).json({ message: "No Admin found" });
+        }
+
+        // Take the first admin document
+        const adminUser = admins[0];
+
         if (!user || !astrologer) {
             throw new Error("User or Astrologer not found during call end");
         }
+
+        await AdminWallet.create({
+            amount: call.duration * call.callCommission,
+            transaction_id: `ADMIN_TXN_${Date.now()}`,
+            transaction_type: "credit",
+            credit_type: "call",
+            service_id: call._id
+        })
 
         // Log wallet transactions
         const userDebit = await Wallet.create({
@@ -282,12 +316,13 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
 
         const astrologerCredit = await Wallet.create({
             user_id: call.astrologerId,
-            amount: call.totalAmount,
+            amount: call.totalAmount - astrologer.callCommission * call.duration,
             transaction_id: `CALL-${call._id}+${Date.now()}`,
             transaction_type: "credit",
             credit_type: "call",
             service_reference_id: call._id
         });
+
 
         res.status(200).json({
             message: "Call ended successfully",
