@@ -271,17 +271,20 @@ export const initSocket = (server) => {
             const response = await axios.post('http://localhost:6000/astrobandhan/v1/user/start/call', payload);
             console.log(response);
 
-            // const astrologerSocketId = activeUsers[astrologerId];
+            const astrologerSocketId = activeUsers[astrologerId];
+            const userSocketId = activeUsers[userId];
 
-            // io.to(astrologerSocketId).emit('startaudiocall', {
-            //     channleid: channleid,
-            //     userId,
-            //     astrologerId,
-            //     token,
-            //     // callId:response.data["callId"],
-            //     // response:response.data,
-            //     message: `A user has created a chat room with you.`,
-            // });
+            io.to(astrologerSocketId).emit('startaudiocall', {
+                callId:response.data["callId"],
+                response:response.data,
+                message: `A user has created a chat room with you.`,
+            });
+
+            io.to(userSocketId).emit('startaudiocall', {
+                callId:response.data["callId"],
+                response:response.data,
+                message: `A user has created a chat room with you.`,
+            });
 
         });
 
