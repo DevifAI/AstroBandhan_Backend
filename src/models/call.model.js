@@ -14,6 +14,8 @@ const callSchema = new mongoose.Schema(
         channelName: { type: String, required: true }, // Agora channel name
         resourceId: { type: String, required: true }, // Agora resource ID for recording
         sid: { type: String, required: true }, // Agora session ID
+        recordingUID: { type: String, required: true }, // Agora session ID
+        recordingToken: { type: String, required: true }, // Agora session ID
         recordingUrl: { type: String, default: null }, // Cloudinary URL for recording
         totalAmount: { type: Number, default: 0 }, // Total amount charged for the call
         recordingStarted:{type:Boolean}
