@@ -93,3 +93,38 @@ async function getAstrologyResponse(question, astrologyType, userDetails) {
         return "I'm unable to answer your question right now. Please try again later.";
     }
 }
+
+
+export const translateText = async (text, targetLanguage) => {
+    try {
+        const response = await axios.post(
+            'https://api.openai.com/v1/chat/completions',
+            {
+                model: "gpt-3.5-turbo", // Use the appropriate model
+                messages: [
+                    {
+                        role: "system",
+                        content: `You are a helpful assistant capable of translating text into various languages. Please translate the following text into ${targetLanguage}.`
+                    },
+                    {
+                        role: "user",
+                        content: text // The text that needs to be translated
+                    }
+                ],
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        // Extract the translated text from the OpenAI response
+        return response.data.choices[0].message.content.trim();
+    } catch (error) {
+        console.error("Error while translating text:", error);
+        throw new Error("Translation failed.");
+    }
+};
+
