@@ -50,6 +50,7 @@ export const createOrder = asyncHandler(async (req, res) => {
     const user = await User.findById(userId);
     const product = await Product.findById(order_details);
     const admin = await Admin.findOne();
+    console.log(admin)
 
     if (!admin) {
       throw new ApiError(404, "Admin not found");
