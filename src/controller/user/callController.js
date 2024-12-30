@@ -327,7 +327,8 @@ export const start_call = asyncHandler(async (req, res) => {
                 clearInterval(intervalId);
             }
         }, 60000);
-
+        newCall.intervalId = intervalId;
+        await newCall.save();
 
         res.status(200).json({
             message: "Call started successfully",
@@ -363,7 +364,10 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
         call.recordingData = recordingData; // Store the recording URL
 
         console.log({ recordingData });
-        clearInterval(intervalId);
+        // Stop the interval
+        if (call.intervalId) {
+            clearInterval(call.intervalId);
+        }
         const user = await User.findById(userId);
         const astrologer = await Astrologer.findById(astrologerId);
 
