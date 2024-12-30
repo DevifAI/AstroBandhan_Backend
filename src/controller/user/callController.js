@@ -275,7 +275,7 @@ export const start_call = asyncHandler(async (req, res) => {
         const { resourceId } = await acquireRecordingResource(channleid, uid,);
         // console.log({resourceId});
         // console.log({token});
-        const resCall =  await startRecording_video(resourceId, channleid, uid, token, publisherUid, JoinedId,) ;
+        const resCall = await startRecording_video(resourceId, channleid, uid, token, publisherUid, JoinedId,);
 
         const abc = {
             userId, // Log as key-value pair in an object
@@ -326,7 +326,7 @@ export const start_call = asyncHandler(async (req, res) => {
                 console.error("Error during per-minute deduction:", error);
                 clearInterval(intervalId);
             }
-        }, 6000);
+        }, 60000);
 
 
         res.status(200).json({
@@ -363,7 +363,7 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
         call.recordingData = recordingData; // Store the recording URL
 
         console.log({ recordingData });
-
+        clearInterval(intervalId);
         const user = await User.findById(userId);
         const astrologer = await Astrologer.findById(astrologerId);
 
