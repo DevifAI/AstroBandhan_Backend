@@ -8,10 +8,18 @@ const notificationSchema = new mongoose.Schema(
       ref: 'User', // Reference to the User model
       required: true
     },
-    message: {
-      type: String,
-      required: true, // Ensure the message is required
-    },
+    message: [
+      {
+        title: {
+          type: String,
+          required: true, // Ensure the title is required
+        },
+        desc: {
+          type: String,
+          required: true, // Ensure the description is required
+        }
+      }
+    ],
     read: {
       type: Boolean,
       default: false, // By default, notifications are unread

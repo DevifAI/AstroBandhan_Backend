@@ -10,7 +10,7 @@ import { forgetPassword, updatePassword_user, validateOtp } from "../../controll
 import { ask_ai_astro, fetch_ai_astro_chat } from "../../controller/user/ask_AI_Astro.js";
 import { getAllLanguages } from "../../controller/admin/LanguageController.js";
 import { add_wallet_balance, find_transaction_history_by_category } from "../../controller/user/addWalletBalance.js";
-import { deleteNotifications, getAllNotificationsByUserId, markNotificationsAsRead } from "../../controller/user/NotificationHandler.js";
+import { deleteNotifications, getAllNotificationsByUserId, getUnreadNotificationsCount, markNotificationsAsRead } from "../../controller/user/NotificationHandler.js";
 import { upload } from "../../middlewares/multer.middlewre.js";
 import { getAshtakootScore, getAshtakootScore_PDF } from "../../controller/user/third_party/match_making.js";
 import { getDailyHoroscope, getPrevHoroscope, getTommHoroscope } from "../../controller/user/third_party/daily_horroscopes.js";
@@ -18,6 +18,8 @@ import { getDailyPanchang, getMonthlyPanchang } from "../../controller/user/thir
 import { get_numerology } from "../../controller/user/third_party/numerology.js";
 
 import { endCallAndLogTransaction, start_call } from "../../controller/user/callController.js";
+import { getAutoSuggestAstrologer, getTrendingAstrologer } from "../../controller/user/getTopAstrologers.js";
+
 const router = Router();
 
 router.route("/signup", upload.single('photo')).post(registerUser);
@@ -33,8 +35,7 @@ router.get('/get/languages', getAllLanguages)
 router.post('/get/ai/chats', fetch_ai_astro_chat)
 router.post('/add/balance', add_wallet_balance)
 router.post('/get/balance/history', find_transaction_history_by_category)
-router.put('/notifications/:userId/read', markNotificationsAsRead);
-router.delete('/notifications/:userId', deleteNotifications);
+router.put('/notifications/:userId/:notificationsId/read', markNotificationsAsRead);
 router.get('/notifications/:userId', getAllNotificationsByUserId);
 router.post('/start/call', start_call);
 
@@ -49,6 +50,11 @@ router.post('/yessterday/horroscope', getPrevHoroscope);
 router.post('/daily/panchang', getDailyPanchang);
 router.post('/monthly/panchang', getMonthlyPanchang);
 router.post('/numerology', get_numerology);
+router.post('/getnotifications/count', getUnreadNotificationsCount);
+router.post('/getnotifications/count', deleteNotifications);
+router.post('/get/top/astrologers', getTrendingAstrologer);
+router.post('/get/trending/astrologers', getTrendingAstrologer);
+router.post('/get/suggest/astrologers', getAutoSuggestAstrologer);
 
 router.post('/end/call', endCallAndLogTransaction);
 

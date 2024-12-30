@@ -4,6 +4,7 @@ import { ApiResponse } from "../../utils/apiResponse.js";
 import { Wallet } from "../../models/walletSchema.model.js";
 import { activeUsers, io } from "../../utils/sockets/socket.js";
 import { AdminWallet } from "../../models/adminWallet.js";
+import Notification from "../../models/notifications.model.js";
 
 export const add_wallet_balance = asyncHandler(async (req, res) => {
     try {
@@ -50,7 +51,18 @@ export const add_wallet_balance = asyncHandler(async (req, res) => {
             io.to(userSocketId).emit('notification', { message });
             console.log(`Notification sent to user ${userId} with socket ID ${userSocketId}`);
         }
+        const newNotification = new Notification({
+            userId: userId,
+            message: [
+                {
+                    title: 'Coin Credited',
+                    desc: `${amount} has been credited to your wallet `,
+                }
+            ]
+        });
 
+        // Save the notification to the database
+        newNotification.save()
 
         return res.status(201).json(
             new ApiResponse(201, add_wallet_doc, `Money ${amount_type === "credit" ? 'added' : "deduct"} successfully.`)

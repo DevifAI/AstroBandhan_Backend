@@ -138,14 +138,15 @@ export const getAstrologersByCategoryName = asyncHandler(async (req, res) => {
       if (astrologerIds.length === 0) {
         return res.status(200).json(new ApiResponse(200, [], "No astrologers found in this category."));
       }
-  
+      
       // Calculate pagination parameters
-      const totalAstrologers = await Astrologer.countDocuments({ '_id': { $in: astrologerIds } });
+      
+      const totalAstrologers = await Astrologer.countDocuments({ '_id': { $in: astrologerIds }, isOffline: false });
       const totalPages = Math.ceil(totalAstrologers / size); // Calculate total pages
       const skip = (page - 1) * size; // Skip calculation for pagination
   
       // Fetch the astrologer details with pagination
-      const astrologers = await Astrologer.find({ '_id': { $in: astrologerIds } })
+      const astrologers = await Astrologer.find({ '_id': { $in: astrologerIds }, isOffline: false })
         .skip(skip)
         .limit(size);
   

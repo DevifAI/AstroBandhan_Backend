@@ -25,11 +25,7 @@ const AshtakootScoreSchema = new mongoose.Schema({
         longitude: Number,
         timezone: Number
     },
-    response: {
-        score: Number,
-        total_score: { type: Number, default: 36 },
-        desc: String // Store nested response details
-    },
+    response: Object,
     createdAt: { type: Date, default: Date.now }
 });
 

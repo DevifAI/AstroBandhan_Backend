@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Notification from "../../models/notifications.model.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 import { asyncHandler } from '../../utils/asyncHandler.js';
@@ -6,7 +7,7 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 // 1. Mark Notifications as Read
 export const markNotificationsAsRead = asyncHandler(async (req, res) => {
     try {
-        const { userId } = req.params; // Get userId from the request parameters
+        const { userId, notificationId } = req.params; // Get userId from the request parameters
 
         if (!userId) {
             return res.status(400).json(
@@ -14,13 +15,16 @@ export const markNotificationsAsRead = asyncHandler(async (req, res) => {
             );
         }
 
+        const objectId = mongoose.Types.ObjectId(notificationId);
+
+
         // Update the 'read' field of notifications to true for the given user
         const result = await Notification.updateMany(
-            { userId, read: false }, // Only update unread notifications
+            { userId, _id: objectId }, // Only update unread notifications
             { $set: { read: true } }  // Set the 'read' field to true
         );
 
-        if (result.nModified === 0) {
+        if (result.Modified === 0) {
             return res.status(404).json(
                 new ApiResponse(404, {}, "No unread notifications found for this user.")
             );
@@ -40,16 +44,20 @@ export const markNotificationsAsRead = asyncHandler(async (req, res) => {
 // 2. Delete Notifications
 export const deleteNotifications = asyncHandler(async (req, res) => {
     try {
-        const { userId } = req.params; // Get userId from the request parameters
+        const { userId, notificationId } = req.body; // Get userId and notificationId from the request parameters
 
-        if (!userId) {
+        if (!userId || !notificationId) {
             return res.status(400).json(
-                new ApiResponse(400, {}, "User ID is required.")
+                new ApiResponse(400, {}, "User ID and Notification ID are required.")
             );
         }
 
+        // Convert notificationId to ObjectId
+        const objectId = mongoose.Types.ObjectId(notificationId);
+
+
         // Delete notifications for the given user
-        const result = await Notification.deleteMany({ userId });
+        const result = await Notification.deleteOne({ userId, _id: objectId });
 
         if (result.deletedCount === 0) {
             return res.status(404).json(
@@ -102,7 +110,7 @@ export const getAllNotificationsByUserId = asyncHandler(async (req, res) => {
 // 4. Get Total Count of Unmarked (Unread) Notifications
 export const getUnreadNotificationsCount = asyncHandler(async (req, res) => {
     try {
-        const { userId } = req.params; // Get userId from the request parameters
+        const { userId } = req.body; // Get userId from the request parameters
 
         if (!userId) {
             return res.status(400).json(

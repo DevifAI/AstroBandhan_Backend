@@ -41,6 +41,7 @@ const astrologerSchema = new mongoose.Schema(
       }
     },
     isVerified: { type: Boolean, default: false },
+    isOffline: { type: Boolean, default: false },
     avatar: {
       type: String,
       default: function () {

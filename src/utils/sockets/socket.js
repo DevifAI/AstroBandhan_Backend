@@ -12,6 +12,7 @@ import axios from "axios";
 import AgoraAccessToken from 'agora-access-token';
 import { AdminWallet } from "../../models/adminWallet.js";
 import { Admin } from "../../models/adminModel.js";
+import Notification from "../../models/notifications.model.js";
 
 // Store connected users (active users map)
 export let activeUsers = {};  // Store users by userId and socketId
@@ -99,6 +100,19 @@ export const initSocket = (server) => {
                         });
                     }
 
+                    const newNotification = new Notification({
+                        userId: astrologerId,
+                        message: [
+                            {
+                                title: 'Chat Request',
+                                desc: 'You have a pending chat request',
+                            }
+                        ]
+                    });
+
+                    // Save the notification to the database
+                    newNotification.save()
+
                     // Notify the astrologer of the incoming chat request
                     socket.to(astrologer.socketId).emit('incomingChatRequest', {
                         userId,
@@ -163,7 +177,7 @@ export const initSocket = (server) => {
             // Get the active socket IDs for astrologer and client
             const astrologerSocketId = activeUsers[astrologerId];
             const userSocketId = activeUsers[userId];
-            
+
             // Emit the start call event to both users with their tokens and UIDs
             io.to(astrologerSocketId).emit('startaudiocall', {
                 channleid: channelName,
@@ -175,18 +189,31 @@ export const initSocket = (server) => {
                 message: `A user has created a chat room with you.`
             });
 
+            const newNotification = new Notification({
+                userId: astrologerId,
+                message: [
+                    {
+                        title: callType === "audio" ? "Audio Call Request" : "Video Call Request", 
+                        desc: `You have a pending ${callType} request`,
+                    }
+                ]
+            });
+
+            // Save the notification to the database
+            newNotification.save()
+
             io.to(userSocketId).emit('startaudiocall', {
                 channleid: channelName,
                 userId,
                 astrologerId,
                 token: clientToken,     // Token for client (PUBLISHER)
-                uid: userUid,     
+                uid: userUid,
                 callType,     // UID for client
                 message: `A user has created a chat room with you.`
             });
         });
 
-        socket.on('joinedaudiocall', async ({ userId, channleid, astrologerId, publisherUid, JoinedId,callType }) => {
+        socket.on('joinedaudiocall', async ({ userId, channleid, astrologerId, publisherUid, JoinedId, callType }) => {
 
             console.log({ publisherUid, JoinedId });
             const payload = {
@@ -209,20 +236,20 @@ export const initSocket = (server) => {
             const userSocketId = activeUsers[userId];
 
             io.to(astrologerSocketId).emit('callid_audiocall', {
-                callId:response.data["callId"],
-                response:response.data,
+                callId: response.data["callId"],
+                response: response.data,
                 message: `Successfully joined the call room.`,
             });
-            
+
             io.to(userSocketId).emit('callid_audiocall', {
-                callId:response.data["callId"],
-                response:response.data,
+                callId: response.data["callId"],
+                response: response.data,
                 message: `A user has joined call room with you.`,
             });
 
         });
-        
-        socket.on('endaudiocall', async ({ callId,astrologerId,userId }) => {
+
+        socket.on('endaudiocall', async ({ callId, astrologerId, userId }) => {
 
             const payload = {
                 callId  // Replace with actual channelName
@@ -231,8 +258,14 @@ export const initSocket = (server) => {
             console.log(response);
 
             const astrologerSocketId = activeUsers[astrologerId];
+            const userSocketId = activeUsers[userId];
 
             io.to(astrologerSocketId).emit('endaudiocall', {
+                userId,
+                astrologerId,
+                message: `Audio Call Ended.`,
+            });
+            io.to(userSocketId).emit('endaudiocall', {
                 userId,
                 astrologerId,
                 message: `Audio Call Ended.`,
@@ -490,7 +523,7 @@ export const initSocket = (server) => {
                     },
                     { new: true } // Return the updated document
                 );
-                
+
                 if (chatRoom) {
                     // Notify both the user and astrologer
                     clearInterval(chatIntervals[chatRoomId]);

@@ -35,6 +35,7 @@ export const toggle_Offline_Online = asyncHandler(async (req, res) => {
         isChatAvailable: false,
         isVideoCallAvailable: false,
       };
+      astrologer.isOffline = true;
     } else if (available_status === 'online') {
       // If astrologer is going online, set all availability fields to true
       astrologer.available = {
@@ -43,8 +44,8 @@ export const toggle_Offline_Online = asyncHandler(async (req, res) => {
         isChatAvailable: true,
         isVideoCallAvailable: true,
       };
+      astrologer.isOffline = false;
     }
-
     // Save the updated astrologer document
     await astrologer.save();
 

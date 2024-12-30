@@ -60,14 +60,14 @@ export const getAshtakootScore = asyncHandler(async (req, res) => {
             api_key: process.env.VEDIC_ASTRO_API_KEY, // Use your actual API key here
             boy_dob: `${male.date}/${male.month}/${male.year}`,
             boy_tob: `${male.hours}:${male.minutes}`,
-            boy_tz: maleGeo.timezone_offset,
-            boy_lat: maleGeo.latitude,
-            boy_lon: maleGeo.longitude,
+            boy_tz: maleGeo.timezone_offset || 5.5,
+            boy_lat: maleGeo.latitude || 22,
+            boy_lon: maleGeo.longitude || 77,
             girl_dob: `${female.date}/${female.month}/${female.year}`,
             girl_tob: `${female.hours}:${female.minutes}`,
-            girl_tz: femaleGeo.timezone_offset,
-            girl_lat: femaleGeo.latitude,
-            girl_lon: femaleGeo.longitude,
+            girl_tz: femaleGeo.timezone_offset || 5.5,
+            girl_lat: femaleGeo.latitude || 22 ,
+            girl_lon: femaleGeo.longitude || 77,
             lang: language,
         };
 
@@ -207,7 +207,7 @@ export const getAshtakootScore_PDF = asyncHandler(async (req, res) => {
         const payload = {
             api_key: process.env.VEDIC_ASTRO_API_KEY, // Use your actual API key here
             boy_name: male.name,
-            boy_dob: `${male.date}/${male.month}/${male.year}`,
+            boy_dob: male.dob,
             boy_tob: `${male.hours}:${male.minutes}`,
             boy_tz: maleGeo.timezone_offset,
             boy_pob: male.location,
@@ -249,17 +249,16 @@ export const getAshtakootScore_PDF = asyncHandler(async (req, res) => {
 
 
         // Encoding parameters, keeping dob and tob in their original format
-        const encodedParams = Object.keys(payload).reduce((acc, key) => {
-            if (key.includes('dob') || key.includes('tob')) {
-                acc[key] = payload[key]; // Keep dob and tob in their original form
-            } else {
-                acc[key] = encodeURIComponent(payload[key]); // Encode other parameters
-            }
-            return acc;
-        }, {});
-
+        // const encodedParams = Object.keys(payload).reduce((acc, key) => {
+        //     if (key.includes('dob') || key.includes('tob')) {
+        //         acc[key] = payload[key]; // Keep dob and tob in their original form
+        //     } else {
+        //         acc[key] = encodeURIComponent(payload[key]); // Encode other parameters
+        //     }
+        //     return acc;
+        // }, {});
         // console.log({ encodedParams })
-        const apiResponse = await axios.get('https://api.vedicastroapi.com/v3-json/pdf/matching', { params: encodedParams });
+        const apiResponse = await axios.get(`https://api.vedicastroapi.com/v3-json/pdf/matching?boy_dob=${payload.boy_dob}&boy_tob=${payload.boy_tob}&boy_tz=${payload.boy_tz}&boy_lat=${payload.boy_lat}&boy_lon=${payload.boy_lon}&girl_dob=${payload.girl_dob}&girl_tob=${payload.girl_tob}&girl_tz=${payload.girl_tz}&girl_lat=${payload.girl_lat}&girl_lon=${payload.girl_lon}&api_key=${payload.api_key}&lang=${payload.lang}&style=${payload.style}&color=${payload.color}&boy_pob=${payload.boy_pob}&girl_pob=${payload.girl_pob}&boy_name=${payload.boy_name}&girl_name=${payload.girl_name}`);
         // console.log(apiResponse)
         // // Extract relevant parts from the API response
         const { status, response } = apiResponse.data; // Assuming 'response' holds the matching details
@@ -297,20 +296,16 @@ export const getAshtakootScore_PDF = asyncHandler(async (req, res) => {
                 longitude: maleGeo.longitude,
                 timezone: maleGeo.timezone_offset,
             },
-            response: {
-                total_score: 36, // Assuming total score is fixed at 36 (change if needed)
-                score: response.score,
-                desc: response.bot_response,
-            },
+            response: { response },
             language
         });
 
         await ashtakootScore.save();
 
         // Send the response with only the relevant data
-        // console.log(response)
+        console.log(response)
         return res.status(200).json(
-            new ApiResponse(200, { response_ashtakoot: { total_score: 36, score: response.score, desc: response.bot_response } }, "Ashtakoot Score fetched successfully.")
+            new ApiResponse(200, { response_ashtakoot: response }, "Ashtakoot PDF fetched successfully.")
         );
 
     } catch (error) {

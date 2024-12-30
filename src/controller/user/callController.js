@@ -7,6 +7,7 @@ import Call from '../../models/call.model.js';
 import { Wallet } from '../../models/walletSchema.model.js';
 import { Admin } from '../../models/adminModel.js';
 import { AdminWallet } from '../../models/adminWallet.js';
+import Notification from '../../models/notifications.model.js';
 
 
 // key：608f211d904e4ee8bd7fa43571906fba
@@ -413,7 +414,38 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
         });
 
 
+        const astrologerAcc = Astrologer.findById(call.astrologerId);
+        const userAcc = User.findById(call.userId);
+
         await call.save();
+
+
+        const newNotification = new Notification({
+            userId: call.userId,
+            message: [
+                {
+                    title: 'Coin Deducted',
+                    desc: `${call.totalAmount} has been deducted from your wallet for the call with ${astrologerAcc.name}`,
+                }
+            ]
+        });
+
+        // Save the notification to the database
+        newNotification.save()
+
+        const newNotification_astrologer = new Notification({
+            userId: call.userId,
+            message: [
+                {
+                    title: 'Coin Credited',
+                    desc: `${call.totalAmount - Math.ceil(astrologer.callCommission * (call.duration / 60))} has been credited to your wallet for the call with ${userAcc.name}`,
+                }
+            ]
+        });
+
+        // Save the notification to the database
+        newNotification.save()
+        newNotification_astrologer.save()
 
 
         res.status(200).json({
