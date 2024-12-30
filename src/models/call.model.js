@@ -19,7 +19,7 @@ const callSchema = new mongoose.Schema(
         recordingData: { type: Object, default: null }, // AWS  for recording
         totalAmount: { type: Number, default: 0 }, // Total amount charged for the call
         recordingStarted: { type: Boolean },
-        callType: { type: String }
+        callType: { type: String, default: "audio" }
     },
     { timestamps: true }
 );

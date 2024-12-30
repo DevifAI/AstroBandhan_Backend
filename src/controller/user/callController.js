@@ -275,7 +275,7 @@ export const start_call = asyncHandler(async (req, res) => {
         const { resourceId } = await acquireRecordingResource(channleid, uid,);
         // console.log({resourceId});
         // console.log({token});
-        const resCall = callType === "audio" ? await startRecording_video(resourceId, channleid, uid, token, publisherUid, JoinedId,) : await startRecording_audio(resourceId, channleid, uid, token, publisherUid, JoinedId,);
+        const resCall =  await startRecording_video(resourceId, channleid, uid, token, publisherUid, JoinedId,) ;
 
         const abc = {
             userId, // Log as key-value pair in an object
