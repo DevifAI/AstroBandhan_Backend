@@ -68,30 +68,31 @@ export const ask_ai_astro = asyncHandler(async (req, res) => {
                 timestamp: currentTime,
             });
 
-            // Handle periodic deduction if the chat hasn't ended yet
-            if (chatRecord.isChatStarted && !chatRecord.isChatEnded && !isFreeChat) {
-                const duration = Math.ceil((currentTimestamp - chatRecord.startTime));
+            // // Handle periodic deduction if the chat hasn't ended yet
+            // if (chatRecord.isChatStarted && !chatRecord.isChatEnded && !isFreeChat) {
+            //     const duration = Math.ceil((currentTimestamp - chatRecord.startTime));
 
-                // Deduct the amount every minute
-                const totalAmount = astroDetails.pricePerChatMinute * duration;
+            //     // Deduct the amount every minute
+            //     const totalAmount = astroDetails.pricePerChatMinute * duration;
+            //     const user = User.findById(userId)
+            //     user.wallet -= 
+            //     // Deduct from user wallet and add to astrologer wallet
+            //     await deductFromUserWallet(userId, totalAmount);
+            //     await addToAstroWallet(astroId, totalAmount);
 
-                // Deduct from user wallet and add to astrologer wallet
-                await deductFromUserWallet(userId, totalAmount);
-                await addToAstroWallet(astroId, totalAmount);
+            //     // Schedule the deduction every minute
+            //     if (!chatRecord.deductionTimer) {
+            //         chatRecord.deductionTimer = setInterval(async () => {
+            //             // Update duration
+            //             const updatedDuration = Math.ceil((currentTimestamp - chatRecord.startTime));
+            //             const updatedAmount = astroDetails.pricePerChatMinute * updatedDuration;
 
-                // Schedule the deduction every minute
-                if (!chatRecord.deductionTimer) {
-                    chatRecord.deductionTimer = setInterval(async () => {
-                        // Update duration
-                        const updatedDuration = Math.ceil((currentTimestamp - chatRecord.startTime));
-                        const updatedAmount = astroDetails.pricePerChatMinute * updatedDuration;
-
-                        // Deduct and add the money
-                        await deductFromUserWallet(userId, astroDetails.pricePerChatMinute);
-                        await addToAstroWallet(astroId, astroDetails.pricePerChatMinute);
-                    }, 60000); // Execute every minute
-                }
-            }
+            //             // Deduct and add the money
+            //             await deductFromUserWallet(userId, astroDetails.pricePerChatMinute);
+            //             await addToAstroWallet(astroId, astroDetails.pricePerChatMinute);
+            //         }, 60000); // Execute every minute
+            //     }
+            // }
 
             // If the chat has ended, stop the deduction timer and update duration
             if (isChatEnded) {

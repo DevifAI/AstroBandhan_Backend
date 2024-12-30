@@ -132,7 +132,7 @@ export const initSocket = (server) => {
             }
         });
 
-        socket.on('startaudiocall', async ({ userId, channleid, astrologerId }) => {
+        socket.on('startaudiocall', async ({ userId, channleid, astrologerId, callType }) => {
             const appID = "69779ffdb88442ecb348ae75b0b3963d";
             const appCertificate = "e10b414d78c84ec9bcd1160d6fe0ef4c";
 
@@ -170,7 +170,8 @@ export const initSocket = (server) => {
                 userId,
                 astrologerId,
                 token: astrologerToken, // Token for astrologer (SUBSCRIBER)
-                uid: astrologerUid,     // UID for astrologer
+                uid: astrologerUid,
+                callType,     // UID for astrologer
                 message: `A user has created a chat room with you.`
             });
 
@@ -179,81 +180,13 @@ export const initSocket = (server) => {
                 userId,
                 astrologerId,
                 token: clientToken,     // Token for client (PUBLISHER)
-                uid: userUid,          // UID for client
+                uid: userUid,     
+                callType,     // UID for client
                 message: `A user has created a chat room with you.`
             });
         });
 
-        // socket.on('startaudiocall', async ({ userId, channleid, astrologerId }) => {
-        //     const appID = "69779ffdb88442ecb348ae75b0b3963d";
-        //     const appCertificate = "e10b414d78c84ec9bcd1160d6fe0ef4c";
-        //     const uid = Math.floor(Math.random() * 100000); // Random user ID
-
-        //     // Function to generate token for user (PUBLISHER role)
-        //     const generateAgoraToken = (channelName, appID, appCertificate, uid) => {
-        //         return AgoraAccessToken.RtcTokenBuilder.buildTokenWithUid(
-        //             appID,
-        //             appCertificate,
-        //             channelName,
-        //             uid,
-        //             AgoraAccessToken.RtcRole.PUBLISHER,
-        //             Math.floor(Date.now() / 1000) + 3600 // Token expires in 1 hour
-        //         );
-        //     };
-
-        //     // Function to generate token for astrologer (SUBSCRIBER role)
-        //     const generateAstrologerToken = (channelName, appID, appCertificate, uid) => {
-        //         return AgoraAccessToken.RtcTokenBuilder.buildTokenWithUid(
-        //             appID,
-        //             appCertificate,
-        //             channelName,
-        //             uid,
-        //             AgoraAccessToken.RtcRole.SUBSCRIBER,
-        //             Math.floor(Date.now() / 1000) + 3600 // Token expires in 1 hour
-        //         );
-        //     };
-
-        //     let channelName = channleid;
-
-        //     const userToken = generateAgoraToken(channelName, appID, appCertificate, uid);
-        //     const astrologerToken = generateAstrologerToken(channelName, appID, appCertificate, uid + 1); // Different UID for astrologer
-
-        //     const astrologerSocketId = activeUsers[astrologerId];
-        //     const userSocketId = activeUsers[userId];
-
-        //     console.log("Logs:");
-        //     console.log({ astrologerId, userId, channelName, uid, userToken, astrologerSocketId, userSocketId });
-
-        //     // Emit event to astrologer with their unique token
-        //     if (astrologerSocketId) {
-        //         io.to(astrologerSocketId).emit('startaudiocall', {
-        //             channleid: channleid,
-        //             userId,
-        //             astrologerId,
-        //             token: astrologerToken,
-        //             uid: uid + 1,
-        //             message: `A user has created a chat room with you.`
-        //         });
-        //     } else {
-        //         console.log(`Astrologer ${astrologerId} is not connected.`);
-        //     }
-
-        //     // Emit event to user with their unique token
-        //     if (userSocketId) {
-        //         io.to(userSocketId).emit('startaudiocall', {
-        //             channleid: channleid,
-        //             userId,
-        //             astrologerId,
-        //             token: userToken,
-        //             uid,
-        //             message: `A chat room has been created with the astrologer.`
-        //         });
-        //     } else {
-        //         console.log(`User ${userId} is not connected.`);
-        //     }
-        // });
-
-        socket.on('joinedaudiocall', async ({ userId, channleid, astrologerId, publisherUid, JoinedId }) => {
+        socket.on('joinedaudiocall', async ({ userId, channleid, astrologerId, publisherUid, JoinedId,callType }) => {
 
             console.log({ publisherUid, JoinedId });
             const payload = {
@@ -262,6 +195,7 @@ export const initSocket = (server) => {
                 channleid,
                 publisherUid,
                 JoinedId,
+                callType
             };
 
             console.log("payload");
@@ -277,13 +211,13 @@ export const initSocket = (server) => {
             io.to(astrologerSocketId).emit('callid_audiocall', {
                 callId:response.data["callId"],
                 response:response.data,
-                message: `A user has created a chat room with you.`,
+                message: `Successfully joined the call room.`,
             });
             
             io.to(userSocketId).emit('callid_audiocall', {
                 callId:response.data["callId"],
                 response:response.data,
-                message: `A user has created a chat room with you.`,
+                message: `A user has joined call room with you.`,
             });
 
         });
@@ -359,7 +293,7 @@ export const initSocket = (server) => {
                         // Step 4: Store the start time of the chat session
                         chatStartTimes[chatRoomId] = Date.now();
 
-                        const admins = await Admin.findAll();  // Or Astrologer.findAll() if you're working with astrologers
+                        const admins = await Admin.find({});  // Or Astrologer.findAll() if you're working with astrologers
 
                         if (admins.length === 0) {
                             return res.status(404).json({ message: "No Admin found" });
@@ -367,7 +301,7 @@ export const initSocket = (server) => {
 
                         // Take the first user/astrologer document
                         const adminUser = admins[0]; // Change this to astrologer if working with astrologers
-                        adminUser.walletBalance += minuteComission;
+                        adminUser.adminWalletBalance += minuteComission;
                         await adminUser.save()
 
                         // Deduct the cost for 1 minute
@@ -417,8 +351,8 @@ export const initSocket = (server) => {
                         try {
                             const currentTime = Date.now();
                             const startTime = chatStartTimes[chatRoomId];
-                            const elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
-                            const minutes = Math.floor(elapsedSeconds / 60);
+                            const elapsedSeconds = Math.ceil((currentTime - startTime) / 1000);
+                            const minutes = Math.ceil(elapsedSeconds / 60);
                             const seconds = elapsedSeconds % 60;
                             const elapsedTime = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
 
@@ -451,7 +385,7 @@ export const initSocket = (server) => {
                             const adminWallet = AdminWallet.findOne({ service_id: chatRoomId })
                             if (adminWallet) {
                                 adminWallet.amount += minuteComission
-                                adminUser.wallet += minuteComission
+                                adminUser.adminWalletBalance += minuteComission
 
                                 await adminUser.save()
                                 await adminWallet.save()
@@ -556,7 +490,7 @@ export const initSocket = (server) => {
                     },
                     { new: true } // Return the updated document
                 );
-
+                
                 if (chatRoom) {
                     // Notify both the user and astrologer
                     clearInterval(chatIntervals[chatRoomId]);
