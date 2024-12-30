@@ -360,7 +360,7 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
 
         // Update the call with recording URL
         call.endedAt = new Date();
-        call.duration = Math.floor((call.endedAt - call.startedAt) / 1000);
+        call.duration = Math.ceil((call.endedAt - call.startedAt) / 1000);
         call.recordingData = recordingData; // Store the recording URL
 
         console.log({ recordingData });
@@ -382,7 +382,9 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
             throw new Error("User or Astrologer not found during call end");
         }
 
-        console.log(call.duration);
+        console.log("duration", call.duration);
+        console.log("admin", Math.ceil((call.duration / 60) * astrologer.callCommission));
+        console.log("astrologer", Math.ceil(astrologer.callCommission * (call.duration / 60)));
 
         await AdminWallet.create({
             amount: Math.ceil((call.duration / 60) * astrologer.callCommission), // Convert duration to minutes and round off
