@@ -8,10 +8,10 @@ import { findAstrologerByVerified } from '../../controller/admin/findAstrologerB
 import { updateAstrologerFields } from '../../controller/admin/updateAstrologerFields.js';
 import { getAstrologers } from '../../controller/admin/findAstrologerBy_id_name_specialities.js';
 import { addAstrologerToCategory, addCategory, deleteAstrologerFromCategory, deleteCategory, getAstrologersByCategoryName } from '../../controller/admin/AstrologerCategory.js';
-import { getPendingAstrologerRequests } from '../../controller/admin/getPendingAstrologerRequest.js'
+import { deleteAstrologerRequest, getPendingAstrologerRequests } from '../../controller/admin/getPendingAstrologerRequest.js'
 import { addAstrologer, editAstrologer, deleteAstrologer } from '../../controller/admin/ai_astrologerController.js';
 import { addProductCategory, deleteProductCategory, editProductCategory } from '../../controller/admin/addProductCategoryController.js';
-import { get_total_astrologers, get_total_completed_chat, get_total_Order, get_total_users, get_unverified_astrologers } from '../../controller/admin/dashboard/manageDashboard.js';
+import { get_calls_chats_counts, get_total_astrologers, get_total_Calls, get_total_Chats, get_total_completed_chat, get_total_Due, get_total_Earning, get_total_Horroscope, get_total_Order, get_total_users, get_total_Video_Calls, get_unverified_astrologers, get_wallet_recharges_and_payouts } from '../../controller/admin/dashboard/manageDashboard.js';
 import { changePasswordAdmin, forgotPasswordAdmin, getAdminById, loginAdmin, registerAdmin, validateOtpAdmin } from '../../controller/admin/admin.controller.js';
 const router = express.Router();
 
@@ -44,6 +44,7 @@ router.post('/add/astrologer/category', addAstrologerToCategory);
 router.delete('/delete/astrologer/category', deleteAstrologerFromCategory);
 router.get('/astrologers/by-category/:categoryName', getAstrologersByCategoryName);
 router.get('/pending-astrologer-requests', getPendingAstrologerRequests);
+router.post('/delete-astrologer-requests', deleteAstrologerRequest);
 
 //need to check all this api, in progress
 router.post('/add/ai/astrologer', addAstrologer);
@@ -56,6 +57,14 @@ router.get('/totalastrologers', get_total_astrologers);
 router.get('/totalusers', get_total_users);
 router.get('/totalchats', get_total_completed_chat);
 router.get('/totalorders', get_total_Order);
+router.get('/totalearnings', get_total_Earning);
+router.get('/totalcalls', get_total_Calls);
+router.get('/totalchats', get_total_Chats);
+router.get('/totalvideocalls', get_total_Video_Calls);
+router.get('/totalhorroscope', get_total_Horroscope);
+router.get('/totalDue', get_total_Due);
+router.get('/reveneuvspayout', get_wallet_recharges_and_payouts);
+router.get('/callchats/counts', get_calls_chats_counts);
 router.get('/unverified/astrologers', get_unverified_astrologers);
 
 export default router;

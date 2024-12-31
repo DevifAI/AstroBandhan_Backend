@@ -30,13 +30,13 @@ const pendingAstrologerRequestSchema = new Schema(
             type: String,
             required: true,
         },
-        languages: [
+        language: 
             {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'Language', // Assuming Language is another model in your application
                 required: true,
             },
-        ],
+        
         bio: {
             type: String,
             required: true,

@@ -405,7 +405,7 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
         });
 
         const astrologerCredit = await Wallet.create({
-            user_id: call.astrologerId,
+            astrologer_id: call.astrologerId,
             amount: call.totalAmount - Math.ceil(astrologer.callCommission * (call.duration / 60)),
             transaction_id: `CALL-${call._id}+${Date.now()}`,
             transaction_type: "credit",

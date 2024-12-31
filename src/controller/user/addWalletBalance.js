@@ -5,6 +5,7 @@ import { Wallet } from "../../models/walletSchema.model.js";
 import { activeUsers, io } from "../../utils/sockets/socket.js";
 import { AdminWallet } from "../../models/adminWallet.js";
 import Notification from "../../models/notifications.model.js";
+import { Admin } from "../../models/adminModel.js";
 
 export const add_wallet_balance = asyncHandler(async (req, res) => {
     try {
@@ -41,7 +42,11 @@ export const add_wallet_balance = asyncHandler(async (req, res) => {
             );
         }
         const add_wallet_doc = new Wallet({ user_id: userId, amount, transaction_id, transaction_type: amount_type, credit_type: "wallet_recharge" });
-        const add_admin_wallet_doc = new AdminWallet({ amount, transaction_id, transaction_type: amount_type, credit_type: "wallet_recharge" });
+        const add_admin_wallet_doc = new AdminWallet({ userId, amount, transaction_id, transaction_type: amount_type, credit_type: "wallet_recharge" });
+        const admins = await Admin.find({});
+        const admin = admins[0];
+        admin.adminWalletBalance += amount;
+        await admin.save();
         await add_wallet_doc.save();
         await add_admin_wallet_doc.save();
 
@@ -126,3 +131,4 @@ export const find_transaction_history_by_category = asyncHandler(async (req, res
         );
     }
 });
+

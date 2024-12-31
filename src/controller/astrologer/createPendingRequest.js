@@ -4,10 +4,10 @@ import {ApiResponse} from '../../utils/apiResponse.js';  // Assuming ApiResponse
 
 // Controller to add a new pending astrologer request
 export const addPendingAstrologerRequest = asyncHandler(async (req, res) => {
-  const { name, gender, phoneNumber, experience, city, state, languages, bio } = req.body;
+  const { name, gender, phoneNumber, experience, city, state, language, bio } = req.body;
 
   // Check if all required fields are present
-  if (!name || !gender || !phoneNumber || !experience || !city || !state || !languages || !bio) {
+  if (!name || !gender || !phoneNumber || !experience || !city || !state || !language || !bio) {
     return res.status(400).json(new ApiResponse(400, null, "All fields are required."));
   }
 
@@ -20,7 +20,7 @@ export const addPendingAstrologerRequest = asyncHandler(async (req, res) => {
       experience,
       city,
       state,
-      languages,
+      language,
       bio,
     });
     // Save the document to the database
