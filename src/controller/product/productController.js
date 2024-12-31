@@ -19,6 +19,7 @@ export const createProduct = asyncHandler(async (req, res) => {
       originalPrice,
       displayPrice,
       in_stock,
+      isTrending,
     } = req.body;
 
     // Validate required fields
@@ -31,6 +32,7 @@ export const createProduct = asyncHandler(async (req, res) => {
       "weight",
       "originalPrice",
       "displayPrice",
+      "isTrending",
     ];
     for (const field of requiredFields) {
       if (!req.body[field]) {
@@ -80,6 +82,7 @@ export const createProduct = asyncHandler(async (req, res) => {
       originalPrice,
       displayPrice,
       in_stock,
+      isTrending
     });
 
     // Save the product to the database
@@ -123,6 +126,26 @@ export const getProductById = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
     const product = await Product.findById(id).populate("category");
+
+    if (!product) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Product not found"));
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, product, "Product retrieved successfully"));
+  } catch (error) {
+    throw new ApiError(500, error.message);
+  }
+});
+
+export const getTrendingProducts = asyncHandler(async (req, res) => {
+  try {
+    
+
+    const product = await Product.findAll({isTrending:true}).populate("category");
 
     if (!product) {
       return res

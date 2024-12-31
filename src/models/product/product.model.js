@@ -11,7 +11,7 @@ const productSchema = new Schema(
     },
     image: {
       type: String,
-      required: [true, "Product name is required"],
+      required: [true, "Product image is required"],
     },
     productDescription: {
       type: String,
@@ -51,6 +51,10 @@ const productSchema = new Schema(
     in_stock: {
       type: Boolean,
       default: true,
+    },
+    isTrending: {
+      type: Boolean,
+      default: false,
     },
   },
   {
