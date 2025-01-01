@@ -164,40 +164,46 @@ export const getTrendingProducts = asyncHandler(async (req, res) => {
 // Get Products by Category
 export const getProductsByCategory = asyncHandler(async (req, res) => {
   try {
-    const { categoryId } = req.params;
+    const { categoryId,is_all } = req.params;
 
-    const products = await Product.aggregate([
-      {
-        $match: {
-          category: new mongoose.Types.ObjectId(categoryId),
+    let products
+    if(is_all === 'true'){
+      products = await Product.find({});
+    }else{
+      products = await Product.aggregate([
+        {
+          $match: {
+            category: new mongoose.Types.ObjectId(categoryId),
+          },
         },
-      },
-      {
-        $lookup: {
-          from: "productcategories",
-          localField: "category",
-          foreignField: "_id",
-          as: "categoryDetails",
+        {
+          $lookup: {
+            from: "productcategories",
+            localField: "category",
+            foreignField: "_id",
+            as: "categoryDetails",
+          },
         },
-      },
-      {
-        $unwind: "$categoryDetails",
-      },
-      {
-        $project: {
-          productName: 1,
-          image: 1,
-          productDescription: 1,
-          category: "$categoryDetails.category_name",
-          rating: 1,
-          brand: 1,
-          weight: 1,
-          originalPrice: 1,
-          displayPrice: 1,
-          in_stock: 1,
+        {
+          $unwind: "$categoryDetails",
         },
-      },
-    ]);
+        {
+          $project: {
+            productName: 1,
+            image: 1,
+            productDescription: 1,
+            category: "$categoryDetails.category_name",
+            rating: 1,
+            brand: 1,
+            weight: 1,
+            originalPrice: 1,
+            displayPrice: 1,
+            in_stock: 1,
+          },
+        },
+      ]);
+    }
+    
 
     if (!products || products.length === 0) {
       return res
