@@ -381,4 +381,27 @@ export const get_calls_chats_counts = asyncHandler(async (req, res) => {
 });
 
 
+export const  get_top_astrologer_this_week = asyncHandler(async (req, res) => {
+console.log("pending")
+})
+
+  export const getAdminProfile = asyncHandler(async (req, res) => {
+        try {
+            const admins = await Admin.find({});
+            const admin = admins[0];
+            res.status(200).json({
+                success: true,
+                admin: admin
+            });
+        } catch (error) {
+            console.error('Error fetching admin profile:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to retrieve admin profile',
+                error: error.message
+            });
+        }
+    });
+
+
 
