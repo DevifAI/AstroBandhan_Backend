@@ -42,7 +42,7 @@ export const add_wallet_balance = asyncHandler(async (req, res) => {
             );
         }
         const add_wallet_doc = new Wallet({ user_id: userId, amount, transaction_id, transaction_type: amount_type, credit_type: "wallet_recharge" });
-        const add_admin_wallet_doc = new AdminWallet({ userId, amount, transaction_id, transaction_type: amount_type, credit_type: "wallet_recharge" });
+        const add_admin_wallet_doc = new AdminWallet({ service_id: transaction_id, userId, amount, transaction_id, transaction_type: amount_type, credit_type: "wallet_recharge" });
         const admins = await Admin.find({});
         const admin = admins[0];
         admin.adminWalletBalance += amount;

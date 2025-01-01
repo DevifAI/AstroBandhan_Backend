@@ -381,27 +381,148 @@ export const get_calls_chats_counts = asyncHandler(async (req, res) => {
 });
 
 
-export const  get_top_astrologer_this_week = asyncHandler(async (req, res) => {
-console.log("pending")
+export const get_top_astrologer_this_week = asyncHandler(async (req, res) => {
+    console.log("pending")
 })
 
-  export const getAdminProfile = asyncHandler(async (req, res) => {
-        try {
-            const admins = await Admin.find({});
-            const admin = admins[0];
-            res.status(200).json({
-                success: true,
-                admin: admin
-            });
-        } catch (error) {
-            console.error('Error fetching admin profile:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to retrieve admin profile',
-                error: error.message
-            });
-        }
-    });
+export const getAdminProfile = asyncHandler(async (req, res) => {
+    try {
+        const admins = await Admin.find({});
+        const admin = admins[0];
+        res.status(200).json({
+            success: true,
+            admin: admin
+        });
+    } catch (error) {
+        console.error('Error fetching admin profile:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to retrieve admin profile',
+            error: error.message
+        });
+    }
+});
 
+export const getTotalCredit_Admin = asyncHandler(async (req, res) => {
+    try {
+        const result = await AdminWallet.aggregate([
+            {
+                $match: { transaction_type: "credit" }
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalAmount: { $sum: "$amount" }
+                }
+            }
+        ]);
+
+        const totalAmount = result.length > 0 ? result[0].totalAmount : 0;
+
+        res.status(200).json({
+            success: true,
+            total: totalAmount
+        });
+    } catch (error) {
+        console.error('Error fetching total credit:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to retrieve total credit',
+            error: error.message
+        });
+    }
+});
+
+
+
+
+export const getTotalCredit_Wallet_Recharge_Admin = asyncHandler(async (req, res) => {
+    try {
+        const { fromDate, toDate } = req.body;
+        console.log(req.body); // Logs the incoming request body
+        console.log({ fromDate, toDate }); // Logs the extracted values
+
+        // Convert date format from dd-mm-yyyy to yyyy-mm-dd
+        // const fromDateObj = fromDate.split("-").reverse().join("-");
+        // const toDateObj = toDate.split("-").reverse().join("-");
+
+        // console.log({ fromDateObj, toDateObj });
+
+        // Query with populate
+        const result = await AdminWallet.aggregate([
+            {
+                $addFields: {
+                    createdDateString: {
+                        $dateToString: {
+                            format: "%Y-%m-%d", // Convert the `createdAt` field to a string in the format YYYY-MM-DD
+                            date: "$createdAt",
+                        },
+                    },
+                },
+            },
+            {
+                $match: {
+                    credit_type: "wallet_recharge", // Filter by credit type
+                    createdDateString: fromDate === toDate
+                        ? fromDate // Exact match for the same date
+                        : {
+                            $gte: fromDate, // Match fromDate (formatted as YYYY-MM-DD)
+                            $lte: toDate, // Match toDate (formatted as YYYY-MM-DD)
+                        },
+                },
+            },
+            {
+                $lookup: {
+                    from: "users", // Reference to the 'users' collection
+                    localField: "userId", // Field in the AdminWallet collection
+                    foreignField: "_id", // Field in the users collection
+                    as: "userDetails", // Alias for the joined data
+                },
+            },
+            {
+                $unwind: {
+                    path: "$userDetails", // Flatten userDetails array
+                    preserveNullAndEmptyArrays: false, // Exclude documents without matching userDetails
+                },
+            },
+            {
+                $project: {
+                    profile: "$userDetails.photo",
+                    name: "$userDetails.name",
+                    contact: "$userDetails.phone",
+                    transaction_id: 1,
+                    photo:"$userDetails.photo",
+                    date: "$createdDateString", // Use the createdDateString field
+                    amount: { $toString: "$amount" }, // Convert the amount to a string
+                },
+            },
+        ]);
+
+        console.log({result})
+        // Transform the data for the response
+        const transformedData = result.map(entry => ({
+            profile: entry?.photo || null,
+            name: entry?.name || "N/A",
+            contact: entry?.contact || "N/A",
+            transaction_id: entry.transaction_id || "N/A",
+            date: entry?.date, // Format date
+            amount: entry.amount ? entry.amount : "0", // Format amount to 2 decimal places
+        }));
+
+        console.log({ transformedData }); // Logs the transformed data
+
+        res.status(200).json({
+            success: true,
+            total: transformedData,
+        });
+    } catch (error) {
+        console.error("Error fetching total credit:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to retrieve total credit",
+            error: error.message,
+        });
+    }
+});
 
 

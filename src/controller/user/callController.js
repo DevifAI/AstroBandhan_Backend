@@ -264,7 +264,7 @@ export const start_call = asyncHandler(async (req, res) => {
 
         // Take the first user/astrologer document
         const adminUser = admins[0]; // Change this to astrologer if working with astrologers
-        adminUser.adminWalletBalance += commissionPerMinute;
+        // adminUser.adminWalletBalance += commissionPerMinute;
 
         await user.save();
         await astrologer.save();
@@ -315,7 +315,7 @@ export const start_call = asyncHandler(async (req, res) => {
                     // console.log({newCall});
                     updatedUser.walletBalance -= pricePerMinute;
                     astrologer.walletBalance += (pricePerMinute - commissionPerMinute); // Add the balance after commission
-                    adminUser.adminWalletBalance += commissionPerMinute;
+                    // adminUser.adminWalletBalance += commissionPerMinute;
                     newCall.totalAmount += pricePerMinute;
                     await updatedUser.save();
                     await newCall.save();
@@ -392,7 +392,8 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
             transaction_id: `ADMIN_TXN_${Date.now()}`,
             transaction_type: "credit",
             credit_type: "call",
-            service_id: call._id
+            service_id: call._id,
+            userId,
         });
 
         const userDebit = await Wallet.create({

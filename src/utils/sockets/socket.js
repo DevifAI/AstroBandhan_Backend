@@ -334,8 +334,8 @@ export const initSocket = (server) => {
 
                         // Take the first user/astrologer document
                         const adminUser = admins[0]; // Change this to astrologer if working with astrologers
-                        adminUser.adminWalletBalance += minuteComission;
-                        await adminUser.save()
+                        // adminUser.adminWalletBalance += minuteComission;
+                        // await adminUser.save()
 
                         // Deduct the cost for 1 minute
                         user.walletBalance -= minuteCost;
@@ -350,7 +350,8 @@ export const initSocket = (server) => {
                             transaction_id: `ADMIN_TXN_${Date.now()}`,
                             transaction_type: "credit",
                             credit_type: "chat",
-                            service_id: chatRoomId
+                            service_id: chatRoomId,
+                            userId
                         })
                         await adminWalletTransaction.save()
                         // Log the transaction
@@ -418,9 +419,9 @@ export const initSocket = (server) => {
                             const adminWallet = AdminWallet.findOne({ service_id: chatRoomId })
                             if (adminWallet) {
                                 adminWallet.amount += minuteComission
-                                adminUser.adminWalletBalance += minuteComission
+                                // adminUser.adminWalletBalance += minuteComission
 
-                                await adminUser.save()
+                                // await adminUser.save()
                                 await adminWallet.save()
                             }
                             if (userWallet) {

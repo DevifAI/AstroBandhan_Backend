@@ -93,13 +93,14 @@ export const createOrder = asyncHandler(async (req, res) => {
       transaction_id: `ADMIN_TXN_${Date.now()}`,
       transaction_type: "credit",
       credit_type: "service_commission",
+      userId,
     });
 
     await adminTransaction.save();
 
     // Add the amount to the admin wallet balance
-    admin.adminWalletBalance += total_price;
-    await admin.save();
+    // admin.adminWalletBalance += total_price;
+    // await admin.save();
 
     // Create the order
     const newOrder = new Order({

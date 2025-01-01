@@ -1,9 +1,7 @@
 import mongoose from 'mongoose';
 
 const adminWalletSchema = new mongoose.Schema({
-    userId: {
-        type: String, default: null
-    },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     service_id: {
         type: String, default: null
     },
@@ -32,14 +30,10 @@ const adminWalletSchema = new mongoose.Schema({
     },
     credit_type: {
         type: String,
-        enum: ['service_commission', 'wallet_recharge', 'payout_astrologer', 'call'],
+        enum: ['service_commission', 'wallet_recharge', 'payout_astrologer', 'call', 'chat'],
         required: function () {
             return this.transaction_type === 'credit';
         },
-        default: null,
-    },
-    reference_id: {
-        type: String,
         default: null,
     },
 }, { timestamps: true });
