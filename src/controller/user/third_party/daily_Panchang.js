@@ -7,8 +7,8 @@ import PanchangModel from '../../../models/panchangModel.js';
 
 export const getDailyPanchang = asyncHandler(async (req, res) => {
     try {
-        const { language, userId } = req.body;
-
+        const { language, userId, formattedDate } = req.body;
+        console.log(formattedDate);
         if (!language) {
             return res.status(400).json(
                 new ApiResponse(400, {}, "Language is required.")
@@ -18,8 +18,8 @@ export const getDailyPanchang = asyncHandler(async (req, res) => {
         const currentDate = new Date();
 
         // Format the current date as DD/MM/YYYY
-        const formattedDate = `${currentDate.getDate().toString().padStart(2, '0')}/${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getFullYear()}`;
-
+        // const formattedDate = `${currentDate.getDate().toString().padStart(2, '0')}/${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getFullYear()}`;
+        // console.log({formattedDate});
         // Get the current time and format it as HH:MM
         const hours = currentDate.getHours().toString().padStart(2, '0'); // Ensure two digits
         const minutes = currentDate.getMinutes().toString().padStart(2, '0'); // Ensure two digits
