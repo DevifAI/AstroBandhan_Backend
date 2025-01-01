@@ -445,7 +445,7 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
         });
 
         // Save the notification to the database
-        newNotification.save()
+        // newNotification.save()
         newNotification_astrologer.save()
 
 
