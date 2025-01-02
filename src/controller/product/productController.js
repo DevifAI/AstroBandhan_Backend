@@ -35,7 +35,6 @@ export const createProduct = asyncHandler(async (req, res) => {
       "brand",
       "originalPrice",
       "displayPrice",
-      "isTrending",
     ];
     for (const field of requiredFields) {
       if (!req.body[field]) {
