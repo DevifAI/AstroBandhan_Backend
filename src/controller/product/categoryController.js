@@ -6,15 +6,15 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 // Create Product Category
 export const createProductCategory = asyncHandler(async (req, res) => {
   try {
-    const { category_name, image } = req.body;
+    const { category_name } = req.body;
 
     if (!category_name) {
       throw new ApiError(400, "Category name is required");
     }
 
-    if (!image) {
-      throw new ApiError(400, "Category image is required");
-    }
+    // if (!image) {
+    //   throw new ApiError(400, "Category image is required");
+    // }
 
     const existingCategory = await ProductCategory.findOne({ category_name });
 
@@ -26,7 +26,7 @@ export const createProductCategory = asyncHandler(async (req, res) => {
 
     const newCategory = new ProductCategory({
       category_name,
-      image,
+      // image,
     });
 
     // Save the new category

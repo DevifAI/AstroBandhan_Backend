@@ -38,8 +38,20 @@ const productSchema = new Schema(
     weight: {
       type: String,
       trim: true,
-      required: [true, "Product weight is required"],
     },
+    material: {
+      type: String,
+      trim: true,
+    },
+    height: {
+      type: String,
+      trim: true,
+    },
+    width: {
+      type: String,
+      trim: true,
+    },
+    contains: [String],
     originalPrice: {
       type: Number,
       required: [true, "Original price is required"],

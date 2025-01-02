@@ -16,10 +16,14 @@ export const createProduct = asyncHandler(async (req, res) => {
       rating,
       brand,
       weight,
+      material,
       originalPrice,
       displayPrice,
       in_stock,
       isTrending,
+      height,
+      width,
+      contains
     } = req.body;
 
     // Validate required fields
@@ -29,7 +33,6 @@ export const createProduct = asyncHandler(async (req, res) => {
       "productDescription",
       "category",
       "brand",
-      "weight",
       "originalPrice",
       "displayPrice",
       "isTrending",
@@ -79,10 +82,14 @@ export const createProduct = asyncHandler(async (req, res) => {
       rating,
       brand,
       weight,
+      material,
       originalPrice,
       displayPrice,
       in_stock,
-      isTrending
+      isTrending,
+      height,
+      width,
+      contains
     });
 
     // Save the product to the database
