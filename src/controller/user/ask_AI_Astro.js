@@ -1,13 +1,60 @@
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { chat_with_ai_astro } from "../../utils/chat_with_ai_astro.js";
 import { AI_Astro_Chat } from "../../models/AI_Astro_Chat.model.js"
+import { AI_Astrologer } from "../../models//ai_astrologer_model.js"
 import { User } from "../../models/user.model.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 import { AI_Astrologer } from "../../models/ai_astrologer_model.js";
 
 // import { sendNotificationToUser } from "../../utils/sockets/sendNotifications.js";
 
+export const deductFromUserWallet = async (userId, amount) => {
+    try {
+        // Fetch the user by ID
+        const user = await User.findById(userId);
+        if (!user) {
+            throw new Error("User not found.");
+        }
 
+        // Check if the user has sufficient balance
+        if (user.walletBalance < amount) {
+            throw new Error("Insufficient wallet balance.");
+        }
+
+        // Deduct the amount
+        user.walletBalance -= amount;
+
+        // Save the updated user data
+        await user.save();
+
+        return new ApiResponse(200, user, "Amount successfully deducted from wallet.");
+    } catch (error) {
+        console.error("Error deducting from wallet:", error);
+        throw new Error(error.message || "Failed to deduct wallet balance.");
+    }
+};
+
+export const addToAstroWallet = async (userId, amount) => {
+    try {
+        if (amount <= 0) {
+            throw new Error("Amount must be greater than zero.");
+        }
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return new ApiResponse(404, "User not found.");
+        }
+
+        user.walletBalance += amount;
+        await user.save();
+
+        return new ApiResponse(200, "Amount successfully added to astro wallet.");
+    } catch (error) {
+        console.error("Error adding to astro wallet:", error);
+        return new ApiResponse(500, "Failed to add amount to astro wallet.");
+    }
+};
 
 async function getUserDetails(userId) {
     try {
