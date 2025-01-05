@@ -254,7 +254,7 @@ export const toggleFreeChat = asyncHandler(async (req, res) => {
             return res.status(404).json(new ApiResponse(404, null, "User not found."));
         }
 
-        user.isFreeChat = isFreeChat;
+        user.Free_Chat_Available = isFreeChat;
         await user.save();
 
         return res.json(new ApiResponse(200, user, "User FreeChat status updated."));
