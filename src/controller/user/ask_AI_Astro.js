@@ -243,7 +243,7 @@ export const fetch_ai_astro_chat = asyncHandler(async (req, res) => {
 
 export const toggleFreeChat = asyncHandler(async (req, res) => {
     const { userId, isFreeChat } = req.body;
-
+        console.log({ userId, isFreeChat });
     if (!userId || isFreeChat === undefined) {
         return res.status(400).json(new ApiResponse(400, null, "Please provide UserId and isFreeChat value."));
     }
