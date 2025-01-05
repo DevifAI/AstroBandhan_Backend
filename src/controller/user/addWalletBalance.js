@@ -82,15 +82,20 @@ export const add_wallet_balance = asyncHandler(async (req, res) => {
 
 
 export const find_transaction_history_by_category = asyncHandler(async (req, res) => {
-    try {
-        const { userId, debit_type, amount_type } = req.body;
 
+    try {
+        console.log("NITIN");
+        const { userId, debit_type, amount_type } = req.body;
+    
+        console.log({ userId, debit_type, amount_type } );
+    
         // Validation for userId and at least one of debit_type or amount_type
         if (!userId) {
             return res.status(400).json(
                 new ApiResponse(400, {}, "User ID is required.")
             );
         }
+
         if (!debit_type && !amount_type) {
             return res.status(400).json(
                 new ApiResponse(400, {}, "At least one of debit_type or amount_type is required.")
@@ -104,7 +109,6 @@ export const find_transaction_history_by_category = asyncHandler(async (req, res
                 new ApiResponse(404, {}, "User not found.")
             );
         }
-
 
         // Find wallet transactions
         let transactions;

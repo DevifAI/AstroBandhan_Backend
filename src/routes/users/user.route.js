@@ -51,7 +51,7 @@ router.post('/daily/panchang', getDailyPanchang);
 router.post('/monthly/panchang', getMonthlyPanchang);
 router.post('/numerology', get_numerology);
 router.post('/getnotifications/count', getUnreadNotificationsCount);
-router.post('/getnotifications/count', deleteNotifications);
+router.post('/getnotifications/delete', deleteNotifications);
 router.post('/get/top/astrologers', getTrendingAstrologer);
 router.post('/get/trending/astrologers', getTrendingAstrologer);
 router.post('/get/suggest/astrologers', getAutoSuggestAstrologer);

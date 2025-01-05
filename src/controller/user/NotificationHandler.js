@@ -15,11 +15,11 @@ export const markNotificationsAsRead = asyncHandler(async (req, res) => {
             );
         }
 
-        const objectId = mongoose.Types.ObjectId(notificationId);
+        const objectId =new mongoose.Types.ObjectId(notificationId);
 
 
         // Update the 'read' field of notifications to true for the given user
-        const result = await Notification.updateMany(
+        const result = await Notification.updateOne(
             { userId, _id: objectId }, // Only update unread notifications
             { $set: { read: true } }  // Set the 'read' field to true
         );
@@ -53,7 +53,7 @@ export const deleteNotifications = asyncHandler(async (req, res) => {
         }
 
         // Convert notificationId to ObjectId
-        const objectId = mongoose.Types.ObjectId(notificationId);
+        const objectId =new mongoose.Types.ObjectId(notificationId);
 
 
         // Delete notifications for the given user
