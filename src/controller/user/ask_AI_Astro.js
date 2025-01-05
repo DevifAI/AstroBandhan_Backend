@@ -3,6 +3,7 @@ import { chat_with_ai_astro } from "../../utils/chat_with_ai_astro.js";
 import { AI_Astro_Chat } from "../../models/AI_Astro_Chat.model.js"
 import { User } from "../../models/user.model.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
+import { AI_Astrologer } from "../../models/ai_astrologer_model.js";
 
 // import { sendNotificationToUser } from "../../utils/sockets/sendNotifications.js";
 
@@ -20,7 +21,7 @@ async function getUserDetails(userId) {
 
 export const ask_ai_astro = asyncHandler(async (req, res) => {
     const { question, astrologyType, userId, astroId, isFreeChat, isChatEnded } = req.body;
-
+    console.log(req.body);
     // // Validate required fields
     // if (!question || !astrologyType || !userId || !astroId || isFreeChat === undefined || isChatEnded === undefined) {
     //     return res.status(400).json({
@@ -33,16 +34,16 @@ export const ask_ai_astro = asyncHandler(async (req, res) => {
     if (!userDetails) {
         return res.status(404).json({ error: "User not found." });
     }
-
+    console.log({userDetails});
     // Get astrologer details
-    const astroDetails = await AI_Astrologer.findById(astroId);
+    const astroDetails = await AI_Astrologer.findById("673a8fe166fe9594396b4e7c");
     if (!astroDetails) {
         return res.status(404).json({ error: "Astrologer not found." });
     }
-
+    console.log({userDetails});
     // Get AI-generated answer
     const answer = await chat_with_ai_astro(question, astrologyType, userDetails);
-
+    console.log({answer});
     try {
         // Find existing chat document for this user and astrologer
         let chatRecord = await AI_Astro_Chat.findOne({

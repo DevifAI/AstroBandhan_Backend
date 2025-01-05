@@ -71,8 +71,8 @@ export const registerUser = asyncHandler(async (req, res) => {
     newUser.refreshToken = refreshToken;
     await newUser.save();
 
-    return res.status(201).json(
-      new ApiResponse(201, { accessToken, refreshToken, newUser }, "User registered successfully.")
+    return res.status(200).json(
+      new ApiResponse(200, { accessToken, refreshToken, newUser }, "User registered successfully.")
     );
   } catch (error) {
     return res.status(500).json(new ApiResponse(500, null, "Something went wrong. Please try again."));
