@@ -22,7 +22,7 @@ import { getAutoSuggestAstrologer, getTrendingAstrologer } from "../../controlle
 
 const router = Router();
 
-router.route("/signup", upload.single('photo')).post(registerUser);
+router.route("/signup").post(registerUser);
 router.route("/changepassword/:userId").post(changePassword);
 router.route("/login").post(userLogin);
 router.route("/addreview").post(addReview);

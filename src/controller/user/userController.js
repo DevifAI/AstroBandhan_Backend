@@ -11,7 +11,7 @@ import fs from "fs";
 
 export const registerUser = asyncHandler(async (req, res) => {
   try {
-    const { name, email, phone, dateOfBirth, timeOfBirth, placeOfBirth, gender, password } = req.body;
+    const { name, email, phone, dateOfBirth, timeOfBirth, placeOfBirth, gender, password, photo } = req.body;
 
     if (!phone) {
       return res.status(400).json(new ApiResponse(400, null, "Phone number is required"));
@@ -34,20 +34,20 @@ export const registerUser = asyncHandler(async (req, res) => {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);  // Correct usage of bcrypt.hash
 
-    const avatarLocalPath = req.file.path;
+    // const avatarLocalPath = photo;
 
     // Upload new avatar to Cloudinary
-    let avatarUrl;
-    try {
-      const uploadResult = await uploadOnCloudinary(avatarLocalPath);
-      avatarUrl = uploadResult.url;
+    let avatarUrl = photo;
+    // try {
+    //   const uploadResult = await uploadOnCloudinary(avatarLocalPath);
+    //   avatarUrl = uploadResult.url;
 
-      // Delete the locally saved file after successful upload
-      fs.unlinkSync(avatarLocalPath);
-    } catch (error) {
-      console.log(error)
-      return res.status(500).json(new ApiResponse(500, null, "Failed to upload photo."));
-    }
+    //   // Delete the locally saved file after successful upload
+    //   fs.unlinkSync(avatarLocalPath);
+    // } catch (error) {
+    //   console.log(error)
+    //   return res.status(500).json(new ApiResponse(500, null, "Failed to upload photo."));
+    // }
 
 
     // Create new user
