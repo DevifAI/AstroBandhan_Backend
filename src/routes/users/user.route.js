@@ -7,7 +7,7 @@ import {
 } from "../../controller/user/addReviewController.js";
 import { getAllAstrologers } from "../../controller/user/getAllAstrologersController.js";
 import { forgetPassword, updatePassword_user, validateOtp } from "../../controller/user/userController.js"
-import { ask_ai_astro, fetch_ai_astro_chat } from "../../controller/user/ask_AI_Astro.js";
+import { ask_ai_astro, fetch_ai_astro_chat, toggleFreeChat } from "../../controller/user/ask_AI_Astro.js";
 import { getAllLanguages } from "../../controller/admin/LanguageController.js";
 import { add_wallet_balance, find_transaction_history_by_category } from "../../controller/user/addWalletBalance.js";
 import { deleteNotifications, getAllNotificationsByUserId, getUnreadNotificationsCount, markNotificationsAsRead } from "../../controller/user/NotificationHandler.js";
@@ -31,6 +31,7 @@ router.post('/send/otp', forgetPassword)
 router.post('/validate/otp', validateOtp)
 router.post('/update/password', updatePassword_user)
 router.post('/ask/ai/astro', ask_ai_astro)
+router.post('/ask/ai/astro', toggleFreeChat)
 router.get('/get/languages', getAllLanguages)
 router.post('/get/ai/chats', fetch_ai_astro_chat)
 router.post('/add/balance', add_wallet_balance)

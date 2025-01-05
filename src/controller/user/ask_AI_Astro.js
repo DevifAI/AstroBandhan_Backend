@@ -21,12 +21,12 @@ async function getUserDetails(userId) {
 export const ask_ai_astro = asyncHandler(async (req, res) => {
     const { question, astrologyType, userId, astroId, isFreeChat, isChatEnded } = req.body;
 
-    // Validate required fields
-    if (!question || !astrologyType || !userId || !astroId || isFreeChat === undefined || isChatEnded === undefined) {
-        return res.status(400).json({
-            error: "Please provide question, astrology type, userId, astroId, isFreeChat, and isChatEnded."
-        });
-    }
+    // // Validate required fields
+    // if (!question || !astrologyType || !userId || !astroId || isFreeChat === undefined || isChatEnded === undefined) {
+    //     return res.status(400).json({
+    //         error: "Please provide question, astrology type, userId, astroId, isFreeChat, and isChatEnded."
+    //     });
+    // }
 
     // Fetch user details
     const userDetails = await getUserDetails(userId);
@@ -191,5 +191,28 @@ export const fetch_ai_astro_chat = asyncHandler(async (req, res) => {
     } catch (error) {
         console.error("Error fetching chat record:", error);
         return res.status(500).json(new ApiResponse(500, null, "Failed to fetch chat record."));
+    }
+});
+
+export const toggleFreeChat = asyncHandler(async (req, res) => {
+    const { userId, isFreeChat } = req.body;
+
+    if (!userId || isFreeChat === undefined) {
+        return res.status(400).json(new ApiResponse(400, null, "Please provide UserId and isFreeChat value."));
+    }
+
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json(new ApiResponse(404, null, "User not found."));
+        }
+
+        user.isFreeChat = isFreeChat;
+        await user.save();
+
+        return res.json(new ApiResponse(200, user, "User FreeChat status updated."));
+    } catch (error) {
+        console.error("Error updating FreeChat status:", error);
+        return res.status(500).json(new ApiResponse(500, null, "Failed to update FreeChat status."));
     }
 });
