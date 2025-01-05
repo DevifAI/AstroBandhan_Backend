@@ -1,7 +1,6 @@
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { chat_with_ai_astro } from "../../utils/chat_with_ai_astro.js";
 import { AI_Astro_Chat } from "../../models/AI_Astro_Chat.model.js"
-import { AI_Astrologer } from "../../models//ai_astrologer_model.js"
 import { User } from "../../models/user.model.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 import { AI_Astrologer } from "../../models/ai_astrologer_model.js";
