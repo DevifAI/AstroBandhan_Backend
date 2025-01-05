@@ -13,6 +13,15 @@ export const registerAdmin = asyncHandler(async (req, res) => {
   try {
     const { name, email, phone, password, role, adminWalletBalance } = req.body;
 
+
+    const isAdmin_Exist = await Admin.find({})
+
+    if (isAdmin_Exist.length > 0) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, null, "Already Admin Exist for this Organization"));
+    }
+
     // Validate required fields
     if (!phone) {
       return res

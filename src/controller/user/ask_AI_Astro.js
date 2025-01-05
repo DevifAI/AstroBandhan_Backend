@@ -88,7 +88,9 @@ export const ask_ai_astro = asyncHandler(async (req, res) => {
     }
     console.log({userDetails});
     // Get AI-generated answer
+   if(question){
     const answer = await chat_with_ai_astro(question, astrologyType, userDetails);
+   }
     console.log({answer});
     try {
         // Find existing chat document for this user and astrologer
@@ -108,12 +110,14 @@ export const ask_ai_astro = asyncHandler(async (req, res) => {
                 chatRecord.startTime = currentTimestamp;
             }
 
-            // Add the new message to the messages array
-            chatRecord.messages.push({
+           if(question && answer){
+             // Add the new message to the messages array
+             chatRecord.messages.push({
                 question,
                 answer,
                 timestamp: currentTime,
             });
+           }
 
             // // Handle periodic deduction if the chat hasn't ended yet
             // if (chatRecord.isChatStarted && !chatRecord.isChatEnded && !isFreeChat) {
