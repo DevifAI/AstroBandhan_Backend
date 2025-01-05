@@ -15,6 +15,7 @@ import { get_calls_chats_counts, get_total_astrologers, get_total_Calls, get_tot
 import { changePasswordAdmin, forgotPasswordAdmin, getAdminById, loginAdmin, registerAdmin, validateOtpAdmin } from '../../controller/admin/admin.controller.js';
 import { getAstrology_History } from '../../controller/admin/App_History/astrologer_history.js';
 import { getCall_History, getVideo_Call_History } from '../../controller/admin/App_History/audio_call_history.js';
+import { Send_Log_In_OTP, Verify_Log_In_OTP } from '../../controller/astrologer/astrologerAuthController.js';
 const router = express.Router();
 
 // ===============================Authentication routes start===============================
@@ -24,6 +25,12 @@ router.patch('/change-password/:adminId', changePasswordAdmin);
 router.post('/forgot-password', forgotPasswordAdmin);
 router.post('/validate-otp', validateOtpAdmin);
 router.get('/profile/:id', getAdminById);
+router.post('/login/otp', Send_Log_In_OTP);
+router.post('/verify/login/otp', Verify_Log_In_OTP);
+
+
+
+
 
 
 // Route to create a language

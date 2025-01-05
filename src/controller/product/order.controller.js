@@ -40,10 +40,10 @@ export const createOrder = asyncHandler(async (req, res) => {
       .map((field) => field.message);
 
     if (missingFields.length > 0) {
-      throw new ApiError(
-        400,
-        `Missing required fields: ${missingFields.join(", ")}`
-      );
+      return res
+      .status(200)
+      .json(new ApiResponse(200, null, `Missing required fields: ${missingFields.join(", ")}`));
+      
     }
 
     // Fetch user, admin and product details
@@ -53,23 +53,30 @@ export const createOrder = asyncHandler(async (req, res) => {
     console.log(admin)
 
     if (!admin) {
-      throw new ApiError(404, "Admin not found");
+      return res
+        .status(400)
+        .json(new ApiResponse(400, null, "Admin not found"));
     }
 
     if (!user) {
-      throw new ApiError(404, "User not found");
+      return res
+        .status(400)
+        .json(new ApiResponse(400, null, "User not found ."));
     }
 
     if (!product) {
-      throw new ApiError(404, "Product not found");
+
+      return res
+        .status(400)
+        .json(new ApiResponse(400, null, "Product not found ."));
     }
 
     // Ensure sufficient wallet balance
     if (user.walletBalance < total_price) {
-      throw new ApiError(
-        400,
-        "Insufficient wallet balance. Please add funds to your wallet."
-      );
+
+      return res
+        .status(400)
+        .json(new ApiResponse(400, null, "Insufficient wallet balance. Please add funds to your wallet."));
     }
 
     // Deduct balance from user's wallet
@@ -124,7 +131,10 @@ export const createOrder = asyncHandler(async (req, res) => {
       .status(201)
       .json(new ApiResponse(201, newOrder, "Order created successfully"));
   } catch (error) {
-    throw new ApiError(500, error.message);
+    return res
+      .status(201)
+      .json(new ApiResponse(201, null, "Something went wrong"));
+
   }
 });
 
@@ -145,7 +155,9 @@ export const getAllOrders = asyncHandler(async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, orders, "Orders retrieved successfully"));
   } catch (error) {
-    throw new ApiError(500, error.message);
+    return res
+      .status(200)
+      .json(new ApiResponse(200, null, "Something went wrong"));
   }
 });
 
@@ -168,7 +180,9 @@ export const getOrderById = asyncHandler(async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, order, "Order retrieved successfully"));
   } catch (error) {
-    throw new ApiError(500, error.message);
+    return res
+      .status(200)
+      .json(new ApiResponse(200, null, "Something went wrong"));
   }
 });
 
@@ -193,7 +207,9 @@ export const getOrdersByUserId = asyncHandler(async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, orders, "Orders retrieved successfully"));
   } catch (error) {
-    throw new ApiError(500, error.message);
+    return res
+      .status(200)
+      .json(new ApiResponse(200, null, "Something went wrong"));
   }
 });
 
@@ -241,7 +257,9 @@ export const updateOrderById = asyncHandler(async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, updatedOrder, "Order updated successfully"));
   } catch (error) {
-    throw new ApiError(500, error.message);
+    return res
+      .status(200)
+      .json(new ApiResponse(200, null, "Something went wrong"));
   }
 });
 
@@ -272,7 +290,9 @@ export const cancelOrder = asyncHandler(async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, order, "Order canceled successfully"));
   } catch (error) {
-    throw new ApiError(500, error.message);
+    return res
+      .status(200)
+      .json(new ApiResponse(200, null, "Something went wrong"));
   }
 });
 
@@ -293,6 +313,8 @@ export const deleteOrder = asyncHandler(async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, null, "Order deleted successfully"));
   } catch (error) {
-    throw new ApiError(500, error.message);
+    return res
+      .status(200)
+      .json(new ApiResponse(200, null, "Something went wrong"));
   }
 });

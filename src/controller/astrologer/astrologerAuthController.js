@@ -218,3 +218,62 @@ export const updatePassword = asyncHandler(async (req, res) => {
         return res.status(500).json(new ApiResponse(500, null, 'An error occurred while updating the password.'));
     }
 });
+
+export const Send_Log_In_OTP = asyncHandler(async (req, res) => {
+    try {
+        const { phone } = req.body;
+        // Validate the phone number
+        if (!validatePhoneNumber(phone)) {
+            return res.status(400).json(new ApiResponse(400, null, 'Invalid phone number format.'));
+        }
+
+        // Check if an astrologer exists with the given phone number
+        const astrologer = await Astrologer.findOne({ phone });
+
+        if (!astrologer) {
+            return res.status(404).json(new ApiResponse(404, null, 'No astrologer found with this phone number.'));
+        }
+
+        // If astrologer exists, send OTP
+        const otpResponse = await sendOTP(phone);
+
+        if (!otpResponse) {
+            return res.status(500).json(new ApiResponse(500, null, 'Failed to send OTP.'));
+        }
+
+        // console.log(otpResponse)
+
+        // Return success response with ApiResponse
+        return res.status(200).json(new ApiResponse(otpResponse.data.responseCode, otpResponse.data, otpResponse.data.message));
+
+    } catch (error) {
+        // console.error(error);
+        return res.status(500).json(new ApiResponse(500, null, 'An error occurred while processing the request.'));
+    }
+});
+
+export const Verify_Log_In_OTP = asyncHandler(async (req, res) => {
+    try {
+        const { phone, verificationId, code } = req.body;
+
+        // Ensure all necessary data is provided
+        if (!phone || !verificationId || !code) {
+            return res.status(400).json(new ApiResponse(400, null, 'Phone, verificationId, and code are required.'));
+        }
+
+        // Call the validateOTP function
+        const response = await validateOTP(phone, verificationId, code);
+
+        // Check the response and return appropriate message
+        if (response.success) {
+            const astrologer = Astrologer.findOne({ phone })
+            return res.status(200).json(new ApiResponse(200, { OTP_MESSAGE: response.data, astrologer }, 'OTP validated successfully.'));
+        } else {
+            return res.status(400).json(new ApiResponse(400, response.data, 'OTP validation failed.'));
+        }
+    } catch (error) {
+        console.error('Error in OTP validation controller:', error);
+        return res.status(500).json(new ApiResponse(500, null, 'An error occurred while validating OTP.'));
+    }
+});
+
