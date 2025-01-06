@@ -1,6 +1,6 @@
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { chat_with_ai_astro } from "../../utils/chat_with_ai_astro.js";
-import { AI_Astro_Chat } from "../../models/AI_Astro_Chat.model.js"
+import { AI_Astro_Chat } from "../../models/ai_astro_chat.model.js"
 import { User } from "../../models/user.model.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 import { AI_Astrologer } from "../../models/ai_astrologer_model.js";
@@ -90,8 +90,8 @@ export const ask_ai_astro = asyncHandler(async (req, res) => {
     // Get AI-generated answer
    if(question){
     const answer = await chat_with_ai_astro(question, astrologyType, userDetails);
-   }
-    console.log({answer});
+}
+console.log({answer});
     try {
         // Find existing chat document for this user and astrologer
         let chatRecord = await AI_Astro_Chat.findOne({
