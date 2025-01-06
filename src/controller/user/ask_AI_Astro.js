@@ -88,10 +88,12 @@ export const ask_ai_astro = asyncHandler(async (req, res) => {
     }
     console.log({userDetails});
     // Get AI-generated answer
+    let answer = null;
    if(question){
-    const answer = await chat_with_ai_astro(question, astrologyType, userDetails);
-   }
+     answer = await chat_with_ai_astro(question, astrologyType, userDetails);
     console.log({answer});
+   }
+
     try {
         // Find existing chat document for this user and astrologer
         let chatRecord = await AI_Astro_Chat.findOne({

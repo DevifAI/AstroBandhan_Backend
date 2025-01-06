@@ -14,15 +14,15 @@ const ask_ai_astro_schema = new mongoose.Schema(
         },
         messages: [
             {
-                question: { type: String, required: true },
-                answer: { type: String, required: true },
+                question: { type: String, required: false },
+                answer: { type: String, required: false },
                 timestamp: { type: Date, default: Date.now },
             },
         ],
         amount: { type: Number, default: 0 },
         isChatStarted: { type: Boolean, default: false },
         isChatEnded: { type: Boolean, default: false },
-        duration: { type: Number, default: 0 }, // Duration in minutes
+        duration: { type: String, default: "0" }, // Duration in minutes
     },
     {
         timestamps: true, // Adds createdAt and updatedAt fields
