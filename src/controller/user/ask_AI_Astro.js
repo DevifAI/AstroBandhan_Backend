@@ -88,10 +88,12 @@ export const ask_ai_astro = asyncHandler(async (req, res) => {
     }
     console.log({userDetails});
     // Get AI-generated answer
+    let answer = null;
    if(question){
-    const answer = await chat_with_ai_astro(question, astrologyType, userDetails);
-}
-console.log({answer});
+     answer = await chat_with_ai_astro(question, astrologyType, userDetails);
+    console.log({answer});
+   }
+
     try {
         // Find existing chat document for this user and astrologer
         let chatRecord = await AI_Astro_Chat.findOne({
@@ -247,7 +249,7 @@ export const fetch_ai_astro_chat = asyncHandler(async (req, res) => {
 
 export const toggleFreeChat = asyncHandler(async (req, res) => {
     const { userId, isFreeChat } = req.body;
-
+        console.log({ userId, isFreeChat });
     if (!userId || isFreeChat === undefined) {
         return res.status(400).json(new ApiResponse(400, null, "Please provide UserId and isFreeChat value."));
     }
