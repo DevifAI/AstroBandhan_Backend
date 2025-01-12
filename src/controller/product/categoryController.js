@@ -1,3 +1,4 @@
+import Product from "../../models/product/product.model.js";
 import ProductCategory from "../../models/product/productCategory.model.js";
 import { ApiError } from "../../utils/apiError.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
@@ -160,6 +161,45 @@ export const deleteCategory = asyncHandler(async (req, res) => {
       .status(200)
       .json(
         new ApiResponse(200, null, "Product category deleted successfully")
+      );
+  } catch (error) {
+    throw new ApiError(500, error.message);
+  }
+});
+
+// Fetch Total Products by Category
+export const fetchTotalProductByCategory = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if the category exists
+    const category = await ProductCategory.findById(id);
+    if (!category) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Product category not found"));
+    }
+
+    // Fetch products and count the total number of products in the category
+    const products = await Product.find({ category: id });
+
+    // Check if products exist in the category
+    if (products.length === 0) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "No products found in this category"));
+    }
+
+    const totalProducts = products.length;
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { totalProducts, products },
+          "Total products in category retrieved successfully"
+        )
       );
   } catch (error) {
     throw new ApiError(500, error.message);

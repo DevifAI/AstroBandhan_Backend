@@ -64,6 +64,10 @@ const productSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    total_stock: {
+      type: Number,
+      default: true,
+    },
     isTrending: {
       type: Boolean,
       default: false,

@@ -277,7 +277,16 @@ export const initSocket = (server) => {
         // Event for when a user wants to resume/join a chat
         socket.on('joinChatFirstTime', async ({ userId, astrologerId, chatRoomId, hitBy }) => {
             try {
+                
                 console.log(`First time joining:`, { userId, astrologerId, chatRoomId, hitBy });
+                
+                const userSocketId = activeUsers[userId];
+
+                io.to(userSocketId).emit('acceptedchat', {
+                    userId,
+                    astrologerId,
+                    message: `Astrologer Joined Success.`,
+                });
 
                 // Step 1: Ensure the chat room is initialized
                 // if (!chatRoomParticipants[chatRoomId]) {
