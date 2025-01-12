@@ -28,11 +28,12 @@ export const registerAstrologer = asyncHandler(async (req, res) => {
       chatCommission,
       callCommission,
       videoCallCommission,
+      category,
       available,  // directly destructure available object from the payload
     } = req.body;
 
     // Validate required fields
-    if (!name || !experience || !pricePerCallMinute || !pricePerChatMinute || !phone || !password || !gender || !isFeatured || !isVerified || !available) {
+    if (!category || !name || !experience || !pricePerCallMinute || !pricePerChatMinute || !phone || !password || !gender || !isFeatured || !isVerified || !available) {
       return res.status(201).json(new ApiResponse(201, null, "Please provide all required fields."));
     }
 
@@ -86,6 +87,7 @@ export const registerAstrologer = asyncHandler(async (req, res) => {
       chatCommission,
       callCommission,
       videoCallCommission,
+      category,
       password: hashedPassword,
     });
 

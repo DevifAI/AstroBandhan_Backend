@@ -19,6 +19,7 @@ import { get_numerology } from "../../controller/user/third_party/numerology.js"
 
 import { endCallAndLogTransaction, start_call } from "../../controller/user/callController.js";
 import { getAutoSuggestAstrologer, getTrendingAstrologer } from "../../controller/user/getTopAstrologers.js";
+import { fetch_all_ai_astrologers } from "../../controller/user/getAllAiAstrologers.js";
 
 const router = Router();
 
@@ -58,5 +59,6 @@ router.post('/get/trending/astrologers', getTrendingAstrologer);
 router.post('/get/suggest/astrologers', getAutoSuggestAstrologer);
 
 router.post('/end/call', endCallAndLogTransaction);
+router.post('/get/all/ai/astrologers', fetch_all_ai_astrologers);
 
 export default router;
