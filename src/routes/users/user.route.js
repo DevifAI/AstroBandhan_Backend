@@ -20,6 +20,8 @@ import { get_numerology } from "../../controller/user/third_party/numerology.js"
 import { endCallAndLogTransaction, start_call } from "../../controller/user/callController.js";
 import { getAutoSuggestAstrologer, getTrendingAstrologer } from "../../controller/user/getTopAstrologers.js";
 import { fetch_all_ai_astrologers } from "../../controller/user/getAllAiAstrologers.js";
+import { fetchChatHistory } from "../../controller/user/chatController.js";
+import { findCall_Transaction_ByUserId, findVideo_Call_Transaction_ByUserId, findWalletByUserId } from "../../controller/user/transaction_history.js";
 
 const router = Router();
 
@@ -37,7 +39,7 @@ router.get('/get/languages', getAllLanguages)
 router.post('/get/ai/chats', fetch_ai_astro_chat)
 router.post('/add/balance', add_wallet_balance)
 router.post('/get/balance/history', find_transaction_history_by_category)
-router.put('/notifications/:userId/:notificationsId/read', markNotificationsAsRead);
+router.post('/notifications/:userId/:notificationId/read', markNotificationsAsRead);
 router.get('/notifications/:userId', getAllNotificationsByUserId);
 router.post('/start/call', start_call);
 
@@ -60,5 +62,9 @@ router.post('/get/suggest/astrologers', getAutoSuggestAstrologer);
 
 router.post('/end/call', endCallAndLogTransaction);
 router.post('/get/all/ai/astrologers', fetch_all_ai_astrologers);
+router.post('/get/chatsById', fetchChatHistory);
+router.post('/get/wallet/history', findWalletByUserId);
+router.post('/get/video/history', findVideo_Call_Transaction_ByUserId);
+router.post('/get/call/history', findCall_Transaction_ByUserId);
 
 export default router;

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { ObjectId } from "mongodb";
 import Notification from "../../models/notifications.model.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 import { asyncHandler } from '../../utils/asyncHandler.js';
@@ -6,38 +7,32 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 
 // 1. Mark Notifications as Read
 export const markNotificationsAsRead = asyncHandler(async (req, res) => {
+    const { userId, notificationId } = req.params
     try {
-        const { userId, notificationId } = req.params; // Get userId from the request parameters
-
-        if (!userId) {
-            return res.status(400).json(
-                new ApiResponse(400, {}, "User ID is required.")
-            );
-        }
-
-        const objectId =new mongoose.Types.ObjectId(notificationId);
-
-
-        // Update the 'read' field of notifications to true for the given user
-        const result = await Notification.updateOne(
-            { userId, _id: objectId }, // Only update unread notifications
-            { $set: { read: true } }  // Set the 'read' field to true
+        console.log({userId, notificationId})
+        // Find the notification by ID and user ID
+        const notification = await Notification.findByIdAndUpdate(
+            notificationId,
+            {
+                read: true // Update the read field to true
+            },
+            { new: true } // This ensures the returned document is the updated one
         );
 
-        if (result.Modified === 0) {
-            return res.status(404).json(
-                new ApiResponse(404, {}, "No unread notifications found for this user.")
-            );
+        if (!notification) {
+            return res.status(404).json({ message: 'Notification not found' });
         }
 
-        return res.status(200).json(
-            new ApiResponse(200, result, "Notifications successfully marked as read.")
-        );
+        // Update the notification's read status
+        notification.read = true;
+        notification.updatedAt = new Date();
+        await notification.save();
+
+        res.status(200).json({ message: 'Notification marked as read successfully' });
+
     } catch (error) {
-        console.error(error);
-        return res.status(500).json(
-            new ApiResponse(500, {}, "An error occurred while marking notifications as read.")
-        );
+        console.error('Error updating notification:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
@@ -53,7 +48,7 @@ export const deleteNotifications = asyncHandler(async (req, res) => {
         }
 
         // Convert notificationId to ObjectId
-        const objectId =new mongoose.Types.ObjectId(notificationId);
+        const objectId = new mongoose.Types.ObjectId(notificationId);
 
 
         // Delete notifications for the given user

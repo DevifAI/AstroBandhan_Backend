@@ -34,9 +34,11 @@ import orderRoutes from "../src/routes/product/order.routes.js";
 app.use("/astrobandhan/v1/user", userRouter);
 app.use("/astrobandhan/v1/admin", adminRouter);
 app.use("/astrobandhan/v1/astrologer", astrologerRouter);
-app.use("/astrobandhan/api/v1/productCategory", productCategoryRoutes);
-app.use("/astrobandhan/api/v1/product", productRoutes);
-app.use("/astrobandhan/api/v1/order", orderRoutes);
+
+
+app.use("/astrobandhan/v1/productCategory", productCategoryRoutes);
+app.use("/astrobandhan/v1/product", productRoutes);
+app.use("/astrobandhan/v1/order", orderRoutes);
 
 
 // Error handling middleware

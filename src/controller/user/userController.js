@@ -14,21 +14,21 @@ export const registerUser = asyncHandler(async (req, res) => {
     const { name, email, phone, dateOfBirth, timeOfBirth, placeOfBirth, gender, password, photo } = req.body;
 
     if (!phone) {
-      return res.status(400).json(new ApiResponse(400, null, "Phone number is required"));
+      return res.status(200).json(new ApiResponse(400, null, "Phone number is required"));
     }
 
     if (!validatePhoneNumber(phone)) {
-      return res.status(400).json(new ApiResponse(400, null, 'Invalid phone number format.'));
+      return res.status(200).json(new ApiResponse(400, null, 'Invalid phone number format.'));
     }
 
     // Check if user already exists
     const existingUser = await User.findOne({ phone });
     if (existingUser) {
-      return res.status(400).json(new ApiResponse(400, null, "User already registered"));
+      return res.status(200).json(new ApiResponse(400, null, "User already registered"));
     }
     const existingAstrologer = await Astrologer.findOne({ phone });
     if (existingAstrologer) {
-      return res.status(400).json(new ApiResponse(400, null, "This number is already used by an astrologer"));
+      return res.status(200).json(new ApiResponse(400, null, "This number is already used by an astrologer"));
     }
     // Hash the password
     const saltRounds = 10;

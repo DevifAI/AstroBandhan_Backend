@@ -12,4 +12,5 @@ router.route("/filter/:categoryId/:is_all").get(getProductsByCategory);
 router.route("/update/:id").patch(updateProductById);
 router.route("/delete/:id").delete(deleteProduct);
 
+
 export default router;

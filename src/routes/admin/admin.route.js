@@ -16,6 +16,7 @@ import { changePasswordAdmin, forgotPasswordAdmin, getAdminById, loginAdmin, reg
 import { getAstrology_History } from '../../controller/admin/App_History/astrologer_history.js';
 import { getCall_History, getVideo_Call_History } from '../../controller/admin/App_History/audio_call_history.js';
 import { Send_Log_In_OTP, Verify_Log_In_OTP } from '../../controller/astrologer/astrologerAuthController.js';
+import { ApproveWithdrawalRequest } from '../../controller/admin/withdrawl_request_approve.js';
 
 
 const router = express.Router();
@@ -86,6 +87,7 @@ router.post('/get/video/history', getVideo_Call_History);
 router.post('/get/adminprofile', getAdminProfile);
 router.post('/get/total/credit', getTotalCredit_Admin);
 router.post('/get/total/wallet_recharge', getTotalCredit_Wallet_Recharge_Admin);
+router.post('/payment/request', ApproveWithdrawalRequest);
 // router.post('/add/astrologer/category', add_Category_for_astrologer);
 // router.post('/edit/astrologer/category', edit_Category_for_astrologer);
 // router.post('/delete/astrologer/category', delete_Category_for_astrologer);

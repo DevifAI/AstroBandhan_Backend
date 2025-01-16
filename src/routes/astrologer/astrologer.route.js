@@ -6,6 +6,7 @@ import { addPendingAstrologerRequest } from '../../controller/astrologer/createP
 import { update_availability } from '../../controller/astrologer/updateAvailability.js';
 import { getActiveById } from '../../controller/user/getAllAstrologersController.js';
 import { toggle_Offline_Online } from '../../controller/astrologer/AstrologerController.js';
+import { createWithdrawalRequest } from '../../controller/astrologer/withdrawl.js';
 
 
 const router = express.Router();
@@ -21,6 +22,7 @@ router.post('/update/password', updatePassword)
 router.post('/update/availability/:astrologerId', update_availability)
 router.post('/activechatroom', getActiveById);
 router.post('/toggle/status', toggle_Offline_Online);
+router.post('/create/withdrawl', createWithdrawalRequest);
 
 
 export default router;
