@@ -120,6 +120,8 @@ export const translateText = async (text, targetLanguage) => {
             }
         );
 
+        console.log({response})
+
         // Extract the translated text from the OpenAI response
         return response.data.choices[0].message.content.trim();
     } catch (error) {

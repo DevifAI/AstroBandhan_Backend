@@ -7,8 +7,8 @@ import PanchangModel from '../../../models/panchangModel.js';
 
 export const getDailyPanchang = asyncHandler(async (req, res) => {
     try {
-        const { language, userId, formattedDate } = req.body;
-        console.log(formattedDate);
+        const { language, userId, date } = req.body;
+        console.log(date);
         if (!language) {
             return res.status(400).json(
                 new ApiResponse(400, {}, "Language is required.")
@@ -28,7 +28,7 @@ export const getDailyPanchang = asyncHandler(async (req, res) => {
 
         const payload = {
             api_key: process.env.VEDIC_ASTRO_API_KEY, // API key from environment variables
-            date: formattedDate, // Format the male's DOB as dd/mm/yyyy
+            date: date, // Format the male's DOB as dd/mm/yyyy
             tz: '5.5', // Male's timezone offset
             lat: "22.966200", // Male's latitude
             lon: "88.389359", // Male's longitude
@@ -63,7 +63,7 @@ export const getDailyPanchang = asyncHandler(async (req, res) => {
         // // Save the Ashtakoot score to the database (if needed)
         const panchang = new PanchangModel({
             userId,
-            date: formattedDate,
+            date,
             language,
             response
         });
@@ -86,7 +86,7 @@ export const getDailyPanchang = asyncHandler(async (req, res) => {
 
 export const getMonthlyPanchang = asyncHandler(async (req, res) => {
     try {
-        const { language, userId } = req.body;
+        const { language, userId, date, } = req.body;
         if (!language) {
             return res.status(400).json(
                 new ApiResponse(400, {}, "Language is required.")
@@ -96,7 +96,7 @@ export const getMonthlyPanchang = asyncHandler(async (req, res) => {
         const currentDate = new Date();
 
         // Format the current date as DD/MM/YYYY
-        const formattedDate = `${currentDate.getDate().toString().padStart(2, '0')}/${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getFullYear()}`;
+        // const formattedDate = `${currentDate.getDate().toString().padStart(2, '0')}/${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getFullYear()}`;
 
         // Get the current time and format it as HH:MM
         const hours = currentDate.getHours().toString().padStart(2, '0'); // Ensure two digits
@@ -104,7 +104,7 @@ export const getMonthlyPanchang = asyncHandler(async (req, res) => {
         const formattedTime = `${hours}:${minutes}`;
         const payload = {
             api_key: process.env.VEDIC_ASTRO_API_KEY, // API key from environment variables
-            date: formattedDate, // Format the male's DOB as dd/mm/yyyy
+            date: date, // Format the male's DOB as dd/mm/yyyy
             tz: '5.5', // Male's timezone offset
             lat: "22.966200", // Male's latitude
             lon: "88.389359", // Male's longitude
@@ -139,7 +139,7 @@ export const getMonthlyPanchang = asyncHandler(async (req, res) => {
         // // Save the Ashtakoot score to the database (if needed)
         const panchang = new PanchangModel({
             userId,
-            date: formattedDate,
+            date: date,
             language,
             response
         });

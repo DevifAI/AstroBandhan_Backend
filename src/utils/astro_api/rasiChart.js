@@ -1,33 +1,27 @@
 import axios from 'axios';
 
 export const fetchPlanetData = async (data) => {
-    const API_KEY = process.env.FREE_ASTRO_API_KEY; // Replace with your actual API key
     console.log({ data })
+    const payload = {
+        dob: `${data.date}/${data.month}/${data.year}`,
+        tob: `${data.hours}/${data.minutes}/${data.seconds}`,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        timezone: data.timezone,
+        lang: "en",
+        api_key: process.env.VEDIC_ASTRO_API_KEY, // API key from environment variables
+    }
+    const encodedParams = Object.keys(payload).reduce((acc, key) => {
+        if (key === 'dob' || key === 'tob') {
+            acc[key] = payload[key]; // Keep date and time as they are
+        } else {
+            acc[key] = encodeURIComponent(payload[key]); // Encode other parameters
+        }
+        return acc;
+    }, {});
     try {
-        const response = await axios.post(
-            'https://json.freeastrologyapi.com/planets',
-            {
-                year: data.year,
-                month: data.month,
-                date: data.date,
-                hours: data.hours,
-                minutes: data.minutes,
-                seconds: data.seconds,
-                latitude: data.latitude,
-                longitude: data.longitude,
-                timezone: data.timezone,
-                config: {
-                    observation_point: data.observation_point,
-                    ayanamsha: data.ayanamsha,
-                },
-            },
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': "OocUE4uDezahoQVs69wLo6xM0Fvxpqkk9jDj0t1S",
-                },
-            }
-        );
+        const apiResponse = await axios.get('https://api.vedicastroapi.com/v3-json/panchang/monthly-panchang', { params: encodedParams });
+        console.log({ apiResponse })
 
         return response.data
     } catch (error) {
