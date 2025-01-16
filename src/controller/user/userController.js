@@ -14,21 +14,21 @@ export const registerUser = asyncHandler(async (req, res) => {
     const { name, email, phone, dateOfBirth, timeOfBirth, placeOfBirth, gender, password, photo } = req.body;
 
     if (!phone) {
-      return res.status(200).json(new ApiResponse(400, null, "Phone number is required"));
+      return res.status(201).json(new ApiResponse(201, null, "Phone number is required"));
     }
 
     if (!validatePhoneNumber(phone)) {
-      return res.status(200).json(new ApiResponse(400, null, 'Invalid phone number format.'));
+      return res.status(201).json(new ApiResponse(201, null, 'Invalid phone number format.'));
     }
 
     // Check if user already exists
     const existingUser = await User.findOne({ phone });
     if (existingUser) {
-      return res.status(200).json(new ApiResponse(400, null, "User already registered"));
+      return res.status(201).json(new ApiResponse(201, null, "User already registered"));
     }
     const existingAstrologer = await Astrologer.findOne({ phone });
     if (existingAstrologer) {
-      return res.status(200).json(new ApiResponse(400, null, "This number is already used by an astrologer"));
+      return res.status(201).json(new ApiResponse(201, null, "This number is already used by an astrologer"));
     }
     // Hash the password
     const saltRounds = 10;
@@ -75,6 +75,7 @@ export const registerUser = asyncHandler(async (req, res) => {
       new ApiResponse(200, { accessToken, refreshToken, newUser }, "User registered successfully.")
     );
   } catch (error) {
+    console.log(error.message);
     return res.status(500).json(new ApiResponse(500, null, "Something went wrong. Please try again."));
   }
 });
@@ -209,12 +210,12 @@ export const forgetPassword = asyncHandler(async (req, res) => {
     if (!validatePhoneNumber(phone)) {
       return res.status(400).json(new ApiResponse(400, null, 'Invalid phone number format.'));
     }
-
+      
     // Check if an astrologer exists with the given phone number
     const user = await User.findOne({ phone });
 
     if (!user) {
-      return res.status(404).json(new ApiResponse(404, null, 'No User found with this phone number.'));
+      return res.status(201).json(new ApiResponse(201, null, 'No User found with this phone number.'));
     }
 
     // If astrologer exists, send OTP
@@ -235,6 +236,69 @@ export const forgetPassword = asyncHandler(async (req, res) => {
   }
 });
 
+
+export const validateloginOtp = asyncHandler(async (req, res) => {
+  try {
+    const { phone, verificationId, code } = req.body;
+
+    // Ensure all necessary data is provided
+    if (!phone || !verificationId || !code) {
+      return res.status(400).json(new ApiResponse(400, null, 'Phone, verificationId, and code are required.'));
+    }
+
+    // Call the validateOTP function
+    const response = await validateOTP(phone, verificationId, code);
+
+
+
+    // Find astrologer by phone
+    const user = await User.findOne({ phone });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+      
+    // Set available to true on login
+    user.available = true;
+
+    // Generate access and refresh tokens
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+
+    // Save the refresh token to the database (optional but recommended)
+    user.refreshToken = refreshToken;
+ 
+
+     user.save();
+
+
+    // Check the response and return appropriate message
+    if (response.success) {
+      
+      return res.status(200).json(new ApiResponse(200, {
+        message: 'Login successful',
+        accessToken,
+        refreshToken,
+        user: {
+          id: user._id,
+          name: user.name,
+          phone: user.phone,
+          Free_Chat_Available: user.Free_Chat_Available
+          // Include other public details if necessary
+        },
+      }, "User Login Successfully"));
+      
+      
+    } else {
+      return res.status(201).json(new ApiResponse(201, response.data, 'OTP validation failed.'));
+    }
+  } catch (error) {
+    console.error('Error in OTP validation controller:', error);
+    return res.status(500).json(new ApiResponse(500, null, 'An error occurred while validating OTP.'));
+  }
+});
+
+
+
 export const validateOtp = asyncHandler(async (req, res) => {
   try {
     const { phone, verificationId, code } = req.body;
@@ -249,9 +313,10 @@ export const validateOtp = asyncHandler(async (req, res) => {
 
     // Check the response and return appropriate message
     if (response.success) {
+      
       return res.status(200).json(new ApiResponse(200, response.data, 'OTP validated successfully.'));
     } else {
-      return res.status(400).json(new ApiResponse(400, response.data, 'OTP validation failed.'));
+      return res.status(201).json(new ApiResponse(201, response.data, 'OTP validation failed.'));
     }
   } catch (error) {
     console.error('Error in OTP validation controller:', error);

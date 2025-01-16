@@ -13,7 +13,8 @@ export const validateOTP = async (phoneNumber, verificationId, code) => {
             },
         });
 
-        if (response.data.status === 'success') {
+
+        if (response.data.responseCode === 200) {
             console.log('OTP validated successfully!');
             return { success: true, data: response.data };
         } else {

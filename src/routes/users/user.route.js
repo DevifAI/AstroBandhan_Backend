@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
-    registerUser, changePassword, userLogin
+    registerUser, changePassword, userLogin,
+    validateloginOtp
 } from "../../controller/user/userController.js";
 import {
     addReview
@@ -32,6 +33,7 @@ router.route("/addreview").post(addReview);
 router.route("/getAstrologer").get(getAllAstrologers);
 router.post('/send/otp', forgetPassword)
 router.post('/validate/otp', validateOtp)
+router.post('/validate/loginotp', validateloginOtp)
 router.post('/update/password', updatePassword_user)
 router.post('/ask/ai/astro', ask_ai_astro)
 router.post('/toggle/ai/astro', toggleFreeChat)

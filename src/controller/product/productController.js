@@ -4,13 +4,14 @@ import { ApiError } from "../../utils/apiError.js";
 import ProductCategory from "../../models/product/productCategory.model.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import Product from "../../models/product/product.model.js";
+import { uploadOnCloudinary } from "../../middlewares/cloudinary.setup.js";
+import fs from "fs";
 
 // Create Product
 export const createProduct = asyncHandler(async (req, res) => {
   try {
     const {
       productName,
-      image,
       productDescription,
       category,
       rating,
@@ -23,13 +24,31 @@ export const createProduct = asyncHandler(async (req, res) => {
       isTrending,
       height,
       width,
-      contains
+      contains,
     } = req.body;
+
+    // Handle image upload to Cloudinary
+    let imageUrl;
+    const avatarLocalPath = req.file?.path; // Assuming the product image is in `req.file`
+
+    if (avatarLocalPath) {
+      try {
+        const uploadResult = await uploadOnCloudinary(avatarLocalPath); // Upload image to Cloudinary
+        imageUrl = uploadResult.url;
+
+        // Delete the locally saved file after successful upload
+        fs.unlinkSync(avatarLocalPath);
+      } catch (error) {
+        console.log(error);
+        return res
+          .status(500)
+          .json(new ApiResponse(500, null, "Failed to upload product image."));
+      }
+    }
 
     // Validate required fields
     const requiredFields = [
       "productName",
-      "image",
       "productDescription",
       "category",
       "brand",
@@ -72,10 +91,10 @@ export const createProduct = asyncHandler(async (req, res) => {
         );
     }
 
-    // Create new product
+    // Create new product object with Cloudinary image URL
     const newProduct = new Product({
       productName,
-      image,
+      image: imageUrl, // Store Cloudinary image URL here
       productDescription,
       category,
       rating,
@@ -88,7 +107,7 @@ export const createProduct = asyncHandler(async (req, res) => {
       isTrending,
       height,
       width,
-      contains
+      contains,
     });
 
     // Save the product to the database
@@ -147,11 +166,50 @@ export const getProductById = asyncHandler(async (req, res) => {
   }
 });
 
+// Search Products
+export const searchProduct = asyncHandler(async (req, res) => {
+  try {
+    const { productName, brand, rating, in_stock } = req.query;
+
+    // Build the search query
+    const searchQuery = {};
+    if (productName) {
+      searchQuery.productName = { $regex: productName, $options: "i" }; // Case-insensitive search
+    }
+    if (brand) {
+      searchQuery.brand = { $regex: brand, $options: "i" }; // Case-insensitive search
+    }
+    if (rating) {
+      searchQuery.rating = Number(rating); // Ensure rating is a number
+    }
+    if (in_stock !== undefined) {
+      searchQuery.in_stock = in_stock === "true"; // Convert to boolean
+    }
+
+    // Find products based on the search query
+    const products = await Product.find(searchQuery).populate("category");
+
+    if (!products || products.length === 0) {
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(404, null, "No products found matching the criteria")
+        );
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, products, "Products retrieved successfully"));
+  } catch (error) {
+    throw new ApiError(500, error.message);
+  }
+});
+
 export const getTrendingProducts = asyncHandler(async (req, res) => {
   try {
-    
-
-    const product = await Product.findAll({isTrending:true}).populate("category");
+    const product = await Product.findAll({ isTrending: true }).populate(
+      "category"
+    );
 
     if (!product) {
       return res
@@ -170,12 +228,12 @@ export const getTrendingProducts = asyncHandler(async (req, res) => {
 // Get Products by Category
 export const getProductsByCategory = asyncHandler(async (req, res) => {
   try {
-    const { categoryId,is_all } = req.params;
+    const { categoryId, is_all } = req.params;
 
-    let products
-    if(is_all === 'true'){
+    let products;
+    if (is_all === "true") {
       products = await Product.find({});
-    }else{
+    } else {
       products = await Product.aggregate([
         {
           $match: {
@@ -209,7 +267,6 @@ export const getProductsByCategory = asyncHandler(async (req, res) => {
         },
       ]);
     }
-    
 
     if (!products || products.length === 0) {
       return res
