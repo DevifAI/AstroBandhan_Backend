@@ -1,8 +1,10 @@
+import { uploadOnCloudinary } from "../../middlewares/cloudinary.setup.js";
 import Product from "../../models/product/product.model.js";
 import ProductCategory from "../../models/product/productCategory.model.js";
 import { ApiError } from "../../utils/apiError.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
+import fs from "fs";
 
 // Create Product Category
 export const createProductCategory = asyncHandler(async (req, res) => {
@@ -13,9 +15,20 @@ export const createProductCategory = asyncHandler(async (req, res) => {
       throw new ApiError(400, "Category name is required");
     }
 
-    // if (!image) {
-    //   throw new ApiError(400, "Category image is required");
-    // }
+    if (!req.file) {
+      throw new ApiError(400, "Category image is required");
+    }
+
+    // Upload the image to Cloudinary
+    const localFilePath = req.file.path;
+    const uploadResult = await uploadOnCloudinary(localFilePath);
+
+    // Delete the local file after uploading
+    fs.unlinkSync(localFilePath);
+
+    if (!uploadResult || !uploadResult.secure_url) {
+      throw new ApiError(500, "Image upload failed");
+    }
 
     const existingCategory = await ProductCategory.findOne({ category_name });
 
@@ -27,13 +40,11 @@ export const createProductCategory = asyncHandler(async (req, res) => {
 
     const newCategory = new ProductCategory({
       category_name,
-      // image,
+      image: uploadResult.secure_url,
     });
 
-    // Save the new category
     await newCategory.save();
 
-    // Fetch the newly saved category and select only `createdAt` and `updatedAt`
     const savedCategory = await ProductCategory.findById(
       newCategory._id
     ).select("-createdAt -updatedAt");
@@ -108,27 +119,50 @@ export const getCategoryById = asyncHandler(async (req, res) => {
 export const updateCategoryById = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
-    const { category_name, image } = req.body;
+    const { category_name } = req.body;
 
     if (!category_name) {
       throw new ApiError(400, "Category name is required");
     }
 
-    if (!image) {
-      throw new ApiError(400, "Category image is required");
-    }
+    // Find the existing category
+    const existingCategory = await ProductCategory.findById(id);
 
-    const updatedCategory = await ProductCategory.findByIdAndUpdate(
-      id,
-      { category_name, image },
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedCategory) {
+    if (!existingCategory) {
       return res
         .status(404)
         .json(new ApiResponse(404, null, "Product category not found"));
     }
+
+    let updatedImageUrl = existingCategory.image;
+
+    // If a new image is uploaded, replace the old one
+    if (req.file) {
+      const localFilePath = req.file.path;
+
+      // Upload the new image to Cloudinary
+      const uploadResult = await uploadOnCloudinary(localFilePath);
+      fs.unlinkSync(localFilePath); // Remove the local file after uploading
+
+      if (!uploadResult || !uploadResult.secure_url) {
+        throw new ApiError(500, "Image upload failed");
+      }
+
+      updatedImageUrl = uploadResult.secure_url;
+
+      // Optional: Delete the old image from Cloudinary
+      if (existingCategory.image) {
+        const publicId = existingCategory.image.split("/").pop().split(".")[0];
+        await cloudinary.uploader.destroy(`astrologer-avatars/${publicId}`);
+      }
+    }
+
+    // Update the category
+    const updatedCategory = await ProductCategory.findByIdAndUpdate(
+      id,
+      { category_name, image: updatedImageUrl },
+      { new: true, runValidators: true }
+    );
 
     return res
       .status(200)
