@@ -155,6 +155,7 @@ export const forgetPassword = asyncHandler(async (req, res) => {
         return res.status(500).json(new ApiResponse(500, null, 'An error occurred while processing the request.'));
     }
 });
+
 export const validateOtp = asyncHandler(async (req, res) => {
     try {
         const { phone, verificationId, code } = req.body;
@@ -178,6 +179,7 @@ export const validateOtp = asyncHandler(async (req, res) => {
         return res.status(500).json(new ApiResponse(500, null, 'An error occurred while validating OTP.'));
     }
 });
+
 export const updatePassword = asyncHandler(async (req, res) => {
     try {
         const { phone, newPassword } = req.body;

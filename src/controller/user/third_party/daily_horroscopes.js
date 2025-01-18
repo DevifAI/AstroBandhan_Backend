@@ -181,6 +181,7 @@ export const getTommHoroscope = asyncHandler(async (req, res) => {
         );
     }
 });
+
 export const getPrevHoroscope = asyncHandler(async (req, res) => {
     try {
         const { userId, zodiacSign } = req.body;

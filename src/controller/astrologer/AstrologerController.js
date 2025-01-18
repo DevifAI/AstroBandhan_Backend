@@ -1,8 +1,6 @@
-
-import { asyncHandler } from '../../utils/asyncHandler.js';
-import { Astrologer } from '../../models/astrologer.model.js';
-import ChatRoom from '../../models/chatRoomSchema.js';
-
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { Astrologer } from "../../models/astrologer.model.js";
+import ChatRoom from "../../models/chatRoomSchema.js";
 
 export const toggle_Offline_Online = asyncHandler(async (req, res) => {
   try {
@@ -11,20 +9,21 @@ export const toggle_Offline_Online = asyncHandler(async (req, res) => {
     // Find the astrologer by astrologerId
     const astrologer = await Astrologer.findById(astrologerId);
     if (!astrologer) {
-      return res.status(404).json({ message: 'Astrologer not found' });
+      return res.status(404).json({ message: "Astrologer not found" });
     }
 
     // Check if the astrologer is attempting to go offline and has an active chat room
-    if (available_status === 'offline') {
+    if (available_status === "offline") {
       // Check if the astrologer has any active chat rooms
       const activeChatRoom = await ChatRoom.findOne({
         astrologer: astrologerId,
-        status: 'active',
+        status: "active",
       });
 
       if (activeChatRoom) {
         return res.status(400).json({
-          message: 'Cannot go offline. Please end your active chat session first.',
+          message:
+            "Cannot go offline. Please end your active chat session first.",
         });
       }
 
@@ -36,7 +35,7 @@ export const toggle_Offline_Online = asyncHandler(async (req, res) => {
         isVideoCallAvailable: false,
       };
       astrologer.isOffline = true;
-    } else if (available_status === 'online') {
+    } else if (available_status === "online") {
       // If astrologer is going online, set all availability fields to true
       astrologer.available = {
         isAvailable: true,
@@ -50,11 +49,35 @@ export const toggle_Offline_Online = asyncHandler(async (req, res) => {
     await astrologer.save();
 
     // Respond with success message
-    res.status(200).json({ message: 'Astrologer availability updated successfully', astrologer });
+    res
+      .status(200)
+      .json({
+        message: "Astrologer availability updated successfully",
+        astrologer,
+      });
   } catch (error) {
     // Catch and handle any errors
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
+// Get Astrologer by ID
+export const getAstrologerById = asyncHandler(async (req, res) => {
+  try {
+    const { astrologerId } = req.params;
 
+    // Find the astrologer by ID
+    const astrologer = await Astrologer.findById(astrologerId);
+
+    if (!astrologer) {
+      return res.status(404).json({ message: "Astrologer not found" });
+    }
+
+    // Respond with astrologer data
+    res
+      .status(200)
+      .json({ message: "Astrologer fetched successfully", astrologer });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
