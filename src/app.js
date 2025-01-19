@@ -1,6 +1,5 @@
 import express from "express";
-import https from "https";  // Import https module
-import fs from "fs";       // Import fs to read certificate files
+import http from "http";
 import cors from "cors";
 import errorHandler from "../src/middlewares/error.middleware.js";
 import { Server } from "socket.io";
@@ -30,33 +29,33 @@ import productCategoryRoutes from "../src/routes/product/productcategory.routes.
 import productRoutes from "../src/routes/product/product.routes.js";
 import orderRoutes from "../src/routes/product/order.routes.js";
 
+
 // API routes
 app.use("/astrobandhan/v1/user", userRouter);
 app.use("/astrobandhan/v1/admin", adminRouter);
 app.use("/astrobandhan/v1/astrologer", astrologerRouter);
+
+
 app.use("/astrobandhan/v1/productCategory", productCategoryRoutes);
 app.use("/astrobandhan/v1/product", productRoutes);
 app.use("/astrobandhan/v1/order", orderRoutes);
 
+
 // Error handling middleware
 app.use(errorHandler);
 
-// Read the self-signed certificate and private key from the correct paths
-const privateKey = fs.readFileSync("/etc/ssl/private/selfsigned.key", "utf8");
-const certificate = fs.readFileSync("/etc/ssl/private/selfsigned.crt", "utf8");
+// Create the HTTP server
+const server = http.createServer(app);
 
-// Create HTTPS server
-const credentials = { key: privateKey, cert: certificate };
-const server = https.createServer(credentials, app);
 
 // Initialize socket
 initSocket(server);  // This initializes the socket.io server
 
 // Start the server on port 6000
-const PORT =  443; // Default to 6000 if not provided
+const PORT = process.env.PORT || 6000; // Default to 6000 if not provided
 server.listen(PORT, () => {
-  const wsUrl = `wss://localhost:${PORT}`;  // WebSocket URL for testing with wss (secure WebSocket)
-  console.log(`AstroBandhan is running on https://localhost:${PORT}`);
+  const wsUrl = `ws://localhost:${PORT}`;  // WebSocket URL for testing
+  console.log(`AstroBandhan is running on http://localhost:${PORT}`);
   console.log(`WebSocket server is running at: ${wsUrl}`);
 });
 
