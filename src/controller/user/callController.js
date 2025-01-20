@@ -13,9 +13,15 @@ import Notification from '../../models/notifications.model.js';
 // key：608f211d904e4ee8bd7fa43571906fba
 // secret：cdd5b28810f245e08d1ed395c2c3f3d1
 
+const ACCESSKEYID = process.env.ACCESSKEYID
+const SECRETACCESSKEY = process.env.SECRETACCESSKEY
+
+const AGORAKEY = process.env.AGORAKEY
+const AGORASECRET = process.env.AGORASECRET
+
 // Define Agora credentials and configuration
-const appID = "69779ffdb88442ecb348ae75b0b3963d";
-const appCertificate = "e10b414d78c84ec9bcd1160d6fe0ef4c";
+const appID = process.env.AGORAAPPID;
+const appCertificate = process.env.AGORACERTIFICATE;
 
 // Function to generate Agora token for starting the call
 const generateAgoraToken = (channelName, uid) => {
@@ -41,7 +47,7 @@ const acquireRecordingResource = async (channelName, uid,) => {
     };
 
     // Encode the username and password to base64 for basic auth
-    const authHeader = 'Basic ' + btoa("608f211d904e4ee8bd7fa43571906fba" + ':' + "cdd5b28810f245e08d1ed395c2c3f3d1");
+    const authHeader = 'Basic ' + btoa(AGORAKEY + ':' + AGORASECRET);
 
     try {
         const response = await axios.post(
@@ -99,15 +105,16 @@ const startRecording_video = async (resourceId, channleid, uid, token, publisher
                 vendor: 1, // Assume AWS for now
                 region: 14, // region AP_SOUTH_1
                 bucket: "astrobandhan", // Replace with actual bucket name
-                accessKey: "AKIAWIJIUQXXXWRGG6VY", // Replace with actual access key
-                secretKey: "8ginnGKGOGuaTj9Puh0STGQDcIsjpwZBCyFWqQJL" // Replace with actual secret key
+                accessKey: ACCESSKEYID, // Replace with actual access key
+                secretKey: SECRETACCESSKEY // Replace with actual secret key
             }
         }
     };
 
 
 
-    const authHeader = 'Basic ' + btoa("608f211d904e4ee8bd7fa43571906fba" + ':' + "cdd5b28810f245e08d1ed395c2c3f3d1");
+    // Encode the username and password to base64 for basic auth
+    const authHeader = 'Basic ' + btoa(AGORAKEY + ':' + AGORASECRET);
 
 
     try {
@@ -165,15 +172,16 @@ const startRecording_audio = async (resourceId, channleid, uid, token, publisher
                 vendor: 1, // Assume AWS for now
                 region: 14, // region AP_SOUTH_1
                 bucket: "astrobandhan", // Replace with actual bucket name
-                accessKey: "AKIAWIJIUQXXXWRGG6VY", // Replace with actual access key
-                secretKey: "8ginnGKGOGuaTj9Puh0STGQDcIsjpwZBCyFWqQJL" // Replace with actual secret key
+                accessKey: ACCESSKEYID, // Replace with actual access key
+                secretKey: SECRETACCESSKEY // Replace with actual secret key
             }
         }
     };
 
 
 
-    const authHeader = 'Basic ' + btoa("608f211d904e4ee8bd7fa43571906fba" + ':' + "cdd5b28810f245e08d1ed395c2c3f3d1");
+    // Encode the username and password to base64 for basic auth
+    const authHeader = 'Basic ' + btoa(AGORAKEY + ':' + AGORASECRET);
 
 
     try {
@@ -205,7 +213,8 @@ const stopRecording = async (resourceId, sid, channelName, recordingUID) => {
             "async_stop": false
         }
     };
-    const authHeader = 'Basic ' + btoa("608f211d904e4ee8bd7fa43571906fba" + ':' + "cdd5b28810f245e08d1ed395c2c3f3d1");
+    // Encode the username and password to base64 for basic auth
+    const authHeader = 'Basic ' + btoa(AGORAKEY + ':' + AGORASECRET);
     try {
         const response = await axios.post(
             `https://api.agora.io/v1/apps/${appID}/cloud_recording/resourceid/${resourceId}/sid/${sid}/mode/mix/stop`,
