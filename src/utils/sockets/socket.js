@@ -593,14 +593,14 @@ export const initSocket = (server) => {
                 };
 
                 // Find the existing chat room and update it, or create a new one if it doesn't exist
-                const chat = await Chat.findOneAndUpdate(
+                await Chat.findOneAndUpdate(
                     { chatRoomId },  // Find chat by chatRoomId
                     { $push: { messages: chatMessage } },  // Push the new message to the 'messages' array
                     { new: true, upsert: true }  // If no chat found, create a new one; return the updated document
                 );
 
                 // Broadcast the message to everyone in the room
-                socket.to(chatRoomId).emit('chatMessage', chat);
+                socket.to(chatRoomId).emit('chatMessage', chatMessage);
             } catch (error) {
                 console.error("Error sending message:", error);
                 socket.emit('error', 'Failed to send the message.');
