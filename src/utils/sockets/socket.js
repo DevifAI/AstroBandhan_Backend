@@ -230,7 +230,7 @@ export const initSocket = (server) => {
             console.log(payload);
 
             // Send POST request using axios
-            const response = await axios.post('http://ec2-15-206-90-111.ap-south-1.compute.amazonaws.com:8000/astrobandhan/v1/user/start/call', payload);
+            const response = await axios.post('https://devifai.in/astrobandhan/v1/user/start/call', payload);
             console.log(response);
 
             const astrologerSocketId = activeUsers[astrologerId];
@@ -255,7 +255,7 @@ export const initSocket = (server) => {
             const payload = {
                 callId  // Replace with actual channelName
             };
-            const response = await axios.post('http://ec2-15-206-90-111.ap-south-1.compute.amazonaws.com:8000/astrobandhan/v1/user/end/call', payload);
+            const response = await axios.post('https://devifai.in/astrobandhan/v1/user/end/call', payload);
             console.log(response);
 
             const astrologerSocketId = activeUsers[astrologerId];
