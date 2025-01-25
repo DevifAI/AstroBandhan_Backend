@@ -6,10 +6,26 @@ import { translateText } from '../../../utils/chat_with_ai_astro.js';
 import { User } from "../../../models/user.model.js";
 import { getCoordinates } from '../../../utils/get_lat&long.js';
 
+
+const zodiacValue = {
+    Aries: 1,
+    Tauras: 2,
+    Gemini: 3,
+    Cancer: 4,
+    Leo: 5,
+    Virgo: 6,
+    Libra: 7,
+    Scorpio: 8,
+    Sagittarius: 9,
+    Capricorn: 10,
+    Aquarius: 11,
+    Pisces: 12
+}
+
 // Controller to fetch daily horoscope
 export const getDailyHoroscope = asyncHandler(async (req, res) => {
     try {
-        const { userId, zodiacSign, language } = req.body;
+        const { userId, zodiacSign, language, date } = req.body;
 
         if (!userId || !zodiacSign) {
             return res.status(400).json(
@@ -17,7 +33,7 @@ export const getDailyHoroscope = asyncHandler(async (req, res) => {
             );
         }
         // Fetch user details
-        const userDetails = await User.findById(userId).select('dateOfBirth timeOfBirth placeOfBirth');
+        const userDetails = await User.findById(userId)
         // Ensure user details are found
         if (!userDetails) {
             return res.status(404).json(
@@ -25,83 +41,37 @@ export const getDailyHoroscope = asyncHandler(async (req, res) => {
             );
         }
 
-        const { dateOfBirth, timeOfBirth, placeOfBirth } = userDetails;
-        const get_lat_long = await getCoordinates(placeOfBirth);
-        const { lat, lng } = get_lat_long
-        // Extract date and time components
-        const dob = dateOfBirth.split("-").reverse().join();
-        // Convert timeOfBirth from 12-hour format (AM/PM) to 24-hour format
-        const [time, modifier] = timeOfBirth.split(' ');
-        let [hours, minutes] = time.split(':');
 
-        if (modifier === 'PM' && hours !== '12') {
-            hours = (parseInt(hours) + 12).toString(); // Convert PM hours to 24-hour format
-        } else if (modifier === 'AM' && hours === '12') {
-            hours = '00'; // Convert 12 AM to 00 in 24-hour format
-        }
-
-        const tob = `${hours}/${minutes}/00`
         const payload = {
-            dob,
-            tob, // Ensure seconds are added as 00 if needed
-            latitude: lat,
-            longitude: lng,
-            timezone: 5.5,
+            date,
+            type: "small",
+            zodiac: zodiacValue[zodiacSign],
             lang: language,
             api_key: process.env.VEDIC_ASTRO_API_KEY, // API key from environment variables
         };
 
         const encodedParams = Object.keys(payload).reduce((acc, key) => {
-            if (key === 'dob' || key === 'tob') {
+            if (key === 'date') {
                 acc[key] = payload[key]; // Keep date and time as they are
             } else {
                 acc[key] = encodeURIComponent(payload[key]); // Encode other parameters
             }
             return acc;
         }, {});
-        const apiResponse = await axios.get('https://api.vedicastroapi.com/v3-json/panchang/monthly-panchang', { params: encodedParams });
-        console.log({ apiResponse })
-        // Fetch horoscope from external API
-
-        // const { status, sun_sign, prediction_date, prediction } = apiResponse.data;
-
-        // if (!status || !prediction) {
-        //     return res.status(400).json(
-        //         new ApiResponse(400, {}, "Error fetching daily horoscope.")
-        //     );
-        // }
-
-        let translatedPrediction;
-
-
-        // Save horoscope to the database
-        // const dailyHoroscope = new DailyHoroscope({
-        //     userId,
-        //     zodiacSign: sun_sign,
-        //     predictionDate: prediction_date,
-        //     prediction: {
-        //         personal_life: translatedPrediction.personal_life,
-        //         profession: translatedPrediction.profession,
-        //         health: translatedPrediction.health,
-        //         emotions: translatedPrediction.emotions,
-        //         travel: translatedPrediction.travel,
-        //         luck: translatedPrediction.luck,
-        //     },
-        // });
-
-        // await dailyHoroscope.save();
-
+        const apiResponse = await axios.get('https://api.vedicastroapi.com/v3-json/prediction/daily-sun', { params: encodedParams });
+        // Extract only the `data` property from the Axios response
+        const { response, status, data } = apiResponse;
         // Return the prediction response
         return res.status(200).json(
             new ApiResponse(200, {
-                prediction: apiResponse
+                response, status, data
             }, "Daily Horoscope fetched successfully.")
         );
 
     } catch (error) {
         console.error(error);
-        return res.status(500).json(
-            new ApiResponse(500, {}, "An error occurred while fetching the daily horoscope.")
+        return res.status(200).json(
+            new ApiResponse(200, {}, "An error occurred while fetching the daily horoscope.")
         );
     }
 });

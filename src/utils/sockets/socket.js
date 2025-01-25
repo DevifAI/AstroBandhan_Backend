@@ -28,7 +28,7 @@ const isAllUsersJoined = (chatRoomId, userId, astrologerId) => {
     const participants = chatRoomParticipants[chatRoomId];
     console.log({ userId, astrologerId, chatRoomId })
     // Check if both user and astrologer are in the chat room
-    console.log({participants});
+    console.log({ participants });
     return participants.size === 2 && participants.has(userId) && participants.has(astrologerId);
 };
 
@@ -194,7 +194,7 @@ export const initSocket = (server) => {
                 userId: astrologerId,
                 message: [
                     {
-                        title: callType === "audio" ? "Audio Call Request" : "Video Call Request", 
+                        title: callType === "audio" ? "Audio Call Request" : "Video Call Request",
                         desc: `You have a pending ${callType} request`,
                     }
                 ]
@@ -273,13 +273,14 @@ export const initSocket = (server) => {
             });
         });
 
-        console.log({chatRoomParticipants});
+        console.log({ chatRoomParticipants });
         // Event for when a user wants to resume/join a chat
         socket.on('joinChatFirstTime', async ({ userId, astrologerId, chatRoomId, hitBy }) => {
             try {
-                
+
                 console.log(`First time joining:`, { userId, astrologerId, chatRoomId, hitBy });
-                
+
+
                 const userSocketId = activeUsers[userId];
 
                 io.to(userSocketId).emit('acceptedchat', {
@@ -299,8 +300,8 @@ export const initSocket = (server) => {
                 } else {
                     chatRoomParticipants[chatRoomId].add(astrologerId);
                 }
-                console.log({chatRoomParticipants});
-                console.log({chatRoomId, userId, astrologerId});
+                console.log({ chatRoomParticipants });
+                console.log({ chatRoomId, userId, astrologerId });
 
                 const user = await User.findById(userId);
                 const astrologer = await Astrologer.findById(astrologerId);
@@ -313,7 +314,7 @@ export const initSocket = (server) => {
                 const minuteCost = astrologer.pricePerChatMinute;
                 const minuteComission = astrologer.chatCommission;
 
-                
+
                 // Step 3: Check if both participants have joined
                 if (isAllUsersJoined(chatRoomId, userId, astrologerId)) {
                     console.log("isAllUsersJoined")
@@ -376,15 +377,15 @@ export const initSocket = (server) => {
                             transaction_type: "credit",
                             credit_type: "chat",
                             service_id: chatRoomId,
-                            userId: userId, 
+                            userId: userId,
                         })
                         await adminWalletTransaction.save()
                         // Log the transaction
                         const userTransaction = new Wallet({
                             user_id: userId,
                             amount: minuteCost,
-                            transaction_type : "debit",
-                            transaction_id: `TXN-${Date.now()}`, 
+                            transaction_type: "debit",
+                            transaction_id: `TXN-${Date.now()}`,
                             debit_type: 'chat',
                             service_reference_id: chatRoomId,
                         });
@@ -415,8 +416,8 @@ export const initSocket = (server) => {
                             const minutes = Math.ceil(elapsedSeconds / 60);
                             const seconds = elapsedSeconds % 60;
                             const elapsedTime = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-                            
-                            console.log({currentTime,startTime,elapsedSeconds,minutes,seconds,elapsedTime})
+
+                            console.log({ currentTime, startTime, elapsedSeconds, minutes, seconds, elapsedTime })
 
 
                             const user = await User.findById(userId);
@@ -443,12 +444,12 @@ export const initSocket = (server) => {
                             }
 
 
-                            const userWalletDoc =await Wallet.findOne({ user_id: userId, amount_type: "debit", service_reference_id: chatRoomId })
-                            const astrologerWalletDoc =await Wallet.findOne({ astrologer_id: astrologerId, amount_type: "credit", service_reference_id: chatRoomId })
+                            const userWalletDoc = await Wallet.findOne({ user_id: userId, amount_type: "debit", service_reference_id: chatRoomId })
+                            const astrologerWalletDoc = await Wallet.findOne({ astrologer_id: astrologerId, amount_type: "credit", service_reference_id: chatRoomId })
                             const adminWalletDoc = await AdminWallet.findOne({ service_id: chatRoomId });
                             if (adminWalletDoc) {
-                            adminWalletDoc.amount += minuteComission;
-                            await adminWalletDoc.save();
+                                adminWalletDoc.amount += minuteComission;
+                                await adminWalletDoc.save();
                             }
                             if (userWalletDoc) {
                                 // Increment the wallet balance with the minuteCost
@@ -469,7 +470,7 @@ export const initSocket = (server) => {
                             }
 
 
-                            console.log({elapsedTime});
+                            console.log({ elapsedTime });
                             // Update the chat duration
                             await Chat.findOneAndUpdate(
                                 { chatRoomId },
@@ -555,7 +556,7 @@ export const initSocket = (server) => {
                 if (chatRoom) {
                     // Notify both the user and astrologer
                     clearInterval(chatIntervals[chatRoomId]);
-                    
+
                     const astrologerSocketId = activeUsers[astrologerId];
                     if (astrologerSocketId) {
                         io.to(astrologerSocketId).emit('chatEnded_XX', {
@@ -583,21 +584,50 @@ export const initSocket = (server) => {
         // Handle sending a message from user or astrologer
         socket.on('sendMessage', async ({ message, senderId, chatRoomId, senderType, messageType }) => {
             try {
-
+                // Prepare the chat message
                 const chatMessage = {
                     senderType: senderType,
-                    senderId: ObjectId.createFromHexString(senderId),
+                    senderId: mongoose.Types.ObjectId(senderId), // Correctly handle ObjectId
                     messageType,
                     message: message,
-                    timestamp: moment().tz('Asia/Kolkata').toDate()  // Correctly using moment for local timezone
+                    timestamp: moment().tz('Asia/Kolkata').toDate(), // Correctly using moment for local timezone
                 };
 
-                // Find the existing chat room and update it, or create a new one if it doesn't exist
-                await Chat.findOneAndUpdate(
-                    { chatRoomId },  // Find chat by chatRoomId
-                    { $push: { messages: chatMessage } },  // Push the new message to the 'messages' array
-                    { new: true, upsert: true }  // If no chat found, create a new one; return the updated document
-                );
+                let userData;
+
+                if (senderType === "user") {
+                    // Fetch user details from the database
+                    userData = await User.findById(senderId).lean();
+
+                    if (!userData) {
+                        throw new Error("User not found.");
+                    }
+                }
+
+                // Check if the chat room exists
+                const chat = await Chat.findOne({ chatRoomId });
+
+                if (!chat) {
+                    // If the chat document doesn't exist, create it with a formatted "Hello World" system message
+                    const systemMessage = {
+                        senderType: 'system',
+                        senderId: null,
+                        messageType: 'text',
+                        message: `Hello! Here are the details of the user:\nName: ${userData.name}\nDate of Birth: ${userData.dateOfBirth}\nPlace of Birth: ${userData.placeOfBirth}`, // Formatted message
+                        timestamp: moment().tz('Asia/Kolkata').toDate(), // Add timestamp
+                    };
+                    await Chat.create({
+                        chatRoomId,
+                        messages: [systemMessage, chatMessage], // Initialize with the system message and the new message
+                    });
+                } else {
+                    // If the chat exists, simply push the new message
+                    await Chat.findOneAndUpdate(
+                        { chatRoomId }, // Find chat by chatRoomId
+                        { $push: { messages: chatMessage } }, // Push the new message to the 'messages' array
+                        { new: true } // Return the updated document
+                    );
+                }
 
                 // Broadcast the message to everyone in the room
                 socket.to(chatRoomId).emit('chatMessage', chatMessage);

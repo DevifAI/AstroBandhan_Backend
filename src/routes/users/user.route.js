@@ -52,7 +52,7 @@ router.post('/matchmaking', getAshtakootScore);
 router.post('/matchmaking/pdf', getAshtakootScore_PDF);
 router.post('/daily/horroscope', getDailyHoroscope);
 router.post('/tommorow/horroscope', getTommHoroscope);
-router.post('/yessterday/horroscope', getPrevHoroscope);
+router.post('/yesterday/horroscope', getPrevHoroscope);
 router.post('/daily/panchang', getDailyPanchang);
 router.post('/monthly/panchang', getMonthlyPanchang);
 router.post('/numerology', get_numerology);

@@ -14,15 +14,16 @@ export const get_numerology = asyncHandler(async (req, res) => {
             );
         }
 
-
+        let api_key = process.env.VEDIC_ASTRO_API_KEY
 
         const payload = {
-            api_key: process.env.VEDIC_ASTRO_API_KEY, // API key from environment variables
+            api_key,// API key from environment variables
             date: dob, // Format the male's DOB as dd/mm/yyyy
             name, // Male's timezone offset
             lang: language, // Language for the response
         };
-
+        
+        console.log({ api_key })
         // Encoding parameters, keeping dob and tob in their original format
         const encodedParams = Object.keys(payload).reduce((acc, key) => {
             if (key === 'date' || key === 'time') {
