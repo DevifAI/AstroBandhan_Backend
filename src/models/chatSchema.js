@@ -14,7 +14,6 @@ const chatSchema = new mongoose.Schema(
                 },
                 messageType: {
                     type: String,
-                    enum: ['text', 'image'],  // Enum for message types
                     default: 'text',          // Default value is 'text'
                     required: true            // Make messageType required
                 },
