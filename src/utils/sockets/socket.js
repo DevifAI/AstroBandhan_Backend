@@ -588,7 +588,7 @@ export const initSocket = (server) => {
                 // Prepare the chat message
                 const chatMessage = {
                     senderType: senderType,
-                    senderId: mongoose.Types.ObjectId(senderId), // Correctly handle ObjectId
+                    senderId: new mongoose.Types.ObjectId(senderId), // Correctly handle ObjectId
                     messageType,
                     message: message,
                     timestamp: moment().tz('Asia/Kolkata').toDate(), // Correctly using moment for local timezone
