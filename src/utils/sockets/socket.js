@@ -13,6 +13,7 @@ import AgoraAccessToken from 'agora-access-token';
 import { AdminWallet } from "../../models/adminWallet.js";
 import { Admin } from "../../models/adminModel.js";
 import Notification from "../../models/notifications.model.js";
+import mongoose from "mongoose";
 
 // Store connected users (active users map)
 export let activeUsers = {};  // Store users by userId and socketId

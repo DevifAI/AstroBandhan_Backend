@@ -24,7 +24,7 @@ const router = express.Router();
 // ===============================Authentication routes start===============================
 router.post('/signup', registerAdmin);
 router.post('/login', loginAdmin);
-router.patch('/change-password/:adminId', changePasswordAdmin);
+router.post('/change-password', changePasswordAdmin);
 router.post('/forgot-password', forgotPasswordAdmin);
 router.post('/validate-otp', validateOtpAdmin);
 router.get('/profile/:id', getAdminById);

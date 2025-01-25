@@ -181,41 +181,17 @@ export const logout = asyncHandler(async (req, res) => {
 // Change Password
 export const changePasswordAdmin = asyncHandler(async (req, res) => {
   try {
-    const { oldPassword, newPassword } = req.body;
-    const { adminId } = req.params; // Extract admin ID from request params
+    const { newPassword, phone } = req.body;
 
-    // Validate required fields
-    if (!oldPassword || !newPassword) {
-      return res
-        .status(400)
-        .json(
-          new ApiResponse(
-            400,
-            null,
-            "Old password and new password are required"
-          )
-        );
-    }
+    console.log({ newPassword, phone });
 
-    // Find admin by ID
-    const admin = await Admin.findById(adminId).select("+password"); // Ensure password field is included
+    // Find admin by phone
+    const admin = await Admin.findOne({ phone }).select("+password"); // Ensure password field is included
 
     if (!admin) {
       return res
         .status(404)
         .json(new ApiResponse(404, null, "Admin not found"));
-    }
-
-    // Compare old password with stored hashed password
-    const isOldPasswordValid = await bcrypt.compare(
-      oldPassword,
-      admin.password
-    );
-
-    if (!isOldPasswordValid) {
-      return res
-        .status(400)
-        .json(new ApiResponse(400, null, "Old password is incorrect"));
     }
 
     // Hash the new password
@@ -259,7 +235,7 @@ export const forgotPasswordAdmin = asyncHandler(async (req, res) => {
           )
         );
     }
-
+    console.log({ phone })
     // Validate the phone number format
     if (!validatePhoneNumber(phone)) {
       return res
@@ -309,10 +285,10 @@ export const forgotPasswordAdmin = asyncHandler(async (req, res) => {
 // Validate OTP and reset password for admin
 export const validateOtpAdmin = asyncHandler(async (req, res) => {
   try {
-    const { phone, verificationId, code, newPassword } = req.body;
+    const { phone, verificationId, code } = req.body;
 
     // Ensure all necessary data is provided
-    if (!phone || !verificationId || !code || !newPassword) {
+    if (!phone || !verificationId || !code) {
       return res
         .status(400)
         .json(
@@ -344,7 +320,7 @@ export const validateOtpAdmin = asyncHandler(async (req, res) => {
     // Check if OTP validation is successful
     if (otpValidationResponse.data.message !== "SUCCESS") {
       return res
-        .status(400)
+        .status(200)
         .json(
           new ApiResponse(
             400,
@@ -355,16 +331,16 @@ export const validateOtpAdmin = asyncHandler(async (req, res) => {
     }
 
     // Hash the new password
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    // const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
     // Update the admin's password
-    admin.password = hashedNewPassword;
-    await admin.save();
+    // admin.password = hashedNewPassword;
+    // await admin.save();
 
     // Return success response with ApiResponse
     return res
       .status(200)
-      .json(new ApiResponse(200, null, "Password changed successfully."));
+      .json(new ApiResponse(200, null, "OTP Verified Successfully"));
   } catch (error) {
     console.error("Error in OTP validation controller:", error);
     return res
@@ -378,6 +354,21 @@ export const validateOtpAdmin = asyncHandler(async (req, res) => {
       );
   }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Get Admin by ID
 export const getAdminById = asyncHandler(async (req, res) => {
