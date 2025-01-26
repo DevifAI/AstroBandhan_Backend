@@ -29,6 +29,7 @@ export const registerAstrologer = asyncHandler(async (req, res) => {
       callCommission,
       videoCallCommission,
       category,
+      avatar,
       available,  // directly destructure available object from the payload
     } = req.body;
 
@@ -89,6 +90,7 @@ export const registerAstrologer = asyncHandler(async (req, res) => {
       videoCallCommission,
       category,
       password: hashedPassword,
+      avatar
     });
 
     // Save the astrologer

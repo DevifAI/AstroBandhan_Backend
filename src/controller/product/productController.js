@@ -27,7 +27,7 @@ export const createProduct = asyncHandler(async (req, res) => {
       imageUrl
     } = req.body;
 
-
+console.log(req.body)
     // Validate required fields
     const requiredFields = [
       "productName",
@@ -73,7 +73,7 @@ export const createProduct = asyncHandler(async (req, res) => {
         );
     }
 
-    // Create new product object with Cloudinary image URL
+    // // Create new product object with Cloudinary image URL
     const newProduct = new Product({
       productName,
       image: imageUrl, // Store Cloudinary image URL here
@@ -91,10 +91,10 @@ export const createProduct = asyncHandler(async (req, res) => {
       contains,
     });
 
-    // Save the product to the database
+    // // Save the product to the database
     await newProduct.save();
 
-    // Respond with success
+    // // Respond with success
     return res
       .status(201)
       .json(new ApiResponse(201, newProduct, "Product created successfully"));
