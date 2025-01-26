@@ -6,7 +6,7 @@ import { uploadAstrologerData } from '../../controller/admin/addAstrologerViaExc
 import { upload } from '../../middlewares/multer.middlewre.js';
 import { findAstrologerByVerified } from '../../controller/admin/findAstrologerByVerified.js';
 import { updateAstrologerFields } from '../../controller/admin/updateAstrologerFields.js';
-import { getAstrologers } from '../../controller/admin/findAstrologerBy_id_name_specialities.js';
+import { deleteAstrologer_original, editAstrologer_original, getAstrologers } from '../../controller/admin/findAstrologerBy_id_name_specialities.js';
 import { addAstrologerToCategory, addCategory, deleteAstrologerFromCategory, deleteCategory, editCategory, getAI_AstrologersByCategoryName, getAstrologersByCategoryName, getCategoryList, reassignAstrologerToCategory } from '../../controller/admin/AstrologerCategory.js';
 import { deleteAstrologerRequest, getPendingAstrologerRequests } from '../../controller/admin/getPendingAstrologerRequest.js'
 import { addAstrologer, editAstrologer, deleteAstrologer } from '../../controller/admin/ai_astrologerController.js';
@@ -17,6 +17,9 @@ import { getAstrology_History } from '../../controller/admin/App_History/astrolo
 import { getCall_History, getVideo_Call_History } from '../../controller/admin/App_History/audio_call_history.js';
 import { Send_Log_In_OTP, Verify_Log_In_OTP } from '../../controller/astrologer/astrologerAuthController.js';
 import { ApproveWithdrawalRequest } from '../../controller/admin/withdrawl_request_approve.js';
+import { getTopAstrologersThisWeek } from '../../controller/admin/getTopAstrologers.js';
+import { getAllUsers } from '../../controller/admin/customers/getAllCustomers.js';
+import { fetch_all_ai_astrologers_admin } from '../../controller/admin/astrologers/getAllAiAstrologers.js';
 
 
 const router = express.Router();
@@ -30,6 +33,7 @@ router.post('/validate-otp', validateOtpAdmin);
 router.get('/profile/:id', getAdminById);
 router.post('/login/otp', Send_Log_In_OTP);
 router.post('/verify/login/otp', Verify_Log_In_OTP);
+router.post('/get/all/ai/astrologers', fetch_all_ai_astrologers_admin);
 
 
 
@@ -49,6 +53,8 @@ router.post('/signup/astrologer/excel', upload.single('excel_astrologer'), uploa
 router.post('/astrologers/find-by-verified', findAstrologerByVerified);
 router.post('/astrologer/update', updateAstrologerFields);
 router.post('/getastrologers', getAstrologers);
+router.post('/upadteastrologers', editAstrologer_original);
+router.post('/delete/astrologer/original', deleteAstrologer_original);
 router.post('/add/category', addCategory);
 router.post('/get/category', getCategoryList);
 router.post('/edit/category', editCategory);
@@ -64,7 +70,7 @@ router.post('/delete-astrologer-requests', deleteAstrologerRequest);
 //need to check all this api, in progress
 router.post('/add/ai/astrologer', addAstrologer);
 router.post('/edit/ai/astrologer/:astrologerId', editAstrologer);
-router.delete('/delete/ai/astrologer/:astrologerId', deleteAstrologer);
+router.post('/delete/ai/astrologer/', deleteAstrologer);
 router.post('/add/product/category', addProductCategory);
 router.post('/edit/product/category/:id', editProductCategory);
 router.delete('/delete/product/category/:id', deleteProductCategory);
@@ -88,6 +94,8 @@ router.post('/get/adminprofile', getAdminProfile);
 router.post('/get/total/credit', getTotalCredit_Admin);
 router.post('/get/total/wallet_recharge', getTotalCredit_Wallet_Recharge_Admin);
 router.post('/payment/request', ApproveWithdrawalRequest);
+router.post('/top/astrologers', getTopAstrologersThisWeek);
+router.post('/get/users', getAllUsers);
 // router.post('/add/astrologer/category', add_Category_for_astrologer);
 // router.post('/edit/astrologer/category', edit_Category_for_astrologer);
 // router.post('/delete/astrologer/category', delete_Category_for_astrologer);

@@ -13,7 +13,6 @@ const ai_astrologerSchema = new mongoose.Schema(
         specialities: [
             {
                 type: String,
-                enum: ['tarot', 'numerology', 'vedic'], // Allowed values
                 required: true, // Ensure at least one speciality is provided
             },
         ],

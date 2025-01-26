@@ -9,6 +9,7 @@ import DailyHoroscope from "../../../models/horroscope.js";
 import { AdminWallet } from "../../../models/adminWallet.js";
 import { ApiResponse } from "../../../utils/apiResponse.js";
 import moment from "moment-timezone";
+import { AstrologerWithdrawalRequest } from "../../../models/withdrawl_request.model.js";
 
 export const get_total_astrologers = asyncHandler(async (req, res) => {
     try {
@@ -83,7 +84,7 @@ export const get_total_Earning = asyncHandler(async (req, res) => {
     try {
         const admins = await Admin.find({});
         const admin = admins[0];
-
+        console.log({ admin })
         res.status(200).json({
             success: true,
             total: admin.adminWalletBalance,
@@ -171,20 +172,20 @@ export const get_total_Horroscope = asyncHandler(async (req, res) => {
 
 export const get_total_Due = asyncHandler(async (req, res) => {
     try {
-        const result = await Astrologer.aggregate([
+        const result = await AstrologerWithdrawalRequest.aggregate([
             {
                 $group: {
                     _id: null,
-                    totalWalletBalance: { $sum: "$walletBalance" }
+                    totalWalletBalance: { $sum: "$amount" }
                 }
             }
         ]);
 
-        const totalWalletBalance = result.length > 0 ? result[0].totalWalletBalance : 0;
+        const totalDueWallet = result.length > 0 ? result[0].totalWalletBalance : 0;
 
         res.status(200).json({
             success: true,
-            total: totalWalletBalance,
+            total: totalDueWallet,
         });
     } catch (error) {
         res.status(500).json({
@@ -371,6 +372,8 @@ export const get_calls_chats_counts = asyncHandler(async (req, res) => {
         });
 
         res.status(200).json(result);
+
+        console.log({ result })
     } catch (error) {
         console.error('Error fetching weekly calls and chats data:', error);
         res.status(500).json({
@@ -491,14 +494,14 @@ export const getTotalCredit_Wallet_Recharge_Admin = asyncHandler(async (req, res
                     name: "$userDetails.name",
                     contact: "$userDetails.phone",
                     transaction_id: 1,
-                    photo:"$userDetails.photo",
+                    photo: "$userDetails.photo",
                     date: "$createdDateString", // Use the createdDateString field
                     amount: { $toString: "$amount" }, // Convert the amount to a string
                 },
             },
         ]);
 
-        console.log({result})
+        console.log({ result })
         // Transform the data for the response
         const transformedData = result.map(entry => ({
             profile: entry?.photo || null,

@@ -9,26 +9,12 @@ import fs from "fs";
 // Create Product Category
 export const createProductCategory = asyncHandler(async (req, res) => {
   try {
-    const { category_name } = req.body;
+    const { category_name, imageUrl } = req.body;
 
     if (!category_name) {
       throw new ApiError(400, "Category name is required");
     }
 
-    if (!req.file) {
-      throw new ApiError(400, "Category image is required");
-    }
-
-    // Upload the image to Cloudinary
-    const localFilePath = req.file.path;
-    const uploadResult = await uploadOnCloudinary(localFilePath);
-
-    // Delete the local file after uploading
-    fs.unlinkSync(localFilePath);
-
-    if (!uploadResult || !uploadResult.secure_url) {
-      throw new ApiError(500, "Image upload failed");
-    }
 
     const existingCategory = await ProductCategory.findOne({ category_name });
 
@@ -40,7 +26,7 @@ export const createProductCategory = asyncHandler(async (req, res) => {
 
     const newCategory = new ProductCategory({
       category_name,
-      image: uploadResult.secure_url,
+      image: imageUrl,
     });
 
     await newCategory.save();

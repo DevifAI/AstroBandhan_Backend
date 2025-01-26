@@ -24,26 +24,9 @@ export const createProduct = asyncHandler(async (req, res) => {
       height,
       width,
       contains,
+      imageUrl
     } = req.body;
 
-    // Handle image upload to Cloudinary
-    let imageUrl;
-    const avatarLocalPath = req.file?.path; // Assuming the product image is in `req.file`
-
-    if (avatarLocalPath) {
-      try {
-        const uploadResult = await uploadOnCloudinary(avatarLocalPath); // Upload image to Cloudinary
-        imageUrl = uploadResult.url;
-
-        // Delete the locally saved file after successful upload
-        fs.unlinkSync(avatarLocalPath);
-      } catch (error) {
-        console.log(error);
-        return res
-          .status(500)
-          .json(new ApiResponse(500, null, "Failed to upload product image."));
-      }
-    }
 
     // Validate required fields
     const requiredFields = [

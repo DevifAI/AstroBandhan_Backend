@@ -4,7 +4,7 @@ import { AI_Astrologer } from '../../models/ai_astrologer_model.js';
 
 // Controller to add a new astrologer
 export const addAstrologer = async (req, res) => {
-    const { name, experience, specialities,  pricePerCallMinute, pricePerChatMinute, gender } = req.body;
+    const { name, experience, specialities, pricePerCallMinute, pricePerChatMinute, gender, avatar, rating } = req.body;
 
     // Input validation (optional but good practice)
     if (!name || !experience || !specialities || !pricePerCallMinute || !pricePerChatMinute || !gender) {
@@ -14,7 +14,7 @@ export const addAstrologer = async (req, res) => {
     try {
         // Check if the astrologer already exists by name
         const existingAstrologer = await AI_Astrologer.findOne({ name });
-        
+
         if (existingAstrologer) {
             return res.status(400).json(new ApiResponse(400, {}, "Astrologer with this name already exists"));
         }
@@ -22,11 +22,13 @@ export const addAstrologer = async (req, res) => {
         // Create and save the new astrologer
         const astrologer = new AI_Astrologer({
             name,
-            experience,
+            experience: Number(experience),
             specialities,
-            pricePerCallMinute,
-            pricePerChatMinute,
+            pricePerCallMinute: Number(pricePerCallMinute),
+            pricePerChatMinute: Number(pricePerChatMinute),
             gender,
+            avatar,
+            rating: Number(rating)
         });
 
         await astrologer.save();
@@ -44,7 +46,7 @@ export const addAstrologer = async (req, res) => {
 export const editAstrologer = async (req, res) => {
     try {
         const { astrologerId } = req.params;
-        const { name, experience, specialities, languages, pricePerCallMinute, pricePerChatMinute, gender, isVerified, isFeatured } = req.body;
+        const { name, experience, specialities, languages, pricePerCallMinute, pricePerChatMinute, gender, isVerified, isFeatured, avatar } = req.body;
 
         const updatedAstrologer = await AI_Astrologer.findByIdAndUpdate(
             astrologerId,
@@ -58,6 +60,7 @@ export const editAstrologer = async (req, res) => {
                 gender,
                 isVerified,
                 isFeatured,
+                avatar
             },
             { new: true }
         );
@@ -76,9 +79,13 @@ export const editAstrologer = async (req, res) => {
 // Controller to delete an astrologer
 export const deleteAstrologer = async (req, res) => {
     try {
-        const { astrologerId } = req.params;
+        const { astrologer_ai_id } = req.body;
+        if (!astrologer_ai_id) {
+            return res.status(200).json(new ApiResponse(404, {}, "Astrologer Id not found"));
 
-        const astrologer = await AI_Astrologer.findByIdAndDelete(astrologerId);
+        }
+
+        const astrologer = await AI_Astrologer.findByIdAndDelete(astrologer_ai_id);
 
         if (!astrologer) {
             return res.status(200).json(new ApiResponse(200, {}, "Astrologer not found"));

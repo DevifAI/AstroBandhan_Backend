@@ -83,3 +83,65 @@ export const getAstrologers = asyncHandler(async (req, res) => {
         return res.status(400).json(new ApiResponse(400, null, "Server error while fetching astrologers."));
     }
 });
+
+
+export const editAstrologer_original = asyncHandler(async (req, res) => {
+    const { _id, ...updateData } = req.body; // Extract _id and the rest of the payload
+
+    // Validate the presence of _id
+    if (!_id) {
+        throw new ApiError(400, 'Astrologer ID is required');
+    }
+
+    // Check if the astrologer exists
+    const existingAstrologer = await Astrologer.findById(_id);
+    if (!existingAstrologer) {
+        throw new ApiError(404, 'Astrologer not found');
+    }
+
+    // Validate and update the astrologer data
+    const updatedAstrologer = await Astrologer.findByIdAndUpdate(
+        _id,
+        { $set: updateData }, // Use $set to update only the provided fields
+        { new: true, runValidators: true } // Return the updated document and run schema validators
+    );
+
+    if (!updatedAstrologer) {
+        throw new ApiError(500, 'Failed to update astrologer');
+    }
+
+    // Send success response with the updated astrologer data
+    res.status(200).json(
+        new ApiResponse(200, updatedAstrologer, 'Astrologer updated successfully')
+    );
+});
+
+
+export const deleteAstrologer_original = asyncHandler(async (req, res) => {
+    const { astrologer_id } = req.body; // Extract _id from the request body
+
+    // Validate the presence of _id
+    if (!astrologer_id) {
+        new ApiResponse(200, null, 'invalid astrologer details')
+    }
+
+    // Check if the astrologer exists
+    const existingAstrologer = await Astrologer.findById(astrologer_id);
+    if (!existingAstrologer) {
+        new ApiResponse(200, null, 'Astrologer not foud')
+    }
+
+    // Delete the astrologer
+    const deletedAstrologer = await Astrologer.findByIdAndDelete(astrologer_id);
+
+    if (!deletedAstrologer) {
+        new ApiResponse(200, null, 'Failed to deleted successfully')
+    }
+
+    // Send success response
+    res.status(200).json(
+        new ApiResponse(200, null, 'Astrologer deleted successfully')
+    );
+});
+
+

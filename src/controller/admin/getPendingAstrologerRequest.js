@@ -4,24 +4,16 @@ import { ApiResponse } from '../../utils/apiResponse.js';  // Assuming ApiRespon
 
 
 export const getPendingAstrologerRequests = asyncHandler(async (req, res) => {
-    const { page = 1, size = 10 } = req.query; // Default to page 1, size 10 if not provided
-    const skip = (page - 1) * size; // Calculate the skip value for pagination
-    const limit = parseInt(size, 10); // Limit value
-    console.log({ skip })
+    
     try {
         // Fetch pending astrologer requests with pagination, filtering by isApproved: false
         const pendingRequests = await PendingAstrologerRequest.find({ isApproved: false })
-            .skip(skip)
-            .limit(limit)
             .populate('language', 'name'); // Populate 'languages' field with the 'name' from the languages collection
-        const totalCount = pendingRequests.length || 0; // Total count of pending requests
-        const totalPages = Math.ceil(totalCount / limit);
+       
 
         // Format response with pagination info
         const response = {
-            totalCount,
-            totalPages,
-            currentPage: page,
+          
             requests: pendingRequests,
         };
 
@@ -31,6 +23,8 @@ export const getPendingAstrologerRequests = asyncHandler(async (req, res) => {
         return res.status(500).json(new ApiResponse(500, null, "Server error while fetching pending astrologer requests."));
     }
 });
+
+
 
 export const deleteAstrologerRequest = asyncHandler(async (req, res) => {
     const { userId } = req.body; // Take userID from request body
