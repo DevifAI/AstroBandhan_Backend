@@ -358,97 +358,116 @@ export const start_call = asyncHandler(async (req, res) => {
 
 
 export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
+
     try {
-      const { callId } = req.body;
-  
-      const call = await Call.findById(callId).populate("userId astrologerId");
-      if (!call || !call.startedAt || !call.totalAmount) {
-        return res.status(400).json({ message: "Call data is incomplete or invalid" });
-      }
-  
-      const { resourceId, sid, recordingUID, channelName, userId, astrologerId } = call;
-  
-      // Stop recording
-      const recordingData = await stopRecording(resourceId, sid, channelName, recordingUID);
-      call.endedAt = new Date();
-      call.duration = Math.ceil((call.endedAt - call.startedAt) / 1000);
-      call.recordingData = recordingData;
-  
-      if (call.intervalId) {
-        clearInterval(call.intervalId);
-      }
-  
-      const user = await User.findById(userId);
-      const astrologer = await Astrologer.findById(astrologerId);
-      if (!user || !astrologer) {
-        return res.status(404).json({ message: "User or Astrologer not found" });
-      }
-  
-      const admins = await Admin.find({});
-      if (admins.length === 0) {
-        return res.status(404).json({ message: "No Admin found" });
-      }
-  
-      await AdminWallet.create({
-        amount: Math.ceil((call.duration / 60) * astrologer.callCommission),
-        transaction_id: `ADMIN_TXN_${Date.now()}`,
-        transaction_type: "credit",
-        credit_type: "call",
-        service_id: call._id,
-        userId,
-      });
-  
-      const userDebit = await Wallet.create({
-        user_id: userId,
-        amount: call.totalAmount,
-        transaction_id: `CALL-${call._id}+${Date.now()}`,
-        transaction_type: "debit",
-        debit_type: "call",
-        service_reference_id: call._id,
-      });
-  
-      const astrologerCredit = await Wallet.create({
-        astrologer_id: astrologerId,
-        amount: call.totalAmount - Math.ceil(astrologer.callCommission * (call.duration / 60)),
-        transaction_id: `CALL-${call._id}+${Date.now()}`,
-        transaction_type: "credit",
-        credit_type: "call",
-        service_reference_id: call._id,
-      });
-  
-      await new Notification({
-        userId: userId,
-        message: [
-          {
-            title: "Coin Deducted",
-            desc: `${call.totalAmount} has been deducted from your wallet for the call with ${astrologer.Fname || "the astrologer"}.`,
-          },
-        ],
-      }).save();
-  
-      await new Notification({
-        userId: astrologerId,
-        message: [
-          {
-            title: "Coin Credited",
-            desc: `${call.totalAmount - Math.ceil(astrologer.callCommission * (call.duration / 60))} has been credited to your wallet.`,
-          },
-        ],
-      }).save();
-  
-      await call.save();
-  
-      res.status(200).json({
-        message: "Call ended successfully",
-        astrologerCredit,
-        userDebit,
-      });
+        const { callId } = req.body;
+        const call = await Call.findById(callId).populate("userId astrologerId");
+        if (!call || !call.startedAt) return;
+
+        // Stop recording
+        const { resourceId, sid, recordingUID, channelName, userId, astrologerId } = call;
+        const recordingData = await stopRecording(resourceId, sid, channelName, recordingUID);
+
+        // Update the call with recording URL
+        call.endedAt = new Date();
+        call.duration = Math.ceil((call.endedAt - call.startedAt) / 1000);
+        call.recordingData = recordingData; // Store the recording URL
+
+        console.log({ recordingData });
+        // Stop the interval
+        if (call.intervalId) {
+            clearInterval(call.intervalId);
+        }
+        const user = await User.findById(userId);
+        const astrologer = await Astrologer.findById(astrologerId);
+
+        const admins = await Admin.find({});  // Fetch all admins
+
+        if (admins.length === 0) {
+            return res.status(404).json({ message: "No Admin found" });
+        }
+
+
+        if (!user || !astrologer) {
+            throw new Error("User or Astrologer not found during call end");
+        }
+
+        console.log("duration", call.duration);
+        console.log("admin", Math.ceil((call.duration / 60) * astrologer.callCommission));
+        console.log("astrologer", Math.ceil(astrologer.callCommission * (call.duration / 60)));
+
+        await AdminWallet.create({
+            amount: Math.ceil((call.duration / 60) * astrologer.callCommission), // Convert duration to minutes and round off
+            transaction_id: `ADMIN_TXN_${Date.now()}`,
+            transaction_type: "credit",
+            credit_type: "call",
+            service_id: call._id,
+            userId,
+        });
+
+        const userDebit = await Wallet.create({
+            user_id: call.userId,
+            amount: call.totalAmount,
+            transaction_id: `CALL-${call._id}+${Date.now()}`,
+            transaction_type: "debit",
+            debit_type: "call",
+            service_reference_id: call._id
+        });
+
+        const astrologerCredit = await Wallet.create({
+            astrologer_id: call.astrologerId,
+            amount: call.totalAmount - Math.ceil(astrologer.callCommission * (call.duration / 60)),
+            transaction_id: `CALL-${call._id}+${Date.now()}`,
+            transaction_type: "credit",
+            credit_type: "call",
+            service_reference_id: call._id
+        });
+
+
+        const astrologerAcc = Astrologer.findById(call.astrologerId);
+        const userAcc = User.findById(call.userId);
+
+        await call.save();
+
+
+        const newNotification = new Notification({
+            userId: call.userId,
+            message: [
+                {
+                    title: 'Coin Deducted',
+                    desc: `${call.totalAmount} has been deducted from your wallet for the call with ${astrologerAcc.name}`,
+                }
+            ]
+        });
+
+        // Save the notification to the database
+        newNotification.save()
+
+        const newNotification_astrologer = new Notification({
+            userId: call.userId,
+            message: [
+                {
+                    title: 'Coin Credited',
+                    desc: `${call.totalAmount - Math.ceil(astrologer.callCommission * (call.duration / 60))} has been credited to your wallet for the call with ${userAcc.name}`,
+                }
+            ]
+        });
+
+        // Save the notification to the database
+        // newNotification.save()
+        newNotification_astrologer.save()
+
+
+        res.status(200).json({
+            message: "Call ended successfully",
+            astrologerCredit,
+            userDebit
+        });
+        console.log(`Call ended. Total duration: ${call.duration} seconds. Total amount: ${call.totalAmount}`);
     } catch (error) {
-      console.error("Error ending the call:", error.message);
-      res.status(500).json({ message: "Internal Server Error", error: error.message });
+        console.error("Error ending the call:", error);
     }
-  });
-  
+});
 
 
 // Function to stop the recording and log the transaction
