@@ -319,7 +319,7 @@ export const start_call = asyncHandler(async (req, res) => {
                     const payload = {
                         callId: newCall._id
                     }
-                    await axios.post('https://www.devifai.in/astrobandhan/v1/user/end/call', payload);
+                    await axios.post('https://devifai.in/astrobandhan/v1/user/end/call', payload);
                 } else {
                     // console.log({newCall});
                     updatedUser.walletBalance -= pricePerMinute;
