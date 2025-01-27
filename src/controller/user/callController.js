@@ -104,7 +104,7 @@ const startRecording_video = async (resourceId, channleid, uid, token, publisher
             storageConfig: {
                 vendor: 1, // Assume AWS for now
                 region: 14, // region AP_SOUTH_1
-                bucket: "astrobandhan", // Replace with actual bucket name
+                bucket: "rudraganga2.0", // Replace with actual bucket name
                 accessKey: ACCESSKEYID, // Replace with actual access key
                 secretKey: SECRETACCESSKEY // Replace with actual secret key
             }
