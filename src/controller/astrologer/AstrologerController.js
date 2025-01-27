@@ -78,6 +78,6 @@ export const getAstrologerById = asyncHandler(async (req, res) => {
       .status(200)
       .json({ message: "Astrologer fetched successfully", astrologer });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(200).json({ message: "Server error", error: error.message });
   }
 });
