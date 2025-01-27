@@ -7,7 +7,7 @@ import moment from "moment-timezone";
 import { User } from "../../models/user.model.js";
 import { Astrologer } from "../../models/astrologer.model.js";
 import { Wallet } from "../../models/walletSchema.model.js";
-import { endCallAndLogTransaction, start_call, startCall } from "../../controller/user/callController.js";
+import { endCallAndLogTransaction, startCall } from "../../controller/user/callController.js";
 import axios from "axios";
 import AgoraAccessToken from 'agora-access-token';
 import { AdminWallet } from "../../models/adminWallet.js";
