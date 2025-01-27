@@ -350,8 +350,20 @@ export const startCall = async (payload) => {
 
 
 
+// Set to track processed callIds
+const processedCallIds = new Set();
+
 export const endCallAndLogTransaction = async (callId) => {
     try {
+        // Check if the callId has already been processed
+        if (processedCallIds.has(callId)) {
+            console.log(`Call ${callId} has already been processed. Skipping execution.`);
+            return { message: "Call already processed" };
+        }
+
+        // Add the callId to the Set to mark it as processed
+        processedCallIds.add(callId);
+
         const call = await Call.findById(callId).populate("userId astrologerId");
         if (!call || !call.startedAt) return;
         console.log({ call });
