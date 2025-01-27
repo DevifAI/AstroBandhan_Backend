@@ -239,13 +239,13 @@ export const initSocket = (server) => {
             const userSocketId = activeUsers[userId];
 
             io.to(astrologerSocketId).emit('callid_audiocall', {
-                callId: response.data["callId"],
+                callId: response.callId, // Access callId directly from response
                 response: response.data,
                 message: `Successfully joined the call room.`,
             });
 
             io.to(userSocketId).emit('callid_audiocall', {
-                callId: response.data["callId"],
+                callId: response.callId, // Access callId directly from response
                 response: response.data,
                 message: `A user has joined call room with you.`,
             });
