@@ -58,10 +58,29 @@ export const createProductCategory = asyncHandler(async (req, res) => {
   }
 });
 
-// Get All Categories
+// Get All Categories with Product Count
 export const getAllCategories = asyncHandler(async (req, res) => {
   try {
-    const categories = await ProductCategory.find();
+    const categories = await ProductCategory.aggregate([
+      {
+        $lookup: {
+          from: "products", // The name of the product collection
+          localField: "_id", // Field from ProductCategory
+          foreignField: "category", // Field from Product
+          as: "products", // Alias for the joined data
+        },
+      },
+      {
+        $addFields: {
+          totalItems: { $size: "$products" }, // Calculate the number of products in each category
+        },
+      },
+      {
+        $project: {
+          products: 0, // Exclude the full product details from the response
+        },
+      },
+    ]);
 
     if (!categories || categories.length === 0) {
       return res
