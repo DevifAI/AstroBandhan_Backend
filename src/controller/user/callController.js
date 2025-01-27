@@ -353,7 +353,7 @@ export const endCallAndLogTransaction = async (callId) => {
     try {
         const call = await Call.findById(callId).populate("userId astrologerId");
         if (!call || !call.startedAt) return;
-
+console.log({call})
         // Stop recording
         const { resourceId, sid, recordingUID, channelName, userId, astrologerId } = call;
         const recordingData = await stopRecording(resourceId, sid, channelName, recordingUID);
