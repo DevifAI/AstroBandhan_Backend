@@ -235,7 +235,8 @@ const stopRecording = async (resourceId, sid, channelName, recordingUID) => {
         console.log(`https://api.agora.io/v1/apps/${appID}/cloud_recording/resourceid/${resourceId}/sid/${sid}/mode/mix/stop`,)
         console.log({ stopParams })
         console.error("Error stopping Agora recording:", error);
-        throw new Error("Failed to stop recording");
+       
+        
     }
 };
 
@@ -353,10 +354,20 @@ export const endCallAndLogTransaction = async (callId) => {
     try {
         const call = await Call.findById(callId).populate("userId astrologerId");
         if (!call || !call.startedAt) return;
-console.log({call})
+        console.log({ call });
+
         // Stop recording
         const { resourceId, sid, recordingUID, channelName, userId, astrologerId } = call;
-        const recordingData = await stopRecording(resourceId, sid, channelName, recordingUID);
+        let recordingData;
+
+        try {
+            recordingData = await stopRecording(resourceId, sid, channelName, recordingUID);
+        } catch (stopRecordingError) {
+            console.error("Error stopping recording:", stopRecordingError);
+            // Handle the error (e.g., log it, notify the user, etc.)
+            // You can decide whether to proceed or throw the error
+            // throw new Error("Failed to stop recording");
+        }
 
         // Update the call with recording URL
         call.endedAt = new Date();
@@ -364,6 +375,7 @@ console.log({call})
         call.recordingData = recordingData; // Store the recording URL
 
         console.log({ recordingData });
+
         // Stop the interval
         if (call.intervalId) {
             clearInterval(call.intervalId);
@@ -372,7 +384,7 @@ console.log({call})
         const user = await User.findById(userId);
         const astrologer = await Astrologer.findById(astrologerId);
 
-        const admins = await Admin.find({});  // Fetch all admins
+        const admins = await Admin.find({}); // Fetch all admins
 
         if (admins.length === 0) {
             throw new Error("No Admin found");
@@ -403,7 +415,7 @@ console.log({call})
             transaction_id: `CALL-${call._id}+${Date.now()}`,
             transaction_type: "debit",
             debit_type: "call",
-            service_reference_id: call._id
+            service_reference_id: call._id,
         });
 
         // Create Astrologer Credit transaction
@@ -413,7 +425,7 @@ console.log({call})
             transaction_id: `CALL-${call._id}+${Date.now()}`,
             transaction_type: "credit",
             credit_type: "call",
-            service_reference_id: call._id
+            service_reference_id: call._id,
         });
 
         // Update the call record
@@ -427,10 +439,10 @@ console.log({call})
             userId: call.userId,
             message: [
                 {
-                    title: 'Coin Deducted',
+                    title: "Coin Deducted",
                     desc: `${call.totalAmount} has been deducted from your wallet for the call with ${astrologerAcc.name}`,
-                }
-            ]
+                },
+            ],
         });
 
         await newNotification.save();
@@ -439,10 +451,10 @@ console.log({call})
             userId: call.astrologerId,
             message: [
                 {
-                    title: 'Coin Credited',
+                    title: "Coin Credited",
                     desc: `${call.totalAmount - Math.ceil(astrologer.callCommission * (call.duration / 60))} has been credited to your wallet for the call with ${userAcc.name}`,
-                }
-            ]
+                },
+            ],
         });
 
         await newNotificationAstrologer.save();
@@ -452,14 +464,13 @@ console.log({call})
         return {
             message: "Call ended successfully",
             astrologerCredit,
-            userDebit
+            userDebit,
         };
     } catch (error) {
         console.error("Error ending the call:", error);
-        throw error;  // Propagate error if necessary
+        throw error; // Propagate error if necessary
     }
 };
-
 
 // Function to stop the recording and log the transaction
 
