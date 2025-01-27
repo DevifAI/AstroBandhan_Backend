@@ -7,7 +7,7 @@ import moment from "moment-timezone";
 import { User } from "../../models/user.model.js";
 import { Astrologer } from "../../models/astrologer.model.js";
 import { Wallet } from "../../models/walletSchema.model.js";
-import { start_call } from "../../controller/user/callController.js";
+import { endCallAndLogTransaction, start_call } from "../../controller/user/callController.js";
 import axios from "axios";
 import AgoraAccessToken from 'agora-access-token';
 import { AdminWallet } from "../../models/adminWallet.js";
@@ -256,7 +256,8 @@ export const initSocket = (server) => {
             const payload = {
                 callId  // Replace with actual channelName
             };
-            const response = await axios.post('https://devifai.in/astrobandhan/v1/user/end/call', payload);
+            // const response = await axios.post('https://devifai.in/astrobandhan/v1/user/end/call', payload);
+            await endCallAndLogTransaction(payload)
             console.log(response);
 
             const astrologerSocketId = activeUsers[astrologerId];

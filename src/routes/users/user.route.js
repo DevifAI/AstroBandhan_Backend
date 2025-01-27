@@ -62,7 +62,7 @@ router.post('/get/top/astrologers', getTrendingAstrologer);
 router.post('/get/trending/astrologers', getTrendingAstrologer);
 router.post('/get/suggest/astrologers', getAutoSuggestAstrologer);
 
-router.post('/end/call', endCallAndLogTransaction);
+// router.post('/end/call', endCallAndLogTransaction);
 router.post('/get/all/ai/astrologers', fetch_all_ai_astrologers);
 router.post('/get/chatsById', fetchChatHistory);
 router.post('/get/wallet/history', findWalletByUserId);

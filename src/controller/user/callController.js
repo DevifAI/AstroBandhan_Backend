@@ -319,7 +319,8 @@ export const start_call = asyncHandler(async (req, res) => {
                     const payload = {
                         callId: newCall._id
                     }
-                    await axios.post('https://devifai.in/astrobandhan/v1/user/end/call', payload);
+                    // await axios.post('https://devifai.in/astrobandhan/v1/user/end/call', payload);
+                    await endCallAndLogTransaction(payload)
                 } else {
                     // console.log({newCall});
                     updatedUser.walletBalance -= pricePerMinute;
@@ -356,11 +357,8 @@ export const start_call = asyncHandler(async (req, res) => {
 });
 
 
-
-export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
-
+export const endCallAndLogTransaction = async (callId) => {
     try {
-        const { callId } = req.body;
         const call = await Call.findById(callId).populate("userId astrologerId");
         if (!call || !call.startedAt) return;
 
@@ -378,15 +376,15 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
         if (call.intervalId) {
             clearInterval(call.intervalId);
         }
+
         const user = await User.findById(userId);
         const astrologer = await Astrologer.findById(astrologerId);
 
         const admins = await Admin.find({});  // Fetch all admins
 
         if (admins.length === 0) {
-            return res.status(404).json({ message: "No Admin found" });
+            throw new Error("No Admin found");
         }
-
 
         if (!user || !astrologer) {
             throw new Error("User or Astrologer not found during call end");
@@ -396,6 +394,7 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
         console.log("admin", Math.ceil((call.duration / 60) * astrologer.callCommission));
         console.log("astrologer", Math.ceil(astrologer.callCommission * (call.duration / 60)));
 
+        // Create Admin Wallet transaction
         await AdminWallet.create({
             amount: Math.ceil((call.duration / 60) * astrologer.callCommission), // Convert duration to minutes and round off
             transaction_id: `ADMIN_TXN_${Date.now()}`,
@@ -405,6 +404,7 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
             userId,
         });
 
+        // Create User Debit transaction
         const userDebit = await Wallet.create({
             user_id: call.userId,
             amount: call.totalAmount,
@@ -414,6 +414,7 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
             service_reference_id: call._id
         });
 
+        // Create Astrologer Credit transaction
         const astrologerCredit = await Wallet.create({
             astrologer_id: call.astrologerId,
             amount: call.totalAmount - Math.ceil(astrologer.callCommission * (call.duration / 60)),
@@ -423,12 +424,12 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
             service_reference_id: call._id
         });
 
-
-        const astrologerAcc = Astrologer.findById(call.astrologerId);
-        const userAcc = User.findById(call.userId);
-
+        // Update the call record
         await call.save();
 
+        // Create notifications for the user and astrologer
+        const astrologerAcc = await Astrologer.findById(call.astrologerId);
+        const userAcc = await User.findById(call.userId);
 
         const newNotification = new Notification({
             userId: call.userId,
@@ -440,11 +441,10 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
             ]
         });
 
-        // Save the notification to the database
-        newNotification.save()
+        await newNotification.save();
 
-        const newNotification_astrologer = new Notification({
-            userId: call.userId,
+        const newNotificationAstrologer = new Notification({
+            userId: call.astrologerId,
             message: [
                 {
                     title: 'Coin Credited',
@@ -453,21 +453,20 @@ export const endCallAndLogTransaction = asyncHandler(async (req, res) => {
             ]
         });
 
-        // Save the notification to the database
-        // newNotification.save()
-        newNotification_astrologer.save()
+        await newNotificationAstrologer.save();
 
+        console.log(`Call ended. Total duration: ${call.duration} seconds. Total amount: ${call.totalAmount}`);
 
-        res.status(200).json({
+        return {
             message: "Call ended successfully",
             astrologerCredit,
             userDebit
-        });
-        console.log(`Call ended. Total duration: ${call.duration} seconds. Total amount: ${call.totalAmount}`);
+        };
     } catch (error) {
         console.error("Error ending the call:", error);
+        throw error;  // Propagate error if necessary
     }
-});
+};
 
 
 // Function to stop the recording and log the transaction
