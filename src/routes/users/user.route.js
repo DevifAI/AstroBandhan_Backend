@@ -43,7 +43,7 @@ router.post('/add/balance', add_wallet_balance)
 router.post('/get/balance/history', find_transaction_history_by_category)
 router.post('/notifications/:userId/:notificationId/read', markNotificationsAsRead);
 router.get('/notifications/:userId', getAllNotificationsByUserId);
-router.post('/start/call', start_call);
+// router.post('/start/call', start_call);
 
 // router.post('/start/call', start_call);
 

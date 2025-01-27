@@ -60,6 +60,7 @@ const acquireRecordingResource = async (channelName, uid,) => {
                 }
             }
         );
+        console.log({response})
         return response.data; // Return resourceId and sid
     } catch (error) {
         console.error("Error acquiring Agora recording resource:", error);
@@ -128,7 +129,7 @@ const startRecording_video = async (resourceId, channleid, uid, token, publisher
                 }
             }
         );
-
+        console.log({response})
         return response.data; // Return recording start data
     } catch (error) {
         console.error("Error starting Agora recording:", error);
@@ -195,7 +196,7 @@ const startRecording_audio = async (resourceId, channleid, uid, token, publisher
                 }
             }
         );
-
+        console.log({response})
         return response.data; // Return recording start data
     } catch (error) {
         console.error("Error starting Agora recording:", error);
@@ -237,58 +238,46 @@ const stopRecording = async (resourceId, sid, channelName, recordingUID) => {
 };
 
 // Function to start the call and record it
-export const start_call = asyncHandler(async (req, res) => {
+export const startCall = async (userId, astrologerId, channleid, publisherUid, JoinedId, callType) => {
     try {
-
-
-        // console.log("callComming");
-        const { userId,        // Replace with actual userId
-            astrologerId,  // Replace with actual astrologerId
-            channleid,
-            publisherUid,
-            JoinedId, callType } = req.body;
         const user = await User.findById(userId);
         const astrologer = await Astrologer.findById(astrologerId);
 
         if (!user || !astrologer) {
-            return res.status(404).json({ message: "User or Astrologer not found" });
+            throw new Error("User or Astrologer not found");
         }
 
         const pricePerMinute = callType === "audio" ? astrologer.pricePerCallMinute : astrologer.pricePerVideoCallMinute;
         const commissionPerMinute = callType === "audio" ? astrologer.callCommission : astrologer.videoCallCommission;
+
         // Check if user has enough balance to start the call
         if (user.walletBalance < pricePerMinute) {
-            return res.status(400).json({ message: "Insufficient wallet balance" });
+            throw new Error("Insufficient wallet balance");
         }
 
         // Deduct first minute from user's wallet and credit astrologer
         user.walletBalance -= pricePerMinute;
-        astrologer.walletBalance += (pricePerMinute - commissionPerMinute); // Add the balance after commission
+        astrologer.walletBalance += (pricePerMinute - commissionPerMinute);
 
         const admins = await Admin.find({});  // Or Astrologer.findAll() if you're working with astrologers
-        // console.log(admins);
         if (admins.length === 0) {
-            return res.status(404).json({ message: "No Admin found" });
+            throw new Error("No Admin found");
         }
 
-        // Take the first user/astrologer document
-        const adminUser = admins[0]; // Change this to astrologer if working with astrologers
-        // adminUser.adminWalletBalance += commissionPerMinute;
+        const adminUser = admins[0]; // Taking the first admin user
 
         await user.save();
         await astrologer.save();
-        await adminUser.save()
-        const uid = Math.floor(Math.random() * 100000); // Random unique UID for the recording bot
-        // Generate Agora token
-        const token = generateAgoraToken(channleid, uid);
-        // Acquire recording resource
-        const { resourceId } = await acquireRecordingResource(channleid, uid,);
-        // console.log({resourceId});
-        // console.log({token});
-        const resCall = await startRecording_video(resourceId, channleid, uid, token, publisherUid, JoinedId,);
+        await adminUser.save();
 
-        const abc = {
-            userId, // Log as key-value pair in an object
+        const uid = Math.floor(Math.random() * 100000); // Random unique UID for the recording bot
+        const token = generateAgoraToken(channleid, uid);
+        const { resourceId } = await acquireRecordingResource(channleid, uid);
+
+        const resCall = await startRecording_video(resourceId, channleid, uid, token, publisherUid, JoinedId);
+
+        const newCall = new Call({
+            userId,
             astrologerId,
             channelName: resCall['cname'],
             startedAt: new Date(),
@@ -296,65 +285,55 @@ export const start_call = asyncHandler(async (req, res) => {
             sid: resCall['sid'],
             resourceId,
             recordingUID: uid.toString(),
-            recordingToken: token, // Proper key-value pair
-            recordingStarted: true, // Proper key-value pair
+            recordingToken: token,
+            recordingStarted: true,
             callType,
-        };
+        });
 
-        // if(!resCall){
-        //     return true;
-        // }
-        // // // Create the Call document in the database
-        const newCall = new Call(abc);
         await newCall.save();
-        console.log({ newCall });
+
         // Start a timer to deduct money every minute
         const intervalId = setInterval(async () => {
-            // console.log("testingcccc");
             try {
                 const updatedUser = await User.findById(userId);
-                console.log({ updatedUser, pricePerMinute });
+
                 if (updatedUser.walletBalance < pricePerMinute) {
                     clearInterval(intervalId);
-                    const payload = {
-                        callId: newCall._id
-                    }
-                    // await axios.post('https://devifai.in/astrobandhan/v1/user/end/call', payload);
-                    await endCallAndLogTransaction(payload)
+                    const payload = { callId: newCall._id };
+                    await endCallAndLogTransaction(payload);
                 } else {
-                    // console.log({newCall});
                     updatedUser.walletBalance -= pricePerMinute;
-                    astrologer.walletBalance += (pricePerMinute - commissionPerMinute); // Add the balance after commission
-                    // adminUser.adminWalletBalance += commissionPerMinute;
+                    astrologer.walletBalance += (pricePerMinute - commissionPerMinute);
                     newCall.totalAmount += pricePerMinute;
                     await updatedUser.save();
                     await newCall.save();
                     await astrologer.save();
-                    await adminUser.save()
-
+                    await adminUser.save();
                 }
             } catch (error) {
                 console.error("Error during per-minute deduction:", error);
                 clearInterval(intervalId);
             }
         }, 60000);
+
         newCall.intervalId = intervalId;
         await newCall.save();
 
-        res.status(200).json({
+        return {
             message: "Call started successfully",
             callId: newCall._id,
             token,
             channelName: channleid,
             resourceId,
-            resCall
-        });
+            resCall,
+        };
 
     } catch (error) {
         console.error(error.message);
-        res.status(500).json({ message: "Server error" });
+        throw new Error("Server error");
     }
-});
+};
+
 
 
 export const endCallAndLogTransaction = async (callId) => {
