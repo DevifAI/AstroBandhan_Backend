@@ -20,6 +20,7 @@ import { ApproveWithdrawalRequest } from '../../controller/admin/withdrawl_reque
 import { getTopAstrologersThisWeek } from '../../controller/admin/getTopAstrologers.js';
 import { getAllUsers } from '../../controller/admin/customers/getAllCustomers.js';
 import { fetch_all_ai_astrologers_admin } from '../../controller/admin/astrologers/getAllAiAstrologers.js';
+import { getChat_History, getChatRoom_History, getChatRoomHistoryByDateRange } from '../../controller/admin/App_History/chat_history.js';
 
 
 const router = express.Router();
@@ -96,6 +97,9 @@ router.post('/get/total/wallet_recharge', getTotalCredit_Wallet_Recharge_Admin);
 router.post('/payment/request', ApproveWithdrawalRequest);
 router.post('/top/astrologers', getTopAstrologersThisWeek);
 router.post('/get/users', getAllUsers);
+router.post('/get/chat/history', getChatRoom_History);
+router.post('/get/chat/history/bydate', getChatRoomHistoryByDateRange);
+router.post('/get/chat/details/history', getChat_History);
 // router.post('/add/astrologer/category', add_Category_for_astrologer);
 // router.post('/edit/astrologer/category', edit_Category_for_astrologer);
 // router.post('/delete/astrologer/category', delete_Category_for_astrologer);
