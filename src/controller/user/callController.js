@@ -8,7 +8,9 @@ import { Wallet } from '../../models/walletSchema.model.js';
 import { Admin } from '../../models/adminModel.js';
 import { AdminWallet } from '../../models/adminWallet.js';
 import Notification from '../../models/notifications.model.js';
+import mongoose from 'mongoose';
 
+const { ObjectId } = mongoose.Types; // Import ObjectId from mongoose
 
 // key：608f211d904e4ee8bd7fa43571906fba
 // secret：cdd5b28810f245e08d1ed395c2c3f3d1
@@ -60,7 +62,7 @@ const acquireRecordingResource = async (channelName, uid,) => {
                 }
             }
         );
-        console.log({response})
+        console.log({ response })
         return response.data; // Return resourceId and sid
     } catch (error) {
         console.error("Error acquiring Agora recording resource:", error);
@@ -129,7 +131,7 @@ const startRecording_video = async (resourceId, channleid, uid, token, publisher
                 }
             }
         );
-        console.log({response})
+        console.log({ response })
         return response.data; // Return recording start data
     } catch (error) {
         console.error("Error starting Agora recording:", error);
@@ -196,7 +198,7 @@ const startRecording_audio = async (resourceId, channleid, uid, token, publisher
                 }
             }
         );
-        console.log({response})
+        console.log({ response })
         return response.data; // Return recording start data
     } catch (error) {
         console.error("Error starting Agora recording:", error);
@@ -240,8 +242,8 @@ const stopRecording = async (resourceId, sid, channelName, recordingUID) => {
 // Function to start the call and record it
 export const startCall = async (userId, astrologerId, channleid, publisherUid, JoinedId, callType) => {
     try {
-        const user = await User.findById(userId);
-        const astrologer = await Astrologer.findById(astrologerId);
+        const user = await User.findById(ObjectId(userId));
+        const astrologer = await Astrologer.findById(ObjectId(astrologerId));
 
         if (!user || !astrologer) {
             throw new Error("User or Astrologer not found");
@@ -261,7 +263,7 @@ export const startCall = async (userId, astrologerId, channleid, publisherUid, J
 
         const admins = await Admin.find({});  // Or Astrologer.findAll() if you're working with astrologers
         if (admins.length === 0) {
-            throw new Error("No Admin found");
+            return res.status(400).json({ message: "No admins found" });
         }
 
         const adminUser = admins[0]; // Taking the first admin user
@@ -291,7 +293,7 @@ export const startCall = async (userId, astrologerId, channleid, publisherUid, J
         });
 
         await newCall.save();
-
+        console.log({ newCall })
         // Start a timer to deduct money every minute
         const intervalId = setInterval(async () => {
             try {
@@ -330,7 +332,7 @@ export const startCall = async (userId, astrologerId, channleid, publisherUid, J
 
     } catch (error) {
         console.error(error.message);
-        throw new Error("Server error");
+        // throw new Error("Server error");
     }
 };
 
