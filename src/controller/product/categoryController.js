@@ -64,20 +64,20 @@ export const getAllCategories = asyncHandler(async (req, res) => {
     const categories = await ProductCategory.aggregate([
       {
         $lookup: {
-          from: "products", // The name of the product collection
-          localField: "_id", // Field from ProductCategory
-          foreignField: "category", // Field from Product
-          as: "products", // Alias for the joined data
+          from: "products",
+          localField: "_id",
+          foreignField: "category",
+          as: "products", 
         },
       },
       {
         $addFields: {
-          totalItems: { $size: "$products" }, // Calculate the number of products in each category
+          totalItems: { $size: "$products" },
         },
       },
       {
         $project: {
-          products: 0, // Exclude the full product details from the response
+          products: 0,  
         },
       },
     ]);
