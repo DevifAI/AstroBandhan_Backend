@@ -9,13 +9,20 @@ import fs from "fs";
 // Create Product Category
 export const createProductCategory = asyncHandler(async (req, res) => {
   try {
-    const { category_name, imageUrl } = req.body;
+    const { category_name, image, imageUrl } = req.body;
 
+    // Validate input
     if (!category_name) {
       throw new ApiError(400, "Category name is required");
     }
 
+    // Use imageUrl or fallback to image
+    const finalImageUrl = imageUrl || image;
+    if (!finalImageUrl) {
+      throw new ApiError(400, "Category image is required");
+    }
 
+    // Check if the category already exists
     const existingCategory = await ProductCategory.findOne({ category_name });
 
     if (existingCategory) {
@@ -24,11 +31,13 @@ export const createProductCategory = asyncHandler(async (req, res) => {
         .json(new ApiResponse(400, null, "Product category already exists"));
     }
 
+    // Create a new category
     const newCategory = new ProductCategory({
       category_name,
-      image: imageUrl,
+      imageUrl: finalImageUrl,
     });
 
+    // Save the new category
     await newCategory.save();
 
     const savedCategory = await ProductCategory.findById(
@@ -105,8 +114,9 @@ export const getCategoryById = asyncHandler(async (req, res) => {
 export const updateCategoryById = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
-    const { category_name } = req.body;
+    const { category_name, imageUrl } = req.body;
 
+    // Validate category_name
     if (!category_name) {
       throw new ApiError(400, "Category name is required");
     }
@@ -120,10 +130,13 @@ export const updateCategoryById = asyncHandler(async (req, res) => {
         .json(new ApiResponse(404, null, "Product category not found"));
     }
 
-    let updatedImageUrl = existingCategory.image;
+    let updatedImageUrl = existingCategory.imageUrl;
 
-    // If a new image is uploaded, replace the old one
-    if (req.file) {
+    // If a new image URL is provided, update it
+    if (imageUrl) {
+      updatedImageUrl = imageUrl;
+    } else if (req.file) {
+      // If a file is uploaded, process it
       const localFilePath = req.file.path;
 
       // Upload the new image to Cloudinary
@@ -137,8 +150,11 @@ export const updateCategoryById = asyncHandler(async (req, res) => {
       updatedImageUrl = uploadResult.secure_url;
 
       // Optional: Delete the old image from Cloudinary
-      if (existingCategory.image) {
-        const publicId = existingCategory.image.split("/").pop().split(".")[0];
+      if (existingCategory.imageUrl) {
+        const publicId = existingCategory.imageUrl
+          .split("/")
+          .pop()
+          .split(".")[0];
         await cloudinary.uploader.destroy(`astrologer-avatars/${publicId}`);
       }
     }
@@ -146,7 +162,7 @@ export const updateCategoryById = asyncHandler(async (req, res) => {
     // Update the category
     const updatedCategory = await ProductCategory.findByIdAndUpdate(
       id,
-      { category_name, image: updatedImageUrl },
+      { category_name, imageUrl: updatedImageUrl }, // Ensure `imageUrl` is updated properly
       { new: true, runValidators: true }
     );
 

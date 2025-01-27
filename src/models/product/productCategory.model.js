@@ -9,7 +9,7 @@ const productCategorySchema = new Schema(
       trim: true,
       required: [true, "Category name is required"],
     },
-    image: {
+    imageUrl: {
       type: String,
       required: [true, "Category image is required"],
     },
