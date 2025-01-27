@@ -258,7 +258,8 @@ export const initSocket = (server) => {
                 callId  // Replace with actual channelName
             };
             // const response = await axios.post('https://devifai.in/astrobandhan/v1/user/end/call', payload);
-            await endCallAndLogTransaction(payload)
+            const response = await endCallAndLogTransaction(callId); // Pass callId directly
+            // console.log(response);
             console.log(response);
 
             const astrologerSocketId = activeUsers[astrologerId];
