@@ -242,11 +242,11 @@ const stopRecording = async (resourceId, sid, channelName, recordingUID) => {
 // Function to start the call and record it
 export const startCall = async (userId, astrologerId, channleid, publisherUid, JoinedId, callType) => {
     try {
-        const user = await User.findById(ObjectId(userId));
-        const astrologer = await Astrologer.findById(ObjectId(astrologerId));
+        const user = await User.findById((userId));
+        const astrologer = await Astrologer.findById((astrologerId));
 
         if (!user || !astrologer) {
-            throw new Error("User or Astrologer not found");
+            return res.json(400).json("User or Astrologer not found")
         }
 
         const pricePerMinute = callType === "audio" ? astrologer.pricePerCallMinute : astrologer.pricePerVideoCallMinute;
@@ -254,7 +254,9 @@ export const startCall = async (userId, astrologerId, channleid, publisherUid, J
 
         // Check if user has enough balance to start the call
         if (user.walletBalance < pricePerMinute) {
-            throw new Error("Insufficient wallet balance");
+            // throw new Error("Insufficient wallet balance");
+            return res.json(400).json("Insufficient wallet balance")
+
         }
 
         // Deduct first minute from user's wallet and credit astrologer
