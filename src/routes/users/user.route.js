@@ -18,7 +18,7 @@ import { getDailyHoroscope, getPrevHoroscope, getTommHoroscope } from "../../con
 import { getDailyPanchang, getMonthlyPanchang } from "../../controller/user/third_party/daily_Panchang.js";
 import { get_numerology } from "../../controller/user/third_party/numerology.js";
 
-import { endCallAndLogTransaction, start_call } from "../../controller/user/callController.js";
+// import { endCallAndLogTransaction, start_call } from "../../controller/user/callController.js";
 import { getAutoSuggestAstrologer, getTrendingAstrologer } from "../../controller/user/getTopAstrologers.js";
 import { fetch_all_ai_astrologers } from "../../controller/user/getAllAiAstrologers.js";
 import { fetchChatHistory } from "../../controller/user/chatController.js";
