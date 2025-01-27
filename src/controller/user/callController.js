@@ -240,13 +240,17 @@ const stopRecording = async (resourceId, sid, channelName, recordingUID) => {
 };
 
 // Function to start the call and record it
-export const startCall = async (userId, astrologerId, channleid, publisherUid, JoinedId, callType) => {
+export const startCall = async (payload) => {
+    const { userId, astrologerId, channleid, publisherUid, JoinedId, callType } = payload;
+
     try {
-        const user = await User.findById((userId));
-        const astrologer = await Astrologer.findById((astrologerId));
+        const user = await User.findById(userId);
+        const astrologer = await Astrologer.findById(astrologerId);
 
         if (!user || !astrologer) {
-            return res.json(400).json("User or Astrologer not found")
+            // throw new Error("User or Astrologer not found");
+            res.status(500).json({ success: false, message: "User or Astrologer not found" });
+
         }
 
         const pricePerMinute = callType === "audio" ? astrologer.pricePerCallMinute : astrologer.pricePerVideoCallMinute;
@@ -255,7 +259,7 @@ export const startCall = async (userId, astrologerId, channleid, publisherUid, J
         // Check if user has enough balance to start the call
         if (user.walletBalance < pricePerMinute) {
             // throw new Error("Insufficient wallet balance");
-            return res.json(400).json("Insufficient wallet balance")
+            res.status(500).json({ success: false, message: "Insufficient wallet balance" });
 
         }
 
@@ -263,9 +267,11 @@ export const startCall = async (userId, astrologerId, channleid, publisherUid, J
         user.walletBalance -= pricePerMinute;
         astrologer.walletBalance += (pricePerMinute - commissionPerMinute);
 
-        const admins = await Admin.find({});  // Or Astrologer.findAll() if you're working with astrologers
+        const admins = await Admin.find({});
         if (admins.length === 0) {
-            return res.status(400).json({ message: "No admins found" });
+            // throw new Error("No admins found");
+            res.status(500).json({ success: false, message: "No admins found" });
+
         }
 
         const adminUser = admins[0]; // Taking the first admin user
@@ -295,7 +301,8 @@ export const startCall = async (userId, astrologerId, channleid, publisherUid, J
         });
 
         await newCall.save();
-        console.log({ newCall })
+        console.log({ newCall });
+
         // Start a timer to deduct money every minute
         const intervalId = setInterval(async () => {
             try {
@@ -333,8 +340,10 @@ export const startCall = async (userId, astrologerId, channleid, publisherUid, J
         };
 
     } catch (error) {
-        console.error(error.message);
-        // throw new Error("Server error");
+        console.error("Error in startCall:", error.message);
+        // throw error; // Re-throw the error for the caller to handle
+        res.status(500).json({ success: false, message: `error:${error.message}` });
+
     }
 };
 

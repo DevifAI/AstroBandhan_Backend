@@ -233,7 +233,7 @@ export const initSocket = (server) => {
             // Send POST request using axios
             // const response = await axios.post('https://devifai.in/astrobandhan/v1/user/start/call', payload);
             await startCall(payload)
-            console.log(response);
+            // console.log(response);
 
             const astrologerSocketId = activeUsers[astrologerId];
             const userSocketId = activeUsers[userId];
