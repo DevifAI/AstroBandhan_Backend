@@ -88,7 +88,8 @@ async function getAstrologyResponse(question, astrologyType, userDetails) {
             }
         );
 
-        // Return the AI's response in the same language or transliteration style as the question
+        // Return the AI's response in the same language or transliteration style as the questio
+        
         return response.data.choices[0].message.content;
     } catch (error) {
         console.error("Error fetching AI response:", error?.response?.data || error.message);
