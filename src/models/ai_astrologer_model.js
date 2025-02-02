@@ -41,6 +41,18 @@ const ai_astrologerSchema = new mongoose.Schema(
             type: String,
             requird: true
         },
+        isVerified:{
+            type:Boolean,
+            required:true
+        },
+        isFeatured:{
+            type:Boolean,
+            required:true
+        },
+        isAvailable:{
+            type:Boolean,
+            required:true
+        },
         avatar: {
             type: String,
             default: function () {

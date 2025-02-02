@@ -7,7 +7,7 @@ export const ApproveWithdrawalRequest = async (req, res) => {
 
     try {
         // Validate input
-        if (typeof isPaymentDone === 'undefined' || !payment_id) {
+        if (typeof isPaymentDone === 'undefined') {
             return res.status(400).json({ message: 'Missing required fields' });
         }
 

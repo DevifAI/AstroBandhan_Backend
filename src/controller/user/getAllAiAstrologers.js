@@ -6,55 +6,55 @@ import { ApiResponse } from "../../utils/apiResponse.js";
 import { AI_Astrologer } from "../../models/ai_astrologer_model.js";
 
 
-export const fetch_ai_astro_chat = asyncHandler(async (req, res) => {
-    const { userId, page, size } = req.body;
-
-    if (!userId) {
-        return res.status(400).json(new ApiResponse(400, null, "Please provide User Information."));
-    }
-
-    const limit = parseInt(size); // Number of records per page
-    const skip = (parseInt(page) - 1) * limit; // Number of records to skip
-
+export const fetch_ai_astro_chats = asyncHandler(async (req, res) => {
     try {
+        const { fromDate, toDate } = req.body;
 
+        // Validate and convert dates
+        let filter = {};
+        if (fromDate && toDate) {
+            const startDate = new Date(fromDate);
+            const endDate = new Date(toDate);
 
-        const user_chats = await AI_Astro_Chat.find({ userId })
-            .skip(skip)
-            .limit(limit);
+            // Check if dates are valid
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                return res.status(400).json(new ApiResponse(400, null, "Invalid date format. Use YYYY-MM-DD."));
+            }
 
-        // Check if any records were fetched
-        if (!user_chats || user_chats.length === 0) {
-            return res.status(404).json(new ApiResponse(404, null, "Chat record not found."));
+            // Set start of the day for fromDate and end of the day for toDate
+            startDate.setHours(0, 0, 0, 0); // Start of the day
+            endDate.setHours(23, 59, 59, 999); // End of the day
+
+            filter.createdAt = {
+                $gte: startDate,
+                $lte: endDate,
+            };
         }
 
+        // Fetch chats based on date range
+        const user_chats = await AI_Astro_Chat.find(filter)
+            .populate("userId aiAstroId")
+            .sort({ createdAt: -1 });
 
+        // Handle empty results
+        if (!user_chats || user_chats.length === 0) {
+            return res.status(200).json(new ApiResponse(200, [], "No chat records found for the specified date range."));
+        }
 
-        // sendNotificationToUser(userId, 'You have successfully fetched chats of AI!'); // Send notification t
-        // Optional: Get total count for pagination info
-        const totalRecords = await AI_Astro_Chat.countDocuments({ userId });
-        const totalPages = Math.ceil(totalRecords / limit);
-
-        return res.json(new ApiResponse(200, {
-            user_chats,
-            pagination: {
-                currentPage: parseInt(page),
-                pageSize: limit,
-                totalRecords,
-                totalPages
-            }
-        }, "Chat record fetched successfully."));
+        // Return successful response
+        return res.status(200).json(new ApiResponse(200, user_chats, "Chat history fetched successfully."));
     } catch (error) {
-        console.error("Error fetching chat record:", error);
-        return res.status(500).json(new ApiResponse(500, null, "Failed to fetch chat record."));
+        console.error("Error fetching chat history:", error);
+        return res.status(500).json(new ApiResponse(500, null, "Internal Server Error"));
     }
 });
+
 
 
 export const fetch_all_ai_astrologers = asyncHandler(async (req, res) => {
     try {
         // Fetch all astrologers from the database
-        const astrologers = await AI_Astrologer.find({isVerified: true});
+        const astrologers = await AI_Astrologer.find({ isVerified: true });
 
         // Check if any records were fetched
         if (!astrologers || astrologers.length === 0) {

@@ -22,6 +22,7 @@ const ask_ai_astro_schema = new mongoose.Schema(
         amount: { type: Number, default: 0 },
         isChatStarted: { type: Boolean, default: false },
         isChatEnded: { type: Boolean, default: false },
+        startTime: { type: String },
         duration: { type: String, default: "0" }, // Duration in minutes
     },
     {

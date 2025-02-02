@@ -9,11 +9,15 @@ const astrologerSchema = new mongoose.Schema(
     experience: {
       type: Number,
       required: true,
-      default: 1,
-      min: [1, 'Experience must be at least 1 year'],
-      max: [50, 'Experience cannot exceed 50 years']
+      default: 0,
+      min: [0, 'Experience must be at least 1 year'],
     },
     specialities: [String],
+    category: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+      required: [true, 'At least one Category must be specified.']
+    }],
     languages: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -28,20 +32,14 @@ const astrologerSchema = new mongoose.Schema(
     pricePerChatMinute: { type: Number, required: true },
     available: {
       type: {
-        isAvailable: { type: Boolean, default: false },
-        isCallAvailable: { type: Boolean, default: false },
-        isChatAvailable: { type: Boolean, default: false },
-        isVideoCallAvailable: { type: Boolean, default: false }
+        isAvailable: { type: Boolean, default: true },
+        isCallAvailable: { type: Boolean, default: true },
+        isChatAvailable: { type: Boolean, default: true },
+        isVideoCallAvailable: { type: Boolean, default: true }
       },
-      default: {
-        isAvailable: false,
-        isCallAvailable: false,
-        isChatAvailable: false,
-        isVideoCallAvailable: false
-      }
     },
     isVerified: { type: Boolean, default: false },
-    popular: { type: Boolean, default: false },
+    // popular: { type: Boolean, default: false },
     isOffline: { type: Boolean, default: false },
     avatar: {
       type: String,

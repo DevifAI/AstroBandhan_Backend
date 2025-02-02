@@ -22,6 +22,11 @@ const orderSchema = new Schema(
       trim: true,
       required: [true, "State description is required"],
     },
+    address: {
+      type: String,
+      trim: true,
+      required: [true, "Address is required"]
+    },
     phone: {
       type: String,
       // required: [true, "Phone number is required"],
@@ -70,8 +75,14 @@ const orderSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    delivery_status: {
+      type: String,
+      enum: ["Pending", "Shipped", "Delivered"],
+      default: "Pending",
+    },
     transaction_id: {
       type: String,
+      unique: true,
       required: function () {
         return this.is_payment_done;
       },

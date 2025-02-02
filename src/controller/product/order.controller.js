@@ -16,11 +16,14 @@ export const createOrder = asyncHandler(async (req, res) => {
       name,
       city,
       state,
+      address,
       phone,
       order_details,
       delivery_date,
       quantity,
       total_price,
+      delivery_status
+
     } = req.body;
 
     // Validate required fields
@@ -28,6 +31,7 @@ export const createOrder = asyncHandler(async (req, res) => {
       { name: "name", message: "Name is required" },
       { name: "city", message: "City name is required" },
       { name: "state", message: "State description is required" },
+      { name: "address", message: "Address  is required" },
       {
         name: "order_details",
         message: "Order details(Product id) are required",
@@ -41,9 +45,9 @@ export const createOrder = asyncHandler(async (req, res) => {
 
     if (missingFields.length > 0) {
       return res
-      .status(200)
-      .json(new ApiResponse(200, null, `Missing required fields: ${missingFields.join(", ")}`));
-      
+        .status(200)
+        .json(new ApiResponse(200, null, `Missing required fields: ${missingFields.join(", ")}`));
+
     }
 
     // Fetch user, admin and product details
@@ -115,12 +119,14 @@ export const createOrder = asyncHandler(async (req, res) => {
       name,
       city,
       state,
+      address,
       phone: phone || user.phone,
       order_details,
       delivery_date,
       quantity,
       total_price,
       is_payment_done: true,
+      delivery_status: "Pending",
       transaction_id: userTransaction.transaction_id,
     });
 
@@ -141,14 +147,35 @@ export const createOrder = asyncHandler(async (req, res) => {
 // Get All Orders
 export const getAllOrders = asyncHandler(async (req, res) => {
   try {
-    const orders = await Order.find()
+    const { fromDate, toDate } = req.body;
+
+    // Initialize query filter
+    let dateFilter = {};
+
+    // Only proceed if both fromDate and toDate are provided
+    if (fromDate && toDate) {
+      const from = new Date(fromDate);
+      const to = new Date(toDate);
+
+      // Set to the end of the day for toDate (23:59:59) to include the full day
+      to.setHours(23, 59, 59, 999);
+
+      // If both fromDate and toDate are provided, filter orders based on the range
+      dateFilter.createdAt = {
+        $gte: from, // Date greater than or equal to fromDate
+        $lte: to,   // Date less than or equal to toDate
+      };
+    }
+
+    // Query to fetch orders, adding the date filter if available
+    const orders = await Order.find(dateFilter)
       .populate("order_details")
       .populate("userId");
 
     if (!orders || orders.length === 0) {
       return res
-        .status(404)
-        .json(new ApiResponse(404, null, "No orders found"));
+        .status(200)
+        .json(new ApiResponse(200, null, "No orders found"));
     }
 
     return res
@@ -156,10 +183,11 @@ export const getAllOrders = asyncHandler(async (req, res) => {
       .json(new ApiResponse(200, orders, "Orders retrieved successfully"));
   } catch (error) {
     return res
-      .status(200)
-      .json(new ApiResponse(200, null, "Something went wrong"));
+      .status(500)
+      .json(new ApiResponse(500, null, "Something went wrong"));
   }
 });
+
 
 // Get Order by ID
 export const getOrderById = asyncHandler(async (req, res) => {
@@ -318,3 +346,35 @@ export const deleteOrder = asyncHandler(async (req, res) => {
       .json(new ApiResponse(200, null, "Something went wrong"));
   }
 });
+
+
+// Update delivery status by transaction ID
+export const updateInvoiceStatus = async (req, res) => {
+  try {
+    const { txnId } = req.params; // Extract transaction ID from the URL
+    const { delivery_status } = req.body; // Extract the new delivery status from the request body
+
+    // Validate the delivery status
+    if (!["Pending", "Shipped", "Delivered"].includes(delivery_status)) {
+      return res.status(400).json({ message: "Invalid delivery status" });
+    }
+
+    // Find the order by transaction ID and update its delivery status
+    const updatedOrder = await Order.findOneAndUpdate(
+      { transaction_id: txnId }, // Find order by transaction ID
+      { delivery_status }, // Update delivery status
+      { new: true } // Return the updated order
+    );
+
+    // If no order is found
+    if (!updatedOrder) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Return the updated order
+    res.status(200).json(updatedOrder);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};

@@ -67,7 +67,7 @@ export const getAllCategories = asyncHandler(async (req, res) => {
           from: "products",
           localField: "_id",
           foreignField: "category",
-          as: "products", 
+          as: "products",
         },
       },
       {
@@ -77,7 +77,7 @@ export const getAllCategories = asyncHandler(async (req, res) => {
       },
       {
         $project: {
-          products: 0,  
+          products: 0,
         },
       },
     ]);
@@ -133,7 +133,7 @@ export const getCategoryById = asyncHandler(async (req, res) => {
 export const updateCategoryById = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
-    const { category_name, imageUrl } = req.body;
+    const { category_name, image } = req.body;
 
     // Validate category_name
     if (!category_name) {
@@ -149,39 +149,11 @@ export const updateCategoryById = asyncHandler(async (req, res) => {
         .json(new ApiResponse(404, null, "Product category not found"));
     }
 
-    let updatedImageUrl = existingCategory.imageUrl;
-
-    // If a new image URL is provided, update it
-    if (imageUrl) {
-      updatedImageUrl = imageUrl;
-    } else if (req.file) {
-      // If a file is uploaded, process it
-      const localFilePath = req.file.path;
-
-      // Upload the new image to Cloudinary
-      const uploadResult = await uploadOnCloudinary(localFilePath);
-      fs.unlinkSync(localFilePath); // Remove the local file after uploading
-
-      if (!uploadResult || !uploadResult.secure_url) {
-        throw new ApiError(500, "Image upload failed");
-      }
-
-      updatedImageUrl = uploadResult.secure_url;
-
-      // Optional: Delete the old image from Cloudinary
-      if (existingCategory.imageUrl) {
-        const publicId = existingCategory.imageUrl
-          .split("/")
-          .pop()
-          .split(".")[0];
-        await cloudinary.uploader.destroy(`astrologer-avatars/${publicId}`);
-      }
-    }
 
     // Update the category
     const updatedCategory = await ProductCategory.findByIdAndUpdate(
       id,
-      { category_name, imageUrl: updatedImageUrl }, // Ensure `imageUrl` is updated properly
+      { category_name, imageUrl: image }, // Ensure `imageUrl` is updated properly
       { new: true, runValidators: true }
     );
 

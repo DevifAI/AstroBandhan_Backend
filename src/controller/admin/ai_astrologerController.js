@@ -4,11 +4,22 @@ import { AI_Astrologer } from '../../models/ai_astrologer_model.js';
 
 // Controller to add a new astrologer
 export const addAstrologer = async (req, res) => {
-    const { name, experience, specialities, pricePerCallMinute, pricePerChatMinute, gender, avatar, rating } = req.body;
+    const { name, experience, specialities, pricePerChatMinute, gender, avatar, rating, isVerified, isFeatured, isAvailable
+    } = req.body;
+    experience
 
     // Input validation (optional but good practice)
-    if (!name || !experience || !specialities || !pricePerCallMinute || !pricePerChatMinute || !gender) {
-        return res.status(400).json(new ApiResponse(400, {}, "All fields are required."));
+    const missingFields = [];
+    if (!name) missingFields.push("name");
+    if (experience < 0) missingFields.push("experience");
+    if (!specialities) missingFields.push("specialities");
+    if (!pricePerChatMinute) missingFields.push("pricePerChatMinute");
+    if (!gender) missingFields.push("gender");
+
+    if (missingFields.length > 0) {
+        return res.status(400).json(
+            new ApiResponse(400, {}, `The following fields are required: ${missingFields.join(", ")}`)
+        );
     }
 
     try {
@@ -24,11 +35,15 @@ export const addAstrologer = async (req, res) => {
             name,
             experience: Number(experience),
             specialities,
-            pricePerCallMinute: Number(pricePerCallMinute),
+
             pricePerChatMinute: Number(pricePerChatMinute),
             gender,
             avatar,
-            rating: Number(rating)
+            isVerified,
+            isFeatured,
+            isAvailable,
+            rating: Number(rating),
+
         });
 
         await astrologer.save();
@@ -46,35 +61,64 @@ export const addAstrologer = async (req, res) => {
 export const editAstrologer = async (req, res) => {
     try {
         const { astrologerId } = req.params;
-        const { name, experience, specialities, languages, pricePerCallMinute, pricePerChatMinute, gender, isVerified, isFeatured, avatar } = req.body;
+        const {
+            name,
+            experience,
+            specialities,
 
-        const updatedAstrologer = await AI_Astrologer.findByIdAndUpdate(
-            astrologerId,
-            {
-                name,
-                experience,
-                specialities,
-                languages,
-                pricePerCallMinute,
-                pricePerChatMinute,
-                gender,
-                isVerified,
-                isFeatured,
-                avatar
-            },
-            { new: true }
-        );
+            pricePerChatMinute,
+            gender,
+            isVerified,
+            isFeatured,
+            avatar,
+            isAvailable,
+        } = req.body;
 
-        if (!updatedAstrologer) {
-            return res.status(200).json(new ApiResponse(200, {}, "Astrologer not found"));
+        // Find the astrologer first
+        const astrologer = await AI_Astrologer.findById(astrologerId);
+        if (!astrologer) {
+            return res.status(404).json(new ApiResponse(404, {}, "Astrologer not found"));
         }
+
+        console.log({ isAvailable }); // Log the value of isAvailable from the request body
+        console.log(astrologer.isAvailable); // Log the current value of isAvailable in the database
+
+        // Update only fields that exist in the request body
+        if (name) astrologer.name = name;
+        if (experience !== undefined) astrologer.experience = experience;
+        if (specialities) astrologer.specialities = specialities;
+
+        // ✅ Explicitly check if isAvailable is present in req.body (including false)
+        if (req.body.hasOwnProperty("isAvailable")) {
+            astrologer.isAvailable = isAvailable;
+        }
+
+        if (pricePerChatMinute !== undefined) astrologer.pricePerChatMinute = parseFloat(pricePerChatMinute);
+        if (gender) astrologer.gender = gender;
+
+        // ✅ Explicitly check if isVerified is present in req.body (including false)
+        if (req.body.hasOwnProperty("isVerified")) {
+            astrologer.isVerified = isVerified;
+        }
+
+        // ✅ Explicitly check if isFeatured is present in req.body (including false)
+        if (req.body.hasOwnProperty("isFeatured")) {
+            astrologer.isFeatured = isFeatured;
+        }
+
+        if (avatar) astrologer.avatar = avatar;
+
+        // Save the updated astrologer
+        const updatedAstrologer = await astrologer.save();
+
+        console.log("Updated Astrologer:", updatedAstrologer);
         return res.status(200).json(new ApiResponse(200, updatedAstrologer, "Astrologer updated successfully"));
     } catch (error) {
-        return res.status(400).json(new ApiResponse(404, error.message, "Error updating astrologer"));
-
-
+        console.error("Update Error:", error);
+        return res.status(400).json(new ApiResponse(400, error.message, "Error updating astrologer"));
     }
 };
+
 
 // Controller to delete an astrologer
 export const deleteAstrologer = async (req, res) => {

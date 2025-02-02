@@ -280,6 +280,8 @@ export const updateProductById = asyncHandler(async (req, res) => {
       originalPrice,
       displayPrice,
       in_stock,
+      isTrending,
+      material
     } = req.body;
 
     const updatedProduct = await Product.findByIdAndUpdate(
@@ -295,6 +297,8 @@ export const updateProductById = asyncHandler(async (req, res) => {
         originalPrice,
         displayPrice,
         in_stock,
+        isTrending,
+        material
       },
       { new: true, runValidators: true }
     );

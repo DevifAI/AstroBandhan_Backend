@@ -1,5 +1,5 @@
 import express from 'express';
-import { createLanguage, deleteLanguage, } from '../../controller/admin/LanguageController.js';
+import { createLanguage, deleteLanguage, getAllLanguages, } from '../../controller/admin/LanguageController.js';
 import { registerAstrologer } from '../../controller/admin/addAstrologerController.js';
 import { editProfilePhoto } from '../../controller/admin/editAstrologerProfilePhoto.js';
 import { uploadAstrologerData } from '../../controller/admin/addAstrologerViaExcelController.js';;
@@ -11,7 +11,7 @@ import { addAstrologerToCategory, addCategory, deleteAstrologerFromCategory, del
 import { deleteAstrologerRequest, getPendingAstrologerRequests } from '../../controller/admin/getPendingAstrologerRequest.js'
 import { addAstrologer, editAstrologer, deleteAstrologer } from '../../controller/admin/ai_astrologerController.js';
 import { addProductCategory, deleteProductCategory, editProductCategory } from '../../controller/admin/addProductCategoryController.js';
-import { get_calls_chats_counts, get_total_astrologers, get_total_Calls, get_total_Chats, get_total_completed_chat, get_total_Due, get_total_Earning, get_total_Horroscope, get_total_Order, get_total_users, get_total_Video_Calls, get_unverified_astrologers, get_wallet_recharges_and_payouts, getAdminProfile, getTotalCredit_Admin, getTotalCredit_Wallet_Recharge_Admin } from '../../controller/admin/dashboard/manageDashboard.js';
+import { get_calls_chats_counts, get_total_astrologers, get_total_Calls, get_total_Chats, get_total_completed_chat, get_total_Due, get_total_Due_Details, get_total_Earning, get_total_Horroscope, get_total_Order, get_total_users, get_total_Video_Calls, get_unverified_astrologers, get_wallet_recharges_and_payouts, getAdminProfile, getTotalCredit_Admin, getTotalCredit_Wallet_Recharge_Admin } from '../../controller/admin/dashboard/manageDashboard.js';
 import { changePasswordAdmin, forgotPasswordAdmin, getAdminById, loginAdmin, registerAdmin, validateOtpAdmin } from '../../controller/admin/admin.controller.js';
 import { getAstrology_History } from '../../controller/admin/App_History/astrologer_history.js';
 import { getCall_History, getVideo_Call_History } from '../../controller/admin/App_History/audio_call_history.js';
@@ -21,6 +21,7 @@ import { getTopAstrologersThisWeek } from '../../controller/admin/getTopAstrolog
 import { getAllUsers } from '../../controller/admin/customers/getAllCustomers.js';
 import { fetch_all_ai_astrologers_admin } from '../../controller/admin/astrologers/getAllAiAstrologers.js';
 import { getChat_History, getChatRoom_History, getChatRoomHistoryByDateRange } from '../../controller/admin/App_History/chat_history.js';
+import { fetch_ai_astro_chats } from '../../controller/user/getAllAiAstrologers.js';
 
 
 const router = express.Router();
@@ -43,6 +44,7 @@ router.post('/get/all/ai/astrologers', fetch_all_ai_astrologers_admin);
 
 // Route to create a language
 router.post('/add/language', createLanguage);
+router.post('/get/languages', getAllLanguages);
 // Route to delete a language by ID
 router.delete('/language/:id', deleteLanguage);
 router.post('/signup/astrologer', registerAstrologer);
@@ -57,7 +59,7 @@ router.post('/getastrologers', getAstrologers);
 router.post('/upadteastrologers', editAstrologer_original);
 router.post('/delete/astrologer/original', deleteAstrologer_original);
 router.post('/add/category', addCategory);
-router.post('/get/category', getCategoryList);
+router.post('/get/astrologer/category', getCategoryList);
 router.post('/edit/category', editCategory);
 router.post('/reassign/astrologer', reassignAstrologerToCategory);
 router.delete('/delete/category/:categoryId', deleteCategory);
@@ -100,6 +102,8 @@ router.post('/get/users', getAllUsers);
 router.post('/get/chat/history', getChatRoom_History);
 router.post('/get/chat/history/bydate', getChatRoomHistoryByDateRange);
 router.post('/get/chat/details/history', getChat_History);
+router.post('/get/total/withdrawl/details', get_total_Due_Details);
+router.post('/get/ai/chats/history', fetch_ai_astro_chats);
 // router.post('/add/astrologer/category', add_Category_for_astrologer);
 // router.post('/edit/astrologer/category', edit_Category_for_astrologer);
 // router.post('/delete/astrologer/category', delete_Category_for_astrologer);

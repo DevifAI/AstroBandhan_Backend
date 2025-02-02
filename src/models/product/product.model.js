@@ -51,7 +51,6 @@ const productSchema = new Schema(
       type: String,
       trim: true,
     },
-    contains: [String],
     originalPrice: {
       type: Number,
       required: [true, "Original price is required"],
@@ -61,6 +60,10 @@ const productSchema = new Schema(
       required: [true, "Display price is required"],
     },
     isTrending: {
+      type: Boolean,
+      default: false,
+    },
+    in_stock: {
       type: Boolean,
       default: false,
     },

@@ -11,7 +11,7 @@ async function getAstrologyResponse(question, astrologyType, userDetails) {
     let astrologerPersona;
 
     // Extract user details (name, dateOfBirth, timeOfBirth, placeofbirth)
-   
+
     const { dateOfBirth, timeOfBirth, name, placeOfBirth } = userDetails;
     const get_lat_long = await getCoordinates(placeOfBirth);
     const { lat, lng } = get_lat_long
@@ -35,21 +35,23 @@ async function getAstrologyResponse(question, astrologyType, userDetails) {
         ayanamsha: 'lahiri',
     }
 
-    const kundli_chart_json = await fetchPlanetData(data)
-    
+    // const kundli_chart_json = await fetchPlanetData(data)
+
     // Assuming the output is an array and we need the first object in the array
-    const filteredOutput = kundli_chart_json.output[0] ?
-        Object.values(kundli_chart_json.output[0]).filter(planet => planet.current_sign !== undefined).map(planet => ({
-            name: planet.name,
-            current_sign: planet.current_sign
-        })) : [];
+    // const filteredOutput = kundli_chart_json.output[0] ?
+    //     Object.values(kundli_chart_json.output[0]).filter(planet => planet.current_sign !== undefined).map(planet => ({
+    //         name: planet.name,
+    //         current_sign: planet.current_sign
+    //     })) : [];
+
+    const filteredOutput = []
 
 
 
     // Set the astrologer persona based on astrology type
     switch (astrologyType.toLowerCase()) {
         case "vedic":
-            astrologerPersona = `You are an experienced Vedic astrologer who provides deep insights based on Vedic principles. The user's name is ${name}, their date of birth is ${dateOfBirth}, and time of birth is ${timeOfBirth}.Response like a human being with good knowledge and deep insight about things.This is the user planet sign ${filteredOutput} . Respond in the same language or transliteration style as the question, and keep the response concise, no longer than 3-5 lines.`;
+            astrologerPersona = `You are an experienced Vedic astrologer who provides deep insights based on Vedic principles. The user name is ${name}, their date of birth is ${dateOfBirth}, and time of birth is ${timeOfBirth}.Response like a human being with good knowledge and deep insight about things.This is the user planet sign ${filteredOutput} . Respond in the same language or transliteration style as the question, and keep the response concise, no longer than 3-5 lines.`;
             break;
         case "numerology":
             astrologerPersona = `You are a numerologist who interprets life through the power of numbers. The user's name is ${name}, their date of birth is ${dateOfBirth}, and time of birth is ${timeOfBirth}.This is the user planet sign ${filteredOutput} . Respond in the same language or transliteration style as the question, and keep the response concise, no longer than 3-5 lines.`;
@@ -100,7 +102,7 @@ export const translateText = async (text, targetLanguage) => {
         const response = await axios.post(
             'https://api.openai.com/v1/chat/completions',
             {
-                model: "gpt-3.5-turbo", // Use the appropriate model
+                model: "gpt-4", // Use the appropriate model
                 messages: [
                     {
                         role: "system",
@@ -114,13 +116,13 @@ export const translateText = async (text, targetLanguage) => {
             },
             {
                 headers: {
-                    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                    'Authorization': `Bearer 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`,
                     'Content-Type': 'application/json'
                 }
             }
         );
 
-        console.log({response})
+        console.log({ response })
 
         // Extract the translated text from the OpenAI response
         return response.data.choices[0].message.content.trim();

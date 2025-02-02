@@ -196,6 +196,26 @@ export const get_total_Due = asyncHandler(async (req, res) => {
     }
 });
 
+export const get_total_Due_Details = asyncHandler(async (req, res) => {
+    try {
+        const result = await AstrologerWithdrawalRequest.find({}).populate("astrologerId");
+
+        const totalDueWallet = result;
+
+        res.status(200).json({
+            success: true,
+            total: totalDueWallet,
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Failed to retrieve the total wallet balance of astrologers",
+            error: error.message,
+        });
+    }
+});
+
+
 
 export const get_unverified_astrologers = asyncHandler(async (req, res) => {
     try {
@@ -527,5 +547,4 @@ export const getTotalCredit_Wallet_Recharge_Admin = asyncHandler(async (req, res
         });
     }
 });
-
 

@@ -4,6 +4,7 @@ import { AI_Astro_Chat } from "../../models/ai_astro_chat.model.js"
 import { User } from "../../models/user.model.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 import { AI_Astrologer } from "../../models/ai_astrologer_model.js";
+import moment from "moment-timezone";
 
 // import { sendNotificationToUser } from "../../utils/sockets/sendNotifications.js";
 
@@ -66,131 +67,75 @@ async function getUserDetails(userId) {
 }
 
 export const ask_ai_astro = asyncHandler(async (req, res) => {
-    const { question, astrologyType, userId, astroId, isFreeChat, isChatEnded } = req.body;
+    const { question, userId, astroId, isFreeChat, isChatEnded } = req.body;
     console.log(req.body);
-    // // Validate required fields
-    // if (!question || !astrologyType || !userId || !astroId || isFreeChat === undefined || isChatEnded === undefined) {
-    //     return res.status(400).json({
-    //         error: "Please provide question, astrology type, userId, astroId, isFreeChat, and isChatEnded."
-    //     });
-    // }
 
     // Fetch user details
     const userDetails = await getUserDetails(userId);
     if (!userDetails) {
         return res.status(404).json({ error: "User not found." });
     }
-    console.log({userDetails});
+
     // Get astrologer details
-    const astroDetails = await AI_Astrologer.findById("673a8fe166fe9594396b4e7c");
+    const astroDetails = await AI_Astrologer.findById(astroId);
     if (!astroDetails) {
         return res.status(404).json({ error: "Astrologer not found." });
     }
-    console.log({userDetails});
+
     // Get AI-generated answer
     let answer = null;
-   if(question){
-     answer = await chat_with_ai_astro(question, astrologyType, userDetails);
-    console.log({answer});
-   }
+    if (question) {
+        answer = await chat_with_ai_astro(question, "vedic", userDetails);
+    }
 
     try {
-        // Find existing chat document for this user and astrologer
+        // Find existing chat document
         let chatRecord = await AI_Astro_Chat.findOne({
             aiAstroId: astroId,
             userId: userId,
         });
 
         const currentTime = new Date();
-        const currentTimestamp = Math.ceil(currentTime / 60000); // Get current timestamp in minutes
+        const currentTimeString = currentTime.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+        });
 
         if (chatRecord) {
-            // If chat record exists, update it
             if (!chatRecord.isChatStarted) {
-                // If chat hasn't started, mark it as started and set the start time
                 chatRecord.isChatStarted = true;
-                chatRecord.startTime = currentTimestamp;
+                chatRecord.startTime = currentTimeString;
+                chatRecord.duration = "1 minute";
+            } else {
+                // Calculate duration in minutes
+                const startTime = new Date(chatRecord.createdAt);
+                const elapsedMinutes = Math.ceil((currentTime - startTime) / 60000);
+                chatRecord.duration = `${elapsedMinutes} ${elapsedMinutes === 1 ? "minute" : "minutes"}`;
             }
 
-           if(question && answer){
-             // Add the new message to the messages array
-             chatRecord.messages.push({
-                question,
-                answer,
-                timestamp: currentTime,
-            });
-           }
+            if (question && answer) {
+                chatRecord.messages.push({ question, answer, timestamp: currentTime });
+            }
 
-            // // Handle periodic deduction if the chat hasn't ended yet
-            // if (chatRecord.isChatStarted && !chatRecord.isChatEnded && !isFreeChat) {
-            //     const duration = Math.ceil((currentTimestamp - chatRecord.startTime));
-
-            //     // Deduct the amount every minute
-            //     const totalAmount = astroDetails.pricePerChatMinute * duration;
-            //     const user = User.findById(userId)
-            //     user.wallet -= 
-            //     // Deduct from user wallet and add to astrologer wallet
-            //     await deductFromUserWallet(userId, totalAmount);
-            //     await addToAstroWallet(astroId, totalAmount);
-
-            //     // Schedule the deduction every minute
-            //     if (!chatRecord.deductionTimer) {
-            //         chatRecord.deductionTimer = setInterval(async () => {
-            //             // Update duration
-            //             const updatedDuration = Math.ceil((currentTimestamp - chatRecord.startTime));
-            //             const updatedAmount = astroDetails.pricePerChatMinute * updatedDuration;
-
-            //             // Deduct and add the money
-            //             await deductFromUserWallet(userId, astroDetails.pricePerChatMinute);
-            //             await addToAstroWallet(astroId, astroDetails.pricePerChatMinute);
-            //         }, 60000); // Execute every minute
-            //     }
-            // }
-
-            // If the chat has ended, stop the deduction timer and update duration
             if (isChatEnded) {
-                // Calculate duration in minutes (round up)
-                const duration = Math.ceil((currentTimestamp - chatRecord.startTime));
-                chatRecord.duration = duration;
                 chatRecord.isChatEnded = true;
-
-                // Clear the deduction interval
-                if (chatRecord.deductionTimer) {
-                    clearInterval(chatRecord.deductionTimer);
-                    chatRecord.deductionTimer = null;
-                }
-
-                // Handle wallet deductions if not a free chat
-                if (!isFreeChat) {
-                    const totalAmount = astroDetails.pricePerChatMinute * duration;
-                    await deductFromUserWallet(userId, totalAmount);
-                    await addToAstroWallet(astroId, totalAmount);
-                }
             }
 
-            // Save the updated chat record
             await chatRecord.save();
             return res.json(new ApiResponse(200, answer, "Message added to existing chat."));
         } else {
-            // If no existing chat, create a new one
+            // Create new chat record
             const newChatRecord = new AI_Astro_Chat({
                 aiAstroId: astroId,
                 userId,
-                messages: [{ question, answer }],
+                messages: [{ question, answer, timestamp: currentTime }],
                 amount: isFreeChat ? 0 : astroDetails.pricePerChatMinute,
                 isChatStarted: true,
-                startTime: currentTimestamp,
+                startTime: currentTimeString,
+                duration: "1 minute",
                 isChatEnded,
-                duration: isChatEnded ? 0 : undefined,  // Set 0 duration for initial chat
             });
-
-            // Handle money deduction if it's not a free chat
-            if (!isFreeChat) {
-                const duration = 1; // Initial duration for the first minute
-                const totalAmount = astroDetails.pricePerChatMinute * duration;
-                await deductFromUserWallet(userId, totalAmount);
-                await addToAstroWallet(astroId, totalAmount);
-            }
 
             await newChatRecord.save();
             return res.json(new ApiResponse(200, answer, "New chat record created successfully."));
@@ -200,6 +145,27 @@ export const ask_ai_astro = asyncHandler(async (req, res) => {
         return res.status(500).json(new ApiResponse(500, null, "Failed to save chat record."));
     }
 });
+
+
+
+// Helper function to format time as "10:44 AM"
+const formatTime = (date) => {
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? "PM" : "AM";
+    const formattedHours = hours % 12 || 12; // Convert to 12-hour format
+    const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes;
+    return `${formattedHours}:${formattedMinutes} ${ampm}`;
+};
+
+// Helper function to calculate duration as "HH:MM"
+const calculateDuration = (startTime, endTime) => {
+    const durationInMilliseconds = endTime - startTime;
+    const durationInMinutes = Math.floor(durationInMilliseconds / (1000 * 60));
+    const hours = Math.floor(durationInMinutes / 60);
+    const minutes = durationInMinutes % 60;
+    return `${hours < 10 ? `0${hours}` : hours}:${minutes < 10 ? `0${minutes}` : minutes}`;
+};
 
 
 
@@ -249,7 +215,7 @@ export const fetch_ai_astro_chat = asyncHandler(async (req, res) => {
 
 export const toggleFreeChat = asyncHandler(async (req, res) => {
     const { userId, isFreeChat } = req.body;
-        console.log({ userId, isFreeChat });
+    console.log({ userId, isFreeChat });
     if (!userId || isFreeChat === undefined) {
         return res.status(400).json(new ApiResponse(400, null, "Please provide UserId and isFreeChat value."));
     }

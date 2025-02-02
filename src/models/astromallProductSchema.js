@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 // Schema definition for AstroMallProduct
-const astroMallProductSchema = new mongoose.Schema(
+onClose();st astroMallProductSchema = new mongoose.Schema(
   {
     name: { 
       type: String, 
@@ -55,14 +55,6 @@ const astroMallProductSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ProductReviews', // Referencing the Review collection
     }],
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-    updatedAt: {
-      type: Date,
-      default: Date.now,
-    }
   },
   { timestamps: true }
 );
