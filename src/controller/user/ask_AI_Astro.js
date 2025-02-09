@@ -147,7 +147,6 @@ export const ask_ai_astro = asyncHandler(async (req, res) => {
 });
 
 
-
 // Helper function to format time as "10:44 AM"
 const formatTime = (date) => {
     const hours = date.getHours();

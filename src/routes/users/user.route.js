@@ -1,7 +1,9 @@
 import { Router } from "express";
 import {
     registerUser, changePassword, userLogin,
-    validateloginOtp
+    validateloginOtp,
+    getuserById,
+    updateUserById
 } from "../../controller/user/userController.js";
 import {
     addReview
@@ -20,7 +22,7 @@ import { get_numerology } from "../../controller/user/third_party/numerology.js"
 
 // import { endCallAndLogTransaction, start_call } from "../../controller/user/callController.js";
 import { getAutoSuggestAstrologer, getTrendingAstrologer } from "../../controller/user/getTopAstrologers.js";
-import { fetch_all_ai_astrologers } from "../../controller/user/getAllAiAstrologers.js";
+import { fetch_ai_astro_by_id, fetch_all_ai_astrologers } from "../../controller/user/getAllAiAstrologers.js";
 import { fetchChatHistory } from "../../controller/user/chatController.js";
 import { findCall_Transaction_ByUserId, findVideo_Call_Transaction_ByUserId, findWalletByUserId } from "../../controller/user/transaction_history.js";
 
@@ -31,6 +33,8 @@ router.route("/changepassword/:userId").post(changePassword);
 router.route("/login").post(userLogin);
 router.route("/addreview").post(addReview);
 router.route("/getAstrologer").get(getAllAstrologers);
+router.route("/get/userDetails").get(getuserById);
+router.route("/update/user").patch(updateUserById);
 router.post('/send/otp', forgetPassword)
 router.post('/validate/otp', validateOtp)
 router.post('/validate/loginotp', validateloginOtp)
@@ -64,6 +68,7 @@ router.post('/get/suggest/astrologers', getAutoSuggestAstrologer);
 
 // router.post('/end/call', endCallAndLogTransaction);
 router.post('/get/all/ai/astrologers', fetch_all_ai_astrologers);
+router.get('/get/all/ai/astrologer/:astroId', fetch_ai_astro_by_id);
 router.post('/get/chatsById', fetchChatHistory);
 router.post('/get/wallet/history', findWalletByUserId);
 router.post('/get/video/history', findVideo_Call_Transaction_ByUserId);

@@ -23,7 +23,6 @@ export const createOrder = asyncHandler(async (req, res) => {
       quantity,
       total_price,
       delivery_status
-
     } = req.body;
 
     // Validate required fields
