@@ -22,7 +22,6 @@ export const createOrder = asyncHandler(async (req, res) => {
       delivery_date,
       quantity,
       total_price,
-      delivery_status
     } = req.body;
 
     // Validate required fields
@@ -53,7 +52,6 @@ export const createOrder = asyncHandler(async (req, res) => {
     const user = await User.findById(userId);
     const product = await Product.findById(order_details);
     const admin = await Admin.findOne();
-    console.log(admin)
 
     if (!admin) {
       return res
