@@ -284,6 +284,8 @@ export const getCategoryList = asyncHandler(async (req, res) => {
         return res.status(500).json(new ApiResponse(500, null, "Server error while fetching categories."));
     }
 });
+
+
 // Controller to reassign an astrologer to a different category
 export const reassignAstrologerToCategory = asyncHandler(async (req, res) => {
     const { astrologerId, oldCategoryId, newCategoryId } = req.body; // Get astrologerId, oldCategoryId, and newCategoryId from request body
