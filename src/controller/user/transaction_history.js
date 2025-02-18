@@ -32,6 +32,8 @@ export const findWalletByUserId = async (req, res) => {
   }
 };
 
+
+// Audio call transaction 
 export const findCall_Transaction_ByUserId = async (req, res) => {
   try {
     const { userId, type } = req.body;
@@ -64,6 +66,8 @@ export const findCall_Transaction_ByUserId = async (req, res) => {
   }
 };
 
+
+// Video call transaction
 export const findVideo_Call_Transaction_ByUserId = async (req, res) => {
   try {
     const { userId, type } = req.body;
