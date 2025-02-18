@@ -58,7 +58,7 @@ export const findCall_Transaction_ByUserId = async (req, res) => {
       return res.status(404).json({ message: "No records found" });
     }
 
-    return res.status(200).json("hi");
+    return res.status(200).json(result);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server error" });
