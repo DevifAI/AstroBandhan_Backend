@@ -49,12 +49,10 @@ export const toggle_Offline_Online = asyncHandler(async (req, res) => {
     await astrologer.save();
 
     // Respond with success message
-    res
-      .status(200)
-      .json({
-        message: "Astrologer availability updated successfully",
-        astrologer,
-      });
+    res.status(200).json({
+      message: "Astrologer availability updated successfully",
+      astrologer,
+    });
   } catch (error) {
     // Catch and handle any errors
     res.status(500).json({ message: "Server error", error: error.message });
@@ -79,5 +77,34 @@ export const getAstrologerById = asyncHandler(async (req, res) => {
       .json({ message: "Astrologer fetched successfully", astrologer });
   } catch (error) {
     res.status(200).json({ message: "Server error", error: error.message });
+  }
+});
+
+// Update Astrologer by ID
+export const updateAstrologerById = asyncHandler(async (req, res) => {
+  try {
+    const { astrologerId } = req.params;
+
+    // Find the astrologer by ID
+    const astrologer = await Astrologer.findById(astrologerId);
+
+    if (!astrologer) {
+      return res.status(404).json({ message: "Astrologer not found" });
+    }
+
+    // Update the astrologer's data with the request body
+    const updatedAstrologer = await Astrologer.findByIdAndUpdate(
+      astrologerId,
+      { $set: req.body },
+      { new: true, runValidators: true }
+    );
+
+    // Respond with updated astrologer data
+    res.status(200).json({
+      message: "Astrologer updated successfully",
+      astrologer: updatedAstrologer,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
