@@ -91,7 +91,7 @@ router.get('/reveneuvspayout', get_wallet_recharges_and_payouts);
 router.get('/callchats/counts', get_calls_chats_counts);
 router.get('/unverified/astrologers', get_unverified_astrologers);
 router.get('/get/chat/history', getAstrology_History);
-router.post('/get/call/history', getCall_History);
+// router.post('/get/call/history', getCall_History);
 router.post('/get/video/history', getVideo_Call_History);
 router.post('/get/adminprofile', getAdminProfile);
 router.post('/get/total/credit', getTotalCredit_Admin);
