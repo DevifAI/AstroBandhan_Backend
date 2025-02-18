@@ -85,7 +85,7 @@ export const updateAstrologerById = asyncHandler(async (req, res) => {
   try {
     const { astrologerId } = req.params;
 
-    // Find the astrologer by _id
+    // Find the astrologer by ID
     const astrologer = await Astrologer.findById(astrologerId);
 
     if (!astrologer) {
