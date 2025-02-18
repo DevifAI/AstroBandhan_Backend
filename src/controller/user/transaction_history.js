@@ -35,6 +35,7 @@ export const findWalletByUserId = async (req, res) => {
 export const findCall_Transaction_ByUserId = async (req, res) => {
   try {
     const { userId, type } = req.body;
+    clg("userId", userId);
     const user_id = new mongoose.Types.ObjectId(userId);
 
     let query =
