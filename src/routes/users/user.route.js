@@ -72,6 +72,6 @@ router.get('/get/all/ai/astrologer/:astroId', fetch_ai_astro_by_id);
 router.post('/get/chatsById', fetchChatHistory);
 router.post('/get/wallet/history', findWalletByUserId);
 router.post('/get/video/history', findVideo_Call_Transaction_ByUserId);
-router.post('/get/call/history', findCall_Transaction_ByUserId);
+// router.post('/get/call/history', findCall_Transaction_ByUserId);
 
 export default router;
