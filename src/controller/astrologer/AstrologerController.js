@@ -99,7 +99,6 @@ export const updateAstrologerById = asyncHandler(async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    // Respond with updated astrologer data
     res.status(200).json({
       message: "Astrologer updated successfully",
       astrologer: updatedAstrologer,
