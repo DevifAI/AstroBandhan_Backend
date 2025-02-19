@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import { Wallet } from "../../models/walletSchema.model.js";
 import Call from "../../models/call.model.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import Chat from "../../models/chatSchema.js";
 
 export const findWalletByUserId = async (req, res) => {
   try {
@@ -32,8 +34,7 @@ export const findWalletByUserId = async (req, res) => {
   }
 };
 
-
-// Audio call transaction 
+// Audio call transaction
 export const findCall_Transaction_ByUserId = async (req, res) => {
   try {
     const { userId, type } = req.body;
@@ -64,7 +65,6 @@ export const findCall_Transaction_ByUserId = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
-
 
 // Video call transaction
 export const findVideo_Call_Transaction_ByUserId = async (req, res) => {
@@ -99,3 +99,28 @@ export const findVideo_Call_Transaction_ByUserId = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+export const findChat_Transaction_ByUserId = asyncHandler(async (req, res) => {
+  try {
+    const { userId, type } = req.body;
+    const user_id = new mongoose.Types.ObjectId(userId);
+
+    let query =
+      type === "user"
+        ? { "messages.senderId": user_id, "messages.senderType": "user" }
+        : { "messages.senderId": user_id, "messages.senderType": "astrologer" };
+
+    const result = await Chat.find(query)
+      .populate({ path: "messages.senderId", select: "name photo" })
+      .populate({ path: "chatRoomId" });
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: "No chat transactions found" });
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+});

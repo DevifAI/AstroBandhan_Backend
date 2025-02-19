@@ -24,7 +24,7 @@ import { get_numerology } from "../../controller/user/third_party/numerology.js"
 import { getAutoSuggestAstrologer, getTrendingAstrologer } from "../../controller/user/getTopAstrologers.js";
 import { fetch_ai_astro_by_id, fetch_all_ai_astrologers } from "../../controller/user/getAllAiAstrologers.js";
 import { fetchChatHistory, fetchChatHistoryById } from "../../controller/user/chatController.js";
-import { findCall_Transaction_ByUserId, findVideo_Call_Transaction_ByUserId, findWalletByUserId } from "../../controller/user/transaction_history.js";
+import { findCall_Transaction_ByUserId, findChat_Transaction_ByUserId, findVideo_Call_Transaction_ByUserId, findWalletByUserId } from "../../controller/user/transaction_history.js";
 
 const router = Router();
 
@@ -74,5 +74,6 @@ router.get('/get/chatHistory/:id', fetchChatHistoryById);
 router.post('/get/wallet/history', findWalletByUserId);
 router.post('/get/video/history', findVideo_Call_Transaction_ByUserId);
 router.post('/get/call/history', findCall_Transaction_ByUserId);
+router.post('/get/chat/history', findChat_Transaction_ByUserId);
 
 export default router;

@@ -43,8 +43,8 @@ export const createOrder = asyncHandler(async (req, res) => {
 
     if (missingFields.length > 0) {
       return res
-        .status(200)
-        .json(new ApiResponse(200, null, `Missing required fields: ${missingFields.join(", ")}`));
+        .status(400)
+        .json(new ApiResponse(400, null, `Missing required fields: ${missingFields.join(", ")}`));
 
     }
 
