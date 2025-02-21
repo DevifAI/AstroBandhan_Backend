@@ -751,6 +751,7 @@ export const initSocket = (server) => {
               messages: [systemMessage, chatMessage], // Initialize with the system message and the new message
             });
           } else {
+            console.log(chatMessage)
             // If the chat exists, simply push the new message
             await Chat.findOneAndUpdate(
               { chatRoomId }, // Find chat by chatRoomId
