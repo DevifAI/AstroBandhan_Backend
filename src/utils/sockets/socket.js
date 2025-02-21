@@ -714,6 +714,8 @@ export const initSocket = (server) => {
       "sendMessage",
       async ({ message, senderId, chatRoomId, senderType, messageType }) => {
         try {
+
+          console.log("sending message::::::::::::::", { message, senderId, chatRoomId, senderType, messageType });
           // Prepare the chat message
           const chatMessage = {
             senderType: senderType,
