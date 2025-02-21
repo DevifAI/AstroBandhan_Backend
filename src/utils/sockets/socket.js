@@ -143,34 +143,34 @@ export const initSocket = (server) => {
             message: "Incoming chat request",
           });
 
-          // // Handle astrologer's response
-          // socket.on("astrologerResponse", async ({ chatRoomId, response }) => {
-          //   if (response === "approve") {
-          //     console.log("Astrologer approved the chat");
-          //     socket
-          //       .to(chatRoomId)
-          //       .emit("chatApproved", {
-          //         chatRoomId,
-          //         message: "Chat approved by astrologer",
-          //       });
-          //   } else if (response === "deny") {
-          //     console.log("Astrologer denied the chat");
+          // Handle astrologer's response
+          socket.on("astrologerResponse", async ({ chatRoomId, response }) => {
+            if (response === "approve") {
+              console.log("Astrologer approved the chat");
+              socket
+                .to(chatRoomId)
+                .emit("chatApproved", {
+                  chatRoomId,
+                  message: "Chat approved by astrologer",
+                });
+            } else if (response === "deny") {
+              console.log("Astrologer denied the chat");
 
-          //     // Notify the user and force them to leave the chat room
-          //     socket
-          //       .to(chatRoomId)
-          //       .emit("chatDenied", {
-          //         message: "Chat request denied by astrologer",
-          //       });
-          //     socket.leave(chatRoomId);
-          //     // Remove the chat room from active sessions
-          //     delete chatRoomParticipants[chatRoomId];
-          //     // Optionally clean up the chat room data in the database
-          //     await ChatRoom.findByIdAndUpdate(chatRoomId, {
-          //       status: "inactive",
-          //     });
-          //   }
-          // });
+              // Notify the user and force them to leave the chat room
+              socket
+                .to(chatRoomId)
+                .emit("chatDenied", {
+                  message: "Chat request denied by astrologer",
+                });
+              socket.leave(chatRoomId);
+              // Remove the chat room from active sessions
+              delete chatRoomParticipants[chatRoomId];
+              // Optionally clean up the chat room data in the database
+              await ChatRoom.findByIdAndUpdate(chatRoomId, {
+                status: "inactive",
+              });
+            }
+          });
         } else {
           socket.emit("error", result.message);
         }
@@ -341,33 +341,6 @@ export const initSocket = (server) => {
     });
 
     console.log({ chatRoomParticipants });
-
-    // Handle astrologer's response
-    socket.on("astrologerResponse", async ({ chatRoomId, response }) => {
-      if (response === "approve") {
-        console.log("Astrologer approved the chat");
-        socket.to(chatRoomId).emit("chatApproved", {
-          chatRoomId,
-          message: "Chat approved by astrologer",
-        });
-      } else if (response === "deny") {
-        console.log("Astrologer denied the chat");
-
-        // Notify the user and force them to leave the chat room
-        socket.to(chatRoomId).emit("chatDenied", {
-          message: "Chat request denied by astrologer",
-        });
-        socket.leave(chatRoomId);
-        // Remove the chat room from active sessions
-        delete chatRoomParticipants[chatRoomId];
-        // Optionally clean up the chat room data in the database
-        await ChatRoom.findByIdAndUpdate(chatRoomId, {
-          status: "inactive",
-        });
-      }
-    });
-
-    
     // Event for when a user wants to resume/join a chat
     socket.on(
       "joinChatFirstTime",
