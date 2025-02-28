@@ -159,9 +159,25 @@ export const userLogin = async (req, res) => {
       new ApiResponse(
         200,
         {
-          data: {
-            accessToken,
-            user,
+          accessToken,
+          refreshToken,
+          user: {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            dateOfBirth: user.dateOfBirth,
+            timeOfBirth: user.timeOfBirth,
+            placeOfBirth: user.placeOfBirth,
+            gender: user.gender,
+            phone: user.phone,
+            walletBalance: user.walletBalance,
+            Free_Chat_Available: user.Free_Chat_Available,
+            followed_astrologers: user.followed_astrologers,
+            consultations: user.consultations,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+            __v: user.__v,
+            photo: user.photo,
           },
         },
         "User Login Successfully"
