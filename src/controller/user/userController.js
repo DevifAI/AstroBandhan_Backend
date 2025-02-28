@@ -159,9 +159,10 @@ export const userLogin = async (req, res) => {
       new ApiResponse(
         200,
         {
-          accessToken,
-          refreshToken,
-          user: user
+          data: {
+            accessToken,
+            user,
+          },
         },
         "User Login Successfully"
       )
