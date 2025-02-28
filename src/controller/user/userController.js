@@ -94,15 +94,34 @@ export const registerUser = asyncHandler(async (req, res) => {
     newUser.refreshToken = refreshToken;
     await newUser.save();
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          { accessToken, refreshToken, newUser },
-          "User registered successfully."
-        )
-      );
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          accessToken,
+          refreshToken,
+          user: {
+            _id: newUser._id,
+            name: newUser.name,
+            email: newUser.email,
+            dateOfBirth: newUser.dateOfBirth,
+            timeOfBirth: newUser.timeOfBirth,
+            placeOfBirth: newUser.placeOfBirth,
+            gender: newUser.gender,
+            phone: newUser.phone,
+            walletBalance: newUser.walletBalance,
+            Free_Chat_Available: newUser.Free_Chat_Available,
+            followed_astrologers: newUser.followed_astrologers,
+            consultations: newUser.consultations,
+            createdAt: newUser.createdAt,
+            updatedAt: newUser.updatedAt,
+            __v: newUser.__v,
+            photo: newUser.photo,
+          },
+        },
+        "User registered successfully."
+      )
+    );
   } catch (error) {
     console.log(error.message);
     return res
