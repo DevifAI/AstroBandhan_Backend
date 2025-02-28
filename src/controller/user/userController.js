@@ -159,16 +159,9 @@ export const userLogin = async (req, res) => {
       new ApiResponse(
         200,
         {
-          message: "Login successful",
           accessToken,
           refreshToken,
-          user: {
-            id: user._id,
-            name: user.name,
-            phone: user.phone,
-            Free_Chat_Available: user.Free_Chat_Available,
-            // Include other public details if necessary
-          },
+          user: user
         },
         "User Login Successfully"
       )
