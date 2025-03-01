@@ -25,14 +25,14 @@ export const registerUser = asyncHandler(async (req, res) => {
 
     if (!phone) {
       return res
-        .status(201)
-        .json(new ApiResponse(201, null, "Phone number is required"));
+        .status(400)
+        .json(new ApiResponse(400, null, "Phone number is required"));
     }
 
     if (!validatePhoneNumber(phone)) {
       return res
-        .status(201)
-        .json(new ApiResponse(201, null, "Invalid phone number format."));
+        .status(400)
+        .json(new ApiResponse(400, null, "Invalid phone number format."));
     }
 
     // Check if user already exists
@@ -40,12 +40,12 @@ export const registerUser = asyncHandler(async (req, res) => {
     if (existingUser) {
       return res
         .status(201)
-        .json(new ApiResponse(201, null, "User already registered"));
+        .json(new ApiResponse(400, null, "User already registered"));
     }
     const existingAstrologer = await Astrologer.findOne({ phone });
     if (existingAstrologer) {
       return res
-        .status(201)
+        .status(400)
         .json(
           new ApiResponse(
             201,
