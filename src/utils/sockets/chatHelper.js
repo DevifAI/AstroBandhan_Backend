@@ -30,9 +30,6 @@ export const getAstrologerStatus = async (astrologerId) => {
     }
 };
 
-
-
-
 // Function to check if the user is in an active chat room
 export const getUserStatus = async (userId) => {
     try {
