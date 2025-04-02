@@ -1,6 +1,7 @@
-import ChatRoom from "../../models/chatRoomSchema.js";
 import { Wallet } from "../../models/walletSchema.model.js";
 import { Astrologer } from "../../models/astrologer.model.js";
+import { User } from "../../models/user.model.js";
+import { Admin } from "../../models/adminModel.js";
 
 async function getChatPrice(astrologerId, chatType) {
   const astrologer = await Astrologer.findById(astrologerId);
@@ -36,11 +37,11 @@ async function getAdminCommission(astrologerId, chatType) {
 
 // Function to deduct wallet balance from user
 async function deductUserWallet(user, costPerMinute) {
-  if (user.wallet.balance < costPerMinute) {
+  if (user.walletBalance < costPerMinute) {
     return { success: false, message: "Insufficient funds" };
   }
 
-  user.wallet.balance -= costPerMinute; // Deduct balance
+  user.walletBalance -= costPerMinute; // Deduct balance
   await user.save(); // Save user without adding a transaction every minute
 
   return { success: true };
@@ -102,6 +103,17 @@ export async function startChat(io, roomId, chatType, userId, astrologerId) {
     let totalTime = 1;
     const interval = setInterval(async () => {
       try {
+        // Check if the user has only 2 minutes of balance left
+        if (
+          user.walletBalance >= costPerMinute &&
+          user.walletBalance < costPerMinute * 3
+        ) {
+          io.to(userId).emit("low-balance-warning", {
+            message:
+              "Warning: Your wallet balance is low. You have only 2 minutes left before the chat ends.",
+          });
+        }
+
         const deductionResult = await deductUserWallet(user, costPerMinute);
         if (!deductionResult.success) {
           io.to(roomId).emit("chat-error", {
@@ -142,6 +154,90 @@ export async function startChat(io, roomId, chatType, userId, astrologerId) {
     console.error("Error in startChat:", error);
     io.to(roomId).emit("chat-error", {
       message: "An error occurred during chat initialization",
+    });
+  }
+}
+
+// Function to end chat session
+export async function endChat(io, roomId, userId, astrologerId, chatType) {
+  try {
+    if (!sessionSummary[roomId]) {
+      io.to(roomId).emit("chat-error", { message: "Session not found." });
+      return;
+    }
+
+    const { totalDeducted, totalAstrologerEarnings, totalAdminEarnings } =
+      sessionSummary[roomId];
+
+    const astrologer = await Astrologer.findById(astrologerId);
+    const user = await User.findById(userId);
+    const admin = await Admin.findOne();
+
+    if (!astrologer || !user || !admin) {
+      io.to(roomId).emit("chat-error", {
+        message: "Astrologer, User, or Admin not found",
+      });
+      return;
+    }
+
+    // Stop the interval timer
+    if (intervals[roomId]) {
+      clearInterval(intervals[roomId]);
+      delete intervals[roomId];
+    }
+
+    // Create transactions
+    const sessionId = new mongoose.Types.ObjectId(); // Unique session reference
+
+    const userTransaction = new Wallet({
+      user_id: userId,
+      amount: totalDeducted,
+      transaction_id: sessionId,
+      transaction_type: "debit",
+      debit_type: chatType,
+      service_reference_id: roomId,
+    });
+
+    const astrologerTransaction = new Wallet({
+      astrologer_id: astrologerId,
+      amount: totalAstrologerEarnings,
+      transaction_id: sessionId,
+      transaction_type: "credit",
+      credit_type: chatType,
+      service_reference_id: roomId,
+    });
+
+    const adminTransaction = new Wallet({
+      user_id: admin._id,
+      amount: totalAdminEarnings,
+      transaction_id: sessionId,
+      transaction_type: "credit",
+      credit_type: "chat",
+      service_reference_id: roomId,
+    });
+
+    await userTransaction.save();
+    await astrologerTransaction.save();
+    await adminTransaction.save();
+
+    // Update astrologer's balance
+    astrologer.walletBalance += totalAstrologerEarnings;
+    await astrologer.save();
+
+    // Update admin's wallet balance
+    admin.adminWalletBalance += totalAdminEarnings;
+    await admin.save();
+
+    io.to(roomId).emit("chat-end", {
+      message: "Chat session ended successfully.",
+    });
+
+    // Cleanup session data
+    delete sessionSummary[roomId];
+  } catch (error) {
+    console.error("Error in endChat:", error);
+    io.to(roomId).emit("chat-error", {
+      message: "An error occurred while ending chat.",
     });
   }
 }

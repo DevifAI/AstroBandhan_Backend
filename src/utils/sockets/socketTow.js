@@ -1,17 +1,17 @@
 import { Server } from "socket.io";
-import Chat from "./models/chat.model.js";
 import {
   handleChatRequest,
-  handleAstrologerConfirm,
   handleUserResponse,
-  handleChatCancellation,
   checkWaitlist,
+  handleAstrologerResponse,
+  handleChatMessage,
+  handleEndChat,
 } from "../../controller/chatController/controller.js";
 
 export const setupSocketIO = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: ["http://localhost:3000", "http://192.168.0.100:8081"],
+      origin: ["http://localhost:3000", "http://192.168.0.100:8081", "https://localhost:6000"],
       methods: ["GET", "POST", "PATCH", "DELETE"],
       allowedHeaders: ["Content-Type"],
       credentials: true,
@@ -30,56 +30,53 @@ export const setupSocketIO = (server) => {
       }
     });
 
-    // Handle astrologer confirming a chat request
-    socket.on("confirm_chat", async ({ chatRoomId, astrologerId }) => {
-      try {
-        await handleAstrologerConfirm(io, chatRoomId, astrologerId);
-      } catch (error) {
-        console.error("Error confirming chat:", error);
+    // Handle astrologer response (confirm/reject)
+    socket.on(
+      "astrologer_response",
+      async ({ chatRoomId, userId, astrologerId, response }) => {
+        try {
+          await handleAstrologerResponse(
+            io,
+            chatRoomId,
+            userId,
+            astrologerId,
+            response
+          );
+        } catch (error) {
+          console.error("Error handling astrologer response:", error);
+        }
       }
-    });
+    );
 
-    // Handle astrologer rejecting a chat request
-    socket.on("reject_chat", async ({ chatRoomId, astrologerId }) => {
-      try {
-        io.to(chatRoomId).emit("chat_rejected", {
-          message: "Astrologer has refused the chat request.",
-        });
-      } catch (error) {
-        console.error("Error rejecting chat:", error);
+    // Handle user response (accept/reject/cancel)
+    socket.on(
+      "user_response",
+      async ({ chatRoomId, userId, response, astrologerId }) => {
+        try {
+          await handleUserResponse(
+            io,
+            chatRoomId,
+            userId,
+            response,
+            astrologerId
+          );
+        } catch (error) {
+          console.error("Error handling user response:", error);
+        }
       }
-    });
-
-    // Handle user response (accept/reject) to astrologer confirmation
-    socket.on("user_response", async ({ chatRoomId, userId, accepted }) => {
-      try {
-        await handleUserResponse(io, chatRoomId, userId, accepted);
-      } catch (error) {
-        console.error("Error handling user response:", error);
-      }
-    });
+    );
 
     // Handle chat message sending
-    socket.on("send_message", async ({ chatRoomId, senderId, message }) => {
+    socket.on("send_message", async (data) => {
       try {
-        const chat = await Chat.findOne({ chatRoomId });
-        if (!chat) return;
+        const result = await handleChatMessage(data, io);
 
-        chat.messages.push({ senderId, message, senderType: "user" });
-        await chat.save();
-
-        io.to(chatRoomId).emit("new_message", { senderId, message });
+        if (result.error) {
+          socket.emit("error", { message: result.error });
+        }
       } catch (error) {
         console.error("Error sending message:", error);
-      }
-    });
-
-    // Handle chat cancellation
-    socket.on("cancel_chat", async ({ userId, astrologerId }) => {
-      try {
-        await handleChatCancellation(io, userId, astrologerId);
-      } catch (error) {
-        console.error("Error canceling chat:", error);
+        socket.emit("error", { message: "Message sending failed" });
       }
     });
 
@@ -91,6 +88,29 @@ export const setupSocketIO = (server) => {
         console.error("Error checking waitlist:", error);
       }
     });
+
+    // Handle ending a chat session
+    socket.on(
+      "end_chat",
+      async ({ roomId, userId, astrologerId, chatType, sender }) => {
+        try {
+          await handleEndChat(
+            io,
+            roomId,
+            userId,
+            astrologerId,
+            chatType,
+            sender,
+            socket
+          );
+        } catch (error) {
+          console.error("Error ending chat:", error);
+          socket.emit("chat-error", {
+            message: "An error occurred while ending the chat.",
+          });
+        }
+      }
+    );
 
     // Handle user disconnection
     socket.on("disconnect", () => {
