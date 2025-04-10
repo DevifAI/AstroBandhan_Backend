@@ -3,15 +3,23 @@ import {
   handleChatRequest,
   handleUserResponse,
   checkWaitlist,
-  handleAstrologerResponse,
   handleChatMessage,
   handleEndChat,
+  handleAstrologerResponse,
 } from "../../controller/chatController/controller.js";
+
+// Socket maps to track active connections
+const astrologerSocketMap = new Map();
+const userSocketMap = new Map();
 
 export const setupSocketIO = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: ["http://localhost:3000", "http://192.168.0.100:8081", "https://localhost:6000"],
+      origin: [
+        "http://localhost:3000",
+        "http://192.168.0.100:8081",
+        "https://localhost:6000",
+      ],
       methods: ["GET", "POST", "PATCH", "DELETE"],
       allowedHeaders: ["Content-Type"],
       credentials: true,
@@ -21,10 +29,29 @@ export const setupSocketIO = (server) => {
   io.on("connection", (socket) => {
     console.log("User connected:", socket.id);
 
+    // Register user
+    socket.on("register_user", ({ userId }) => {
+      userSocketMap.set(userId, socket.id);
+      console.log(`User registered: ${userId} -> ${socket.id}`);
+    });
+
+    // Register astrologer
+    socket.on("register_astrologer", ({ astrologerId }) => {
+      astrologerSocketMap.set(astrologerId, socket.id);
+      console.log(`Astrologer registered: ${astrologerId} -> ${socket.id}`);
+    });
+
     // Handle user requesting a chat with an astrologer
     socket.on("request_chat", async ({ userId, astrologerId, chatType }) => {
       try {
-        await handleChatRequest(io, userId, astrologerId, chatType);
+        console.log("Chat request:", userId, astrologerId, chatType);
+        await handleChatRequest(
+          io,
+          userId,
+          astrologerId,
+          chatType,
+          astrologerSocketMap
+        );
       } catch (error) {
         console.error("Error processing chat request:", error);
       }
@@ -40,7 +67,9 @@ export const setupSocketIO = (server) => {
             chatRoomId,
             userId,
             astrologerId,
-            response
+            response,
+            userSocketMap,
+            astrologerSocketMap
           );
         } catch (error) {
           console.error("Error handling astrologer response:", error);
@@ -58,7 +87,8 @@ export const setupSocketIO = (server) => {
             chatRoomId,
             userId,
             response,
-            astrologerId
+            astrologerId,
+            astrologerSocketMap // pass this map so it works
           );
         } catch (error) {
           console.error("Error handling user response:", error);
@@ -70,7 +100,6 @@ export const setupSocketIO = (server) => {
     socket.on("send_message", async (data) => {
       try {
         const result = await handleChatMessage(data, io);
-
         if (result.error) {
           socket.emit("error", { message: result.error });
         }
@@ -112,11 +141,20 @@ export const setupSocketIO = (server) => {
       }
     );
 
-    // Handle user disconnection
+    // Cleanup on disconnect
     socket.on("disconnect", () => {
       console.log("User disconnected:", socket.id);
+      for (const [userId, id] of userSocketMap.entries()) {
+        if (id === socket.id) userSocketMap.delete(userId);
+      }
+      for (const [astrologerId, id] of astrologerSocketMap.entries()) {
+        if (id === socket.id) astrologerSocketMap.delete(astrologerId);
+      }
     });
   });
 
   return io;
 };
+
+// Export socket maps if needed in controller
+export { astrologerSocketMap, userSocketMap };

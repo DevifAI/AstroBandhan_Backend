@@ -40,23 +40,37 @@ export async function checkWaitlist(io, astrologerId) {
 /**
  * Function to handle new chat request.
  */
-export async function handleChatRequest(io, userId, astrologerId, chatType) {
+export async function handleChatRequest(
+  io,
+  userId,
+  astrologerId,
+  chatType,
+  astrologerSocketMap,
+  userSocketMap
+) {
   try {
     const user = await User.findById(userId);
     const astrologer = await Astrologer.findById(astrologerId);
-    const userWallet = user.walletBalance;
 
-    if (!astrologer) {
-      io.to(userId).emit("chat_request_failed", {
-        message: "Astrologer not found",
-      });
+    if (!user || !astrologer) {
+      const userSocketId = userSocketMap.get(userId);
+      if (userSocketId) {
+        io.to(userSocketId).emit("chat_request_failed", {
+          message: "User or Astrologer not found",
+        });
+      }
       return;
     }
 
+    const userWallet = user.walletBalance;
+
     if (!userWallet || userWallet < astrologer.pricePerChatMinute) {
-      io.to(userId).emit("chat_request_failed", {
-        message: "Insufficient balance",
-      });
+      const userSocketId = userSocketMap.get(userId);
+      if (userSocketId) {
+        io.to(userSocketId).emit("chat_request_failed", {
+          message: "Insufficient balance",
+        });
+      }
       return;
     }
 
@@ -70,13 +84,16 @@ export async function handleChatRequest(io, userId, astrologerId, chatType) {
       });
       await waitlistEntry.save();
 
-      io.to(userId).emit("waitlist_added", {
-        message: `Astrologer is currently busy. You have been added to the ${chatType} waitlist.`,
-      });
+      const userSocketId = userSocketMap.get(userId);
+      if (userSocketId) {
+        io.to(userSocketId).emit("waitlist_added", {
+          message: `Astrologer is currently busy. You have been added to the ${chatType} waitlist.`,
+        });
+      }
       return;
     }
 
-    // Create a pending chat request
+    // Create a pending chat room
     const chatRoom = new ChatRoom({
       user: userId,
       astrologer: astrologerId,
@@ -86,73 +103,97 @@ export async function handleChatRequest(io, userId, astrologerId, chatType) {
     await chatRoom.save();
 
     // Notify astrologer
-    io.to(astrologerId).emit("chat_request_received", {
-      userId,
-      chatRoomId: chatRoom._id,
-      chatType,
-      message: `New ${chatType} request received. Confirm to proceed.`,
-    });
+    const astrologerSocketId = astrologerSocketMap.get(astrologerId);
+    if (astrologerSocketId) {
+      io.to(astrologerSocketId).emit("chat_request_received", {
+        userId,
+        chatRoomId: chatRoom._id,
+        chatType,
+        message: `New ${chatType} request received. Confirm to proceed.`,
+      });
+    }
   } catch (error) {
     console.error("Error creating chat request:", error);
   }
 }
 
 /**
- * Function to handle astrologer response (confirm or reject).
+ * Handle astrologer's response to a chat request
  */
 export async function handleAstrologerResponse(
   io,
   chatRoomId,
   userId,
   astrologerId,
-  response
+  response,
+  userSocketMap,
+  astrologerSocketMap
 ) {
   try {
     const chatRoom = await ChatRoom.findById(chatRoomId);
 
+    const userSocketId = userSocketMap?.get?.(userId);
+    const astrologerSocketId = astrologerSocketMap?.get?.(astrologerId);
+
     if (!chatRoom) {
-      io.to(astrologerId).emit("chat_request_failed", {
-        message: "Chat request not found.",
-      });
+      if (astrologerSocketId) {
+        io.to(astrologerSocketId).emit("chat_request_failed", {
+          message: "Chat request not found.",
+        });
+      }
       return;
     }
 
     if (response === "confirm") {
       if (chatRoom.status !== "pending") {
-        io.to(astrologerId).emit("chat_request_failed", {
-          message: "Chat request is no longer valid.",
-        });
+        if (astrologerSocketId) {
+          io.to(astrologerSocketId).emit("chat_request_failed", {
+            message: "Chat request is no longer valid.",
+          });
+        }
         return;
       }
 
-      io.to(userId).emit("astrologer_confirmed", {
-        chatRoomId,
-        userId,
-        astrologerId,
-        message: "Astrologer is ready to join. Do you want to start the chat?",
-      });
+      // Update status
+      chatRoom.status = "confirmed";
+      await chatRoom.save();
+
+      if (userSocketId) {
+        io.to(userSocketId).emit("astrologer_confirmed", {
+          chatRoomId,
+          userId,
+          astrologerId,
+          message:
+            "Astrologer is ready to join. Do you want to start the chat?",
+        });
+      }
     } else if (response === "reject") {
-      // Delete chat room and remove from waitlist
       await ChatRoom.findByIdAndDelete(chatRoomId);
       await Waitlist.findOneAndDelete({
         user: userId,
         astrologer: astrologerId,
       });
 
-      io.to(chatRoomId).emit("chat_rejected", {
-        message: "Astrologer has refused the chat request.",
-      });
+      if (userSocketId) {
+        io.to(userSocketId).emit("chat_request_cancelled", {
+          message: "The astrologer has rejected your chat request.",
+        });
+      }
 
-      io.to(userId).emit("chat_request_cancelled", {
-        message: "The astrologer has rejected your chat request.",
-      });
-
-      io.to(astrologerId).emit("chat_request_cancelled", {
-        message: "You have rejected the chat request.",
-      });
+      if (astrologerSocketId) {
+        io.to(astrologerSocketId).emit("chat_request_cancelled", {
+          message: "You have rejected the chat request.",
+        });
+      }
     }
   } catch (error) {
     console.error("Error handling astrologer response:", error);
+    const astrologerSocketId = astrologerSocketMap?.get?.(astrologerId);
+    if (astrologerSocketId) {
+      io.to(astrologerSocketId).emit("chat_error", {
+        message: "An error occurred while processing the chat response.",
+      });
+    }
   }
 }
 
@@ -164,11 +205,14 @@ export async function handleUserResponse(
   chatRoomId,
   userId,
   response,
-  astrologerId
+  astrologerId,
+  astrologerSocketMap
 ) {
   try {
     const chatRoom = await ChatRoom.findById(chatRoomId);
     const astrologer = await Astrologer.findById(astrologerId);
+
+    const astrologerSocketId = astrologerSocketMap?.get?.(astrologerId);
 
     if (!astrologer) {
       io.to(userId).emit("chat_request_failed", {
@@ -178,7 +222,7 @@ export async function handleUserResponse(
     }
 
     if (response === "accept") {
-      if (!chatRoom || chatRoom.status !== "pending") {
+      if (!chatRoom || chatRoom.status !== "confirmed") {
         io.to(userId).emit("chat_request_failed", {
           message: "Chat request not found or already processed.",
         });
@@ -192,16 +236,18 @@ export async function handleUserResponse(
       astrologer.status = "busy";
       await astrologer.save();
 
-      // Remove from waitlist if exists
+      // Remove from waitlist
       await Waitlist.findOneAndDelete({
         user: userId,
         astrologer: astrologerId,
       });
 
-      io.to(astrologerId).emit("chat_started", {
-        chatRoomId,
-        message: "User accepted the request. Chat is starting...",
-      });
+      if (astrologerSocketId) {
+        io.to(astrologerSocketId).emit("chat_started", {
+          chatRoomId,
+          message: "User accepted the request. Chat is starting...",
+        });
+      }
 
       io.to(userId).emit("chat_accepted", {
         chatRoomId,
@@ -216,7 +262,7 @@ export async function handleUserResponse(
         astrologer._id
       );
     } else {
-      // User rejected or cancelled request, delete chat room and waitlist entry
+      // Rejected or cancelled
       await ChatRoom.findByIdAndDelete(chatRoomId);
 
       const waitlistEntry = await Waitlist.findOneAndDelete({
@@ -230,10 +276,12 @@ export async function handleUserResponse(
         });
       }
 
-      io.to(astrologerId).emit("chat_rejected", {
-        chatRoomId,
-        message: "User cancelled the chat request.",
-      });
+      if (astrologerSocketId) {
+        io.to(astrologerSocketId).emit("chat_rejected", {
+          chatRoomId,
+          message: "User cancelled the chat request.",
+        });
+      }
 
       io.to(userId).emit("chat_request_cancelled", {
         message: "Your chat request has been cancelled.",

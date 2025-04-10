@@ -2,8 +2,6 @@ import express from "express";
 import http from "http";
 import cors from "cors";
 import errorHandler from "../src/middlewares/error.middleware.js";
-import { Server } from "socket.io";
-import { initSocket } from "./utils/sockets/socket.js";
 
 // Initialize Express app
 const app = express();
@@ -28,18 +26,16 @@ import astrologerRouter from "../src/routes/astrologer/astrologer.route.js";
 import productCategoryRoutes from "../src/routes/product/productcategory.routes.js";
 import productRoutes from "../src/routes/product/product.routes.js";
 import orderRoutes from "../src/routes/product/order.routes.js";
-
+import { setupSocketIO } from "./utils/sockets/socketTow.js";
 
 // API routes
 app.use("/astrobandhan/v1/user", userRouter);
 app.use("/astrobandhan/v1/admin", adminRouter);
 app.use("/astrobandhan/v1/astrologer", astrologerRouter);
 
-
 app.use("/astrobandhan/v1/productCategory", productCategoryRoutes);
 app.use("/astrobandhan/v1/product", productRoutes);
 app.use("/astrobandhan/v1/order", orderRoutes);
-
 
 // Error handling middleware
 app.use(errorHandler);
@@ -47,14 +43,13 @@ app.use(errorHandler);
 // Create the HTTP server
 const server = http.createServer(app);
 
-
 // Initialize socket
-initSocket(server);  // This initializes the socket.io server
+setupSocketIO(server); // This initializes the socket.io server
 
 // Start the server on port 6000
 const PORT = 8000; // Default to 6000 if not provided
 server.listen(PORT, () => {
-  const wsUrl = `ws://localhost:${PORT}`;  // WebSocket URL for testing
+  const wsUrl = `ws://localhost:${PORT}`; // WebSocket URL for testing
   console.log(`AstroBandhan is running on http://localhost:${PORT}`);
   console.log(`WebSocket server is running at: ${wsUrl}`);
 });
