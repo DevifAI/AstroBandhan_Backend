@@ -39,7 +39,7 @@ export const findCall_Transaction_ByUserId = async (req, res) => {
   try {
     const { userId, type } = req.body;
     const user_id = new mongoose.Types.ObjectId(userId);
-
+    console.log({ user_id });
     let query =
       type === "user"
         ? { userId: user_id, callType: "audio" }
@@ -56,7 +56,7 @@ export const findCall_Transaction_ByUserId = async (req, res) => {
       });
 
     if (result.length === 0) {
-      return res.status(404).json({ message: "No records found" });
+      return res.status(200).json({ message: "No records found" });
     }
 
     return res.status(200).json(result);

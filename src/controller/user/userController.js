@@ -375,6 +375,7 @@ export const validateloginOtp = asyncHandler(async (req, res) => {
 
     // Check the response and return appropriate message
     if (response.success) {
+      console.log("Here is my code");
       return res.status(200).json(
         new ApiResponse(
           200,

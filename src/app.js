@@ -7,7 +7,17 @@ import errorHandler from "../src/middlewares/error.middleware.js";
 const app = express();
 
 // CORS configuration
-app.use(cors());
+const corsOptions = {
+  origin: '*', // Allow all origins; you can replace '*' with specific domains if needed
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed HTTP methods
+  allowedHeaders: ['Content-Type', 'Authorization'] // Specify allowed headers
+};
+
+app.use(cors(corsOptions)); // Apply CORS middleware
+
+
+
+
 
 // Other middleware and route setup
 app.use(express.json({ limit: "16kb" }));
