@@ -207,58 +207,6 @@ export async function startChat(io, roomId, chatType, userId, astrologerId) {
 }
 
 // End chat session, settle payments
-// export async function endChat(io, roomId, userId, astrologerId) {
-//   try {
-//     if (!roomId || !userId || !astrologerId) {
-//       throw new Error("Missing required parameters");
-//     }
-
-//     const [user, astrologer] = await Promise.all([
-//       User.findById(userId),
-//       Astrologer.findById(astrologerId),
-//     ]);
-
-//     if (!user || !astrologer) {
-//       throw new Error("User or Astrologer not found");
-//     }
-
-//     // Mark astrologer as available again
-//     astrologer.status = "available";
-//     await astrologer.save();
-
-//     // Stop billing interval
-//     if (intervals[roomId]) {
-//       clearInterval(intervals[roomId]);
-//       delete intervals[roomId];
-//     }
-
-//     const session = sessionSummary[roomId];
-
-//     // Emit chat end event with summary
-//     io.to(user.socketId).emit("chat-ended", {
-//       message: "Chat ended",
-//       totalTime: session?.totalTime || 0,
-//       totalDeducted: session?.totalDeducted || 0,
-//     });
-
-//     io.to(astrologer.socketId).emit("chat-ended", {
-//       message: "Chat ended",
-//       totalTime: session?.totalTime || 0,
-//       totalEarnings: session
-//         ? (session.totalDeducted * (100 - session.adminCommission)) / 100
-//         : 0,
-//     });
-
-//     // Clean up session summary
-//     delete sessionSummary[roomId];
-//   } catch (err) {
-//     console.error("Error in endChat:", err);
-//     io.to(roomId).emit("chat-error", {
-//       message: "An error occurred while ending the chat.",
-//     });
-//   }
-// }
-
 export async function endChat(io, roomId, userId, astrologerId) {
   try {
     if (!roomId || !userId || !astrologerId) {

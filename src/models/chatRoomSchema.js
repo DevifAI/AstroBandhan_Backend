@@ -11,8 +11,12 @@ const chatRoomSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "active", "inactive"],
+      enum: ["pending", "confirmed", "active", "inactive", "ended"],
       default: "pending",
+    },
+    endedBy: {
+      type: String,
+      enum: ["user", "astrologer", "system"],
     },
     isUserJoined: { type: Boolean, default: false },
     isAstrologerJoined: { type: Boolean, default: false },
