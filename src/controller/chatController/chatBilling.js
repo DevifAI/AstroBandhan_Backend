@@ -2,124 +2,149 @@ import { Wallet } from "../../models/walletSchema.model.js";
 import { Astrologer } from "../../models/astrologer.model.js";
 import { User } from "../../models/user.model.js";
 import { Admin } from "../../models/adminModel.js";
+import mongoose from "mongoose";
+import { AdminWallet } from "../../models/adminWallet.js";
 
+const sessionSummary = {};
+const intervals = {};
+
+// Helper: Get astrologer’s price per chat type
 async function getChatPrice(astrologerId, chatType) {
   const astrologer = await Astrologer.findById(astrologerId);
-  if (!astrologer) return null;
+  if (!astrologer) throw new Error("Astrologer not found");
 
   switch (chatType) {
-    case "chat":
+    case "text":
       return astrologer.pricePerChatMinute;
-    case "call":
+    case "audio":
       return astrologer.pricePerCallMinute;
-    case "videoCall":
+    case "video":
       return astrologer.pricePerVideoCallMinute;
     default:
-      return null;
+      throw new Error("Invalid chat type");
   }
 }
 
+// Helper: Get commission percentage
 async function getAdminCommission(astrologerId, chatType) {
   const astrologer = await Astrologer.findById(astrologerId);
-  if (!astrologer) return null;
+  if (!astrologer) throw new Error("Astrologer not found");
 
   switch (chatType) {
-    case "chat":
+    case "text":
       return astrologer.chatCommission;
-    case "call":
+    case "audio":
       return astrologer.callCommission;
-    case "videoCall":
+    case "video":
       return astrologer.videoCallCommission;
     default:
-      return null;
+      throw new Error("Invalid chat type");
   }
 }
 
-// Function to deduct wallet balance from user
-async function deductUserWallet(user, costPerMinute) {
-  if (user.walletBalance < costPerMinute) {
-    return { success: false, message: "Insufficient funds" };
-  }
-
-  user.walletBalance -= costPerMinute; // Deduct balance
-  await user.save(); // Save user without adding a transaction every minute
-
-  return { success: true };
-}
-
-const sessionSummary = {}; // Store temporary balances
-const intervals = {}; // Store chat intervals
-
-// Function to start chat session
 export async function startChat(io, roomId, chatType, userId, astrologerId) {
   try {
-    const astrologer = await Astrologer.findById(astrologerId);
-    const user = await User.findById(userId);
-    const admin = await Admin.findOne();
+    if (!roomId || !chatType || !userId || !astrologerId) {
+      throw new Error("Missing required parameters");
+    }
+
+    const [astrologer, user, admin] = await Promise.all([
+      Astrologer.findById(astrologerId),
+      User.findById(userId),
+      Admin.findOne(),
+    ]);
 
     if (!astrologer || !user || !admin) {
-      io.to(roomId).emit("chat-error", {
-        message: "Astrologer, User, or Admin not found",
-      });
-      return;
+      throw new Error("Astrologer, User, or Admin not found");
     }
 
-    const costPerMinute = await getChatPrice(chatType, astrologerId);
+    const costPerMinute = await getChatPrice(astrologerId, chatType);
     const adminCommission = await getAdminCommission(astrologerId, chatType);
+    const adminShare = costPerMinute - adminCommission;
+    const astrologerShare = costPerMinute - adminShare;
 
-    if (costPerMinute === null || adminCommission === null) {
-      io.to(roomId).emit("chat-error", {
-        message: "Invalid chat type or astrologer not found",
+    // Insufficient balance check
+    if (user.walletBalance < costPerMinute) {
+      io.to(user.socketId).emit("chat-error", {
+        message: "Insufficient funds",
       });
-      return;
-    }
-
-    // Initialize session summary
-    sessionSummary[roomId] = {
-      totalDeducted: 0,
-      totalAstrologerEarnings: 0,
-      totalAdminEarnings: 0,
-    };
-
-    // First deduction
-    const firstDeduction = await deductUserWallet(user, costPerMinute);
-    if (!firstDeduction.success) {
-      io.to(roomId).emit("chat-error", { message: firstDeduction.message });
-      io.to(roomId).emit("chat-end", { reason: firstDeduction.message });
       astrologer.status = "available";
       await astrologer.save();
       return;
     }
 
-    // Calculate earnings based on commission
-    const astrologerEarnings = ((100 - adminCommission) / 100) * costPerMinute;
-    const adminEarnings = (adminCommission / 100) * costPerMinute;
+    // Deduct first minute
+    user.walletBalance -= costPerMinute;
+    await user.save();
 
-    // Track totals
-    sessionSummary[roomId].totalDeducted += costPerMinute;
-    sessionSummary[roomId].totalAstrologerEarnings += astrologerEarnings;
-    sessionSummary[roomId].totalAdminEarnings += adminEarnings;
+    // Create initial wallet transactions
+    const txUser = new Wallet({
+      user_id: userId,
+      amount: costPerMinute,
+      transaction_type: "debit",
+      debit_type: chatType,
+      service_reference_id: roomId,
+      transaction_id: new mongoose.Types.ObjectId(),
+    });
+
+    const txAstrologer = new Wallet({
+      astrologer_id: astrologerId,
+      amount: astrologerShare,
+      transaction_type: "credit",
+      credit_type: chatType,
+      service_reference_id: roomId,
+      transaction_id: new mongoose.Types.ObjectId(),
+    });
+
+    const txAdmin = new AdminWallet({
+      userId: admin._id,
+      amount: adminShare,
+      transaction_type: "credit",
+      credit_type: "chat",
+      service_id: roomId,
+      transaction_id: new mongoose.Types.ObjectId(),
+    });
+
+    await Promise.all([txUser.save(), txAstrologer.save(), txAdmin.save()]);
+
+    astrologer.walletBalance += astrologerShare;
+    admin.adminWalletBalance += adminShare;
+    await Promise.all([astrologer.save(), admin.save()]);
+
+    sessionSummary[roomId] = {
+      totalDeducted: costPerMinute,
+      totalTime: 1,
+      costPerMinute,
+      adminCommission,
+      txUserId: txUser._id,
+      txAstrologerId: txAstrologer._id,
+      txAdminId: txAdmin._id,
+    };
 
     let totalTime = 1;
+
     const interval = setInterval(async () => {
       try {
-        // Check if the user has only 2 minutes of balance left
-        if (
-          user.walletBalance >= costPerMinute &&
-          user.walletBalance < costPerMinute * 3
-        ) {
-          io.to(userId).emit("low-balance-warning", {
-            message:
-              "Warning: Your wallet balance is low. You have only 2 minutes left before the chat ends.",
+        const freshUser = await User.findById(userId);
+        const freshAstrologer = await Astrologer.findById(astrologerId);
+        const freshAdmin = await Admin.findOne();
+
+        if (!freshUser || !freshAstrologer || !freshAdmin)
+          throw new Error("Entity not found");
+
+        if (freshUser.walletBalance < costPerMinute * 3) {
+          io.to(user.socketId).emit("low-balance-warning", {
+            message: "Warning: Low wallet balance. Only 2 minutes left.",
           });
         }
 
-        const deductionResult = await deductUserWallet(user, costPerMinute);
-        if (!deductionResult.success) {
-          io.to(roomId).emit("chat-error", {
-            message: deductionResult.message,
+        if (freshUser.walletBalance < costPerMinute) {
+          io.to(user.socketId).emit("chat-end", {
+            reason: "Insufficient funds",
           });
-          io.to(roomId).emit("chat-end", { reason: deductionResult.message });
+          io.to(astrologer.socketId).emit("chat-end", {
+            reason: "User has insufficient balance.",
+          });
 
           astrologer.status = "available";
           await astrologer.save();
@@ -128,116 +153,129 @@ export async function startChat(io, roomId, chatType, userId, astrologerId) {
           return;
         }
 
-        // Accumulate deductions and earnings
-        sessionSummary[roomId].totalDeducted += costPerMinute;
-        sessionSummary[roomId].totalAstrologerEarnings += astrologerEarnings;
-        sessionSummary[roomId].totalAdminEarnings += adminEarnings;
+        // Deduct next minute
+        freshUser.walletBalance -= costPerMinute;
+        await freshUser.save();
 
-        totalTime++;
-        io.to(roomId).emit("chat-timer", {
+        // Calculate shares again
+        const adminShare = costPerMinute - adminCommission;
+        const astrologerShare = costPerMinute - adminShare;
+
+        // Update previous wallet transactions
+        await Promise.all([
+          Wallet.findByIdAndUpdate(sessionSummary[roomId].txUserId, {
+            $inc: { amount: costPerMinute },
+          }),
+          Wallet.findByIdAndUpdate(sessionSummary[roomId].txAstrologerId, {
+            $inc: { amount: astrologerShare },
+          }),
+          AdminWallet.findByIdAndUpdate(sessionSummary[roomId].txAdminId, {
+            $inc: { amount: adminShare },
+          }),
+        ]);
+
+        // Update wallet balances
+        freshAstrologer.walletBalance += astrologerShare;
+        freshAdmin.adminWalletBalance += adminShare;
+        await Promise.all([freshAstrologer.save(), freshAdmin.save()]);
+
+        sessionSummary[roomId].totalDeducted += costPerMinute;
+        sessionSummary[roomId].totalTime = ++totalTime;
+
+        io.to(user.socketId).emit("chat-timer", {
           roomId,
-          cost: costPerMinute,
           elapsedTime: totalTime,
         });
-      } catch (error) {
-        console.error("Error during interval execution:", error);
-        io.to(roomId).emit("chat-error", {
-          message: "An error occurred during chat billing",
+        io.to(astrologer.socketId).emit("chat-timer", {
+          roomId,
+          elapsedTime: totalTime,
         });
+      } catch (err) {
+        console.error("Billing interval error:", err);
         clearInterval(interval);
         delete intervals[roomId];
       }
     }, 60000);
 
     intervals[roomId] = interval;
-  } catch (error) {
-    console.error("Error in startChat:", error);
+  } catch (err) {
+    console.error("Error in startChat:", err);
     io.to(roomId).emit("chat-error", {
-      message: "An error occurred during chat initialization",
+      message: "An error occurred during chat initialization.",
     });
   }
 }
 
-// Function to end chat session
-export async function endChat(io, roomId, userId, astrologerId, chatType) {
+// End chat session, settle payments
+export async function endChat(io, roomId, userId, astrologerId) {
   try {
-    if (!sessionSummary[roomId]) {
-      io.to(roomId).emit("chat-error", { message: "Session not found." });
-      return;
+    if (!roomId || !userId || !astrologerId) {
+      throw new Error("Missing required parameters");
     }
 
-    const { totalDeducted, totalAstrologerEarnings, totalAdminEarnings } =
-      sessionSummary[roomId];
+    const [user, astrologer, admin] = await Promise.all([
+      User.findById(userId),
+      Astrologer.findById(astrologerId),
+      Admin.findOne(),
+    ]);
 
-    const astrologer = await Astrologer.findById(astrologerId);
-    const user = await User.findById(userId);
-    const admin = await Admin.findOne();
-
-    if (!astrologer || !user || !admin) {
-      io.to(roomId).emit("chat-error", {
-        message: "Astrologer, User, or Admin not found",
-      });
-      return;
+    if (!user || !astrologer || !admin) {
+      throw new Error("User, Astrologer, or Admin not found");
     }
 
-    // Stop the interval timer
+    // Mark astrologer as available again
+    astrologer.status = "available";
+    await astrologer.save();
+
+    // Stop billing interval
     if (intervals[roomId]) {
       clearInterval(intervals[roomId]);
       delete intervals[roomId];
     }
 
-    // Create transactions
-    const sessionId = new mongoose.Types.ObjectId(); // Unique session reference
+    const session = sessionSummary[roomId];
 
-    const userTransaction = new Wallet({
-      user_id: userId,
-      amount: totalDeducted,
-      transaction_id: sessionId,
-      transaction_type: "debit",
-      debit_type: chatType,
-      service_reference_id: roomId,
+    // If session was never initialized
+    if (!session) {
+      io.to(user.socketId).emit("chat-ended", {
+        message: "Chat ended (no session data)",
+        totalTime: 0,
+        totalDeducted: 0,
+      });
+
+      io.to(astrologer.socketId).emit("chat-ended", {
+        message: "Chat ended (no session data)",
+        totalTime: 0,
+        totalEarnings: 0,
+      });
+
+      return;
+    }
+
+    const { totalTime, totalDeducted, adminCommission } = session;
+    const totalEarnings = totalDeducted - adminCommission;
+
+    // Final emit to both user and astrologer
+    io.to(user.socketId).emit("chat-ended", {
+      message: "Chat ended",
+      totalTime,
+      totalDeducted,
     });
 
-    const astrologerTransaction = new Wallet({
-      astrologer_id: astrologerId,
-      amount: totalAstrologerEarnings,
-      transaction_id: sessionId,
-      transaction_type: "credit",
-      credit_type: chatType,
-      service_reference_id: roomId,
-    });
-
-    const adminTransaction = new Wallet({
-      user_id: admin._id,
-      amount: totalAdminEarnings,
-      transaction_id: sessionId,
-      transaction_type: "credit",
-      credit_type: "chat",
-      service_reference_id: roomId,
-    });
-
-    await userTransaction.save();
-    await astrologerTransaction.save();
-    await adminTransaction.save();
-
-    // Update astrologer's balance
-    astrologer.walletBalance += totalAstrologerEarnings;
-    await astrologer.save();
-
-    // Update admin's wallet balance
-    admin.adminWalletBalance += totalAdminEarnings;
-    await admin.save();
-
-    io.to(roomId).emit("chat-end", {
-      message: "Chat session ended successfully.",
+    io.to(astrologer.socketId).emit("chat-ended", {
+      message: "Chat ended",
+      totalTime,
+      totalEarnings,
     });
 
     // Cleanup session data
     delete sessionSummary[roomId];
-  } catch (error) {
-    console.error("Error in endChat:", error);
-    io.to(roomId).emit("chat-error", {
-      message: "An error occurred while ending chat.",
-    });
+  } catch (err) {
+    console.error("Error in endChat:", err);
+    if (roomId) {
+      io.to(roomId).emit("chat-error", {
+        message: "An error occurred while ending the chat.",
+      });
+    }
   }
 }

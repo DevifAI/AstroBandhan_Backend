@@ -4,13 +4,21 @@ const chatRoomSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     astrologer: { type: mongoose.Schema.Types.ObjectId, ref: "Astrologer" },
-    chatRoomId: { type: String, unique: true },
+    chatType: {
+      type: String,
+      enum: ["text", "audio", "video"],
+      required: true,
+    },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "active", "inactive"],
+      enum: ["pending", "confirmed", "active", "inactive", "ended"],
       default: "pending",
     },
-    isUserJoined: { type: Boolean, default: true },
+    endedBy: {
+      type: String,
+      enum: ["user", "astrologer", "system"],
+    },
+    isUserJoined: { type: Boolean, default: false },
     isAstrologerJoined: { type: Boolean, default: false },
   },
   { timestamps: true }
