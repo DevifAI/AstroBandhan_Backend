@@ -10,7 +10,7 @@ const waitlistSchema = new mongoose.Schema(
     },
     chatType: {
       type: String,
-      enum: ["chat", "audio", "video"],
+      enum: ["text", "audio", "video"],
       required: true,
     }, // Type of communication
     status: { type: String, enum: ["waiting"], default: "waiting" },

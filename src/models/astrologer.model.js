@@ -6,6 +6,10 @@ import jwt from "jsonwebtoken";
 const astrologerSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
+    socketId: {
+      type: String,
+      default: null,
+    },
     experience: {
       type: Number,
       required: true,
