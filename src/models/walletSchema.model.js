@@ -53,6 +53,8 @@ const walletSchema = new mongoose.Schema(
         "video",
         "palm_reading",
         "others",
+        "Ecom",
+        "gifting",
       ],
       default: null,
       required: function () {

@@ -1,5 +1,6 @@
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { Astrologer } from "../../models/astrologer.model.js";
+import Review from "../../models/review.model.js";
 import ChatRoom from "../../models/chatRoomSchema.js";
 
 export const toggle_Offline_Online = asyncHandler(async (req, res) => {
@@ -71,12 +72,32 @@ export const getAstrologerById = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "Astrologer not found" });
     }
 
-    // Respond with astrologer data
-    res
-      .status(200)
-      .json({ message: "Astrologer fetched successfully", astrologer });
+    // Fetch reviews for this astrologer and populate the user's name
+    const reviews = await Review.find({ astrologerId })
+      .populate({
+        path: "userId", // Populate the `userId` field in the review
+        select: "name", // Only fetch the `name` field from the User collection
+      })
+      .sort({ createdAt: -1 }) // Sort by `createdAt` in descending order (most recent first)
+      .limit(8); // Limit the result to the last 8 reviews
+
+    // Prepare the review data with user names
+    const reviewsWithUserNames = reviews.map((review) => ({
+      comment: review.comment,
+      rating: review.rating,
+      userName: review.userId.name, // Replace userId with the user's name
+    }));
+
+    // Respond with astrologer data and reviews inside the astrologer object
+    res.status(200).json({
+      message: "Astrologer fetched successfully",
+      astrologer: {
+        ...astrologer.toObject(), // Spread the astrologer data
+        reviews: reviewsWithUserNames, // Add reviews directly inside astrologer object
+      },
+    });
   } catch (error) {
-    res.status(200).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 

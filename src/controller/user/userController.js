@@ -148,16 +148,26 @@ export const userLogin = async (req, res) => {
         .json(new ApiResponse(400, null, "Invalid phone number format."));
     }
 
+    console.log(validatePhoneNumber(phone));
+
     // Find astrologer by phone
     const user = await User.findOne({ phone });
     if (!user) {
-      return res.status(404).json({ message: "User not found." });
+      const response = res
+        .status(200)
+        .json(new ApiResponse(401, { user: {} }, "User Not Found"));
+
+      return response;
     }
 
     // Check if password matches
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Incorrect password." });
+      const response = res
+        .status(200)
+        .json(new ApiResponse(401, { user: {} }, "Incorrect Password"));
+
+      return response;
     }
 
     // Set available to true on login
