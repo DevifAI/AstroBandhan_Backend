@@ -80,7 +80,6 @@ export const getActiveById = async (req, res) => {
       {
         $match: {
           astrologer: new mongoose.Types.ObjectId(astrologerId),
-          status: "active",
         },
       },
       {
@@ -101,6 +100,7 @@ export const getActiveById = async (req, res) => {
           chatRoomId: 1,
           createdAt: 1,
           isAstrologerJoined: 1,
+          avatar: { $arrayElemAt: ["$userDetails.photo", 0] },
           username: {
             $arrayElemAt: ["$userDetails.name", 0],
           },

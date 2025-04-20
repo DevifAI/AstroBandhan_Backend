@@ -9,23 +9,42 @@ import {
   handleEndChat,
   handleAstrologerResponse,
 } from "../../controller/chatController/controller.js";
+import sendPushNotification from "../One_Signal/onesignal.js";
+import {
+  sendWelcomeNotification,
+  storePlayerIdForUser,
+  updateUserActivityStatus,
+} from "../../controller/user/oneSignal/OneSignalController.js";
 
 export const setupSocketIO = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: [
-        "http://localhost:3000",
-        "http://192.168.0.100:8081",
-        "https://localhost:6000",
-      ],
-      methods: ["GET", "POST", "PATCH", "DELETE"],
-      allowedHeaders: ["Content-Type"],
-      credentials: true,
+      origin: "*", // Allow all origins
+      methods: ["GET", "POST", "PATCH", "DELETE"], // Allowed HTTP methods
+      allowedHeaders: ["Content-Type"], // Allowed headers
+      credentials: false, // Disable credentials if allowing all origins
     },
   });
 
   io.on("connection", (socket) => {
     console.log("User connected:", socket.id);
+
+    //Save PlayerId and Send Welcome Notification To User
+    socket.on("register_player_id", async (data) => {
+      const { userId, playerId, userType } = data;
+      console.log(`Registering player ID ${playerId} for user ${userId}`);
+
+      try {
+        storePlayerIdForUser(userId, playerId, userType); // Store the player ID in the database
+        if (userType === "user") {
+          await sendWelcomeNotification(userId, playerId, userType); // Send welcome notification
+        } else if (userType === "astrologer") {
+          await sendWelcomeNotification(userId, playerId, userType);
+        }
+      } catch (error) {
+        console.error("Error sending notification:", error);
+      }
+    });
 
     // Register user
     socket.on("register_user", async ({ userId }) => {
@@ -56,6 +75,12 @@ export const setupSocketIO = (server) => {
       }
     });
 
+    // Listen for 'ping' from the client
+    socket.on("ping", () => {
+      console.log("Ping received from client:", socket.id);
+      socket.emit("pong"); // Respond with 'pong'
+    });
+
     // Register astrologer
     socket.on("register_astrologer", async ({ astrologerId }) => {
       if (!astrologerId) {
@@ -65,8 +90,10 @@ export const setupSocketIO = (server) => {
       }
 
       try {
+        console.log({ astrologerId });
         // Check if the astrologer exists
         const astrologer = await Astrologer.findById(astrologerId);
+        console.log({ astrologer });
         if (!astrologer) {
           console.error(`Astrologer not found: ${astrologerId}`);
           socket.emit("error", { message: "Astrologer not found" });
@@ -141,7 +168,13 @@ export const setupSocketIO = (server) => {
           return;
         }
         try {
-          console.log("User response:", chatRoomId, userId, response, astrologerId);
+          console.log(
+            "User response:",
+            chatRoomId,
+            userId,
+            response,
+            astrologerId
+          );
           await handleUserResponse(
             io,
             chatRoomId,
@@ -155,6 +188,37 @@ export const setupSocketIO = (server) => {
         }
       }
     );
+
+    // Handle user status update
+    socket.on("update_status", async (data) => {
+      if (!data || !data.userId || typeof data.isActive === "undefined") {
+        console.error("Invalid data for update_status");
+        socket.emit("error", { message: "Invalid data for updating status" });
+        return;
+      }
+      try {
+        const result = await updateUserActivityStatus(
+          data.userId,
+          data.isActive
+        ); // Call the DB update function
+        if (!result) {
+          socket.emit("error", {
+            message: "Failed to update user activity status",
+          });
+        } else {
+          console.log(
+            `User status updated successfully: ${data.userId} is now ${data.isActive ? "active" : "inactive"}`
+          );
+          // socket.emit("status_updated", {
+          //   message: "Status updated successfully",
+          //   userId: data.userId,
+          // });
+        }
+      } catch (error) {
+        console.error("Error updating user status:", error);
+        socket.emit("error", { message: "Failed to update user status" });
+      }
+    });
 
     // Handle chat message
     socket.on("send_message", async (data) => {
@@ -187,7 +251,14 @@ export const setupSocketIO = (server) => {
     socket.on(
       "end_chat",
       async ({ roomId, userId, astrologerId, chatType, sender }) => {
-        console.log("End chat request:", roomId, userId, astrologerId, chatType, sender);
+        console.log(
+          "End chat request:",
+          roomId,
+          userId,
+          astrologerId,
+          chatType,
+          sender
+        );
         if (!roomId || !userId || !astrologerId || !chatType || !sender) {
           console.error("Invalid data for end_chat");
           socket.emit("chat-error", {
@@ -210,7 +281,7 @@ export const setupSocketIO = (server) => {
         }
       }
     );
-    
+
     // Cleanup on disconnect
     socket.on("disconnect", async () => {
       console.log("User disconnected:", socket.id);

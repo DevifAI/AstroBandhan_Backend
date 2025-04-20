@@ -5,6 +5,7 @@ import Waitlist from "../../models/waitlist.model.js";
 import { endChat, startChat } from "./chatBilling.js";
 import { User } from "../../models/user.model.js";
 import Chat from "../../models/chatSchema.js";
+import sendPushNotification from "../../utils/One_Signal/onesignal.js";
 
 // Define a regex pattern to detect phone numbers, emails, and social media links/keywords
 const SENSITIVE_INFO_REGEX =
@@ -39,14 +40,18 @@ export async function checkWaitlist(io, astrologerId) {
  * Function to handle new chat request.
  */
 export async function handleChatRequest(io, userId, astrologerId, chatType) {
+  console.log({ userId, astrologerId, chatType });
   try {
     const user = await User.findById(userId);
     const astrologer = await Astrologer.findById(astrologerId);
+
+    // console.log({ user, astrologer });
 
     const userSocketId = user?.socketId;
     const astrologerSocketId = astrologer?.socketId;
 
     if (!user || !astrologer) {
+      console.log("2");
       if (userSocketId) {
         io.to(userSocketId).emit("chat_request_failed", {
           message: "User or Astrologer not found",
@@ -57,15 +62,18 @@ export async function handleChatRequest(io, userId, astrologerId, chatType) {
 
     const userWallet = user.walletBalance;
 
+    console.log("0");
+
     if (!userWallet || userWallet < astrologer.pricePerChatMinute) {
       if (userSocketId) {
+        console.log("1");
         io.to(userSocketId).emit("chat_request_failed", {
           message: "Insufficient balance",
         });
       }
       return;
     }
-
+    console.log({ userSocketId, astrologerSocketId });
     if (astrologer.status === "busy") {
       // Add user to waitlist
       const waitlistEntry = new Waitlist({
@@ -74,8 +82,8 @@ export async function handleChatRequest(io, userId, astrologerId, chatType) {
         chatType,
         status: "waiting",
       });
-      await waitlistEntry.save();
-
+      const res = await waitlistEntry.save();
+      // console.log({ res });
       if (userSocketId) {
         io.to(userSocketId).emit("waitlist_added", {
           message: `Astrologer is currently busy. You have been added to the ${chatType} waitlist.`,
@@ -90,11 +98,14 @@ export async function handleChatRequest(io, userId, astrologerId, chatType) {
       chatType,
       status: "pending",
     });
-    await chatRoom.save(); // Creates a new unique document every time
+    const res2 = await chatRoom.save(); // Creates a new unique document every time
 
-    console.log("Chat room created:", chatRoom);
+    // console.log({ res2 });
+
+    // console.log("Chat room created:", chatRoom);
 
     // Notify astrologer
+    console.log({ astrologerSocketId });
     if (astrologerSocketId) {
       io.to(astrologerSocketId).emit("chat_request_received", {
         userId,
@@ -102,6 +113,24 @@ export async function handleChatRequest(io, userId, astrologerId, chatType) {
         chatType,
         message: `New ${chatType} request received. Confirm to proceed.`,
       });
+
+      console.log("message sent to astrologer");
+    }
+    if (userSocketId) {
+      console.log("message sent to user");
+      io.to(userSocketId).emit("chat_request_pending", {
+        message: `We will let you know once astrologer accept the chat request .`,
+        isNotificationSent: user.isOnApp,
+      });
+      if (user.isOnApp) {
+        console.log("sdsadsadsadsad", user?.playerId);
+        // sendPushNotification(
+        //   userId,
+        //   user.playerId,
+        //   "📩 Chat Request Sent ✨",
+        //   "Your chat request has been sent to the astrologer! We'll notify you as soon as they accept it."
+        // );
+      }
     }
   } catch (error) {
     console.error("Error creating chat request:", error.message);
@@ -158,6 +187,7 @@ export async function handleAstrologerResponse(
           message:
             "Astrologer is ready to join. Do you want to start the chat?",
         });
+        sendPushNotification(data.userId, data.message);
       }
     } else if (response === "reject") {
       // Delete chat room and remove from waitlist
