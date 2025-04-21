@@ -19,10 +19,10 @@ import {
 export const setupSocketIO = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: "*", // Allow all origins
+      origin: "http://localhost:3000", // Replace with your frontend's URL
       methods: ["GET", "POST", "PATCH", "DELETE"], // Allowed HTTP methods
       allowedHeaders: ["Content-Type"], // Allowed headers
-      credentials: false, // Disable credentials if allowing all origins
+      credentials: true, // Enable credentials
     },
   });
 
@@ -93,7 +93,7 @@ export const setupSocketIO = (server) => {
         console.log({ astrologerId });
         // Check if the astrologer exists
         const astrologer = await Astrologer.findById(astrologerId);
-        console.log({ astrologer });
+        // console.log({ astrologer });
         if (!astrologer) {
           console.error(`Astrologer not found: ${astrologerId}`);
           socket.emit("error", { message: "Astrologer not found" });
@@ -168,13 +168,13 @@ export const setupSocketIO = (server) => {
           return;
         }
         try {
-          console.log(
-            "User response:",
-            chatRoomId,
-            userId,
-            response,
-            astrologerId
-          );
+          // console.log(
+          //   "User response:",
+          //   chatRoomId,
+          //   userId,
+          //   response,
+          //   astrologerId
+          // );
           await handleUserResponse(
             io,
             chatRoomId,
@@ -251,14 +251,14 @@ export const setupSocketIO = (server) => {
     socket.on(
       "end_chat",
       async ({ roomId, userId, astrologerId, chatType, sender }) => {
-        console.log(
-          "End chat request:",
-          roomId,
-          userId,
-          astrologerId,
-          chatType,
-          sender
-        );
+        // console.log(
+        //   "End chat request:",
+        //   roomId,
+        //   userId,
+        //   astrologerId,
+        //   chatType,
+        //   sender
+        // );
         if (!roomId || !userId || !astrologerId || !chatType || !sender) {
           console.error("Invalid data for end_chat");
           socket.emit("chat-error", {
