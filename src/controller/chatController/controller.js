@@ -119,17 +119,18 @@ export async function handleChatRequest(io, userId, astrologerId, chatType) {
     if (userSocketId) {
       console.log("message sent to user");
       io.to(userSocketId).emit("chat_request_pending", {
-        message: `We will let you know once astrologer accept the chat request .`,
-        isNotificationSent: user.isOnApp,
+        message: `Your chat request has been sent to the astrologer! `,
+        isNotificationSent: !user.isOnApp,
       });
-      if (user.isOnApp) {
+      if (!user.isOnApp) {
         console.log("sdsadsadsadsad", user?.playerId);
-        // sendPushNotification(
-        //   userId,
-        //   user.playerId,
-        //   "📩 Chat Request Sent ✨",
-        //   "Your chat request has been sent to the astrologer! We'll notify you as soon as they accept it."
-        // );
+        const playerId = user?.playerId.toString();
+        sendPushNotification(
+          userId,
+          "📩 Chat Request Sent ✨",
+          "Your chat request has been sent to the astrologer! We'll notify you as soon as they accept it.",
+          playerId,
+        );
       }
     }
   } catch (error) {
