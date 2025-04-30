@@ -656,6 +656,7 @@ export const checkChatRoomStatus = async (io) => {
 
   for (const chatRoom of chatRooms) {
     const user = chatRoom.user;
+    console.log({ user });
     const astrologer = chatRoom.astrologer;
 
     // console.log({ chatRoom });
@@ -663,7 +664,7 @@ export const checkChatRoomStatus = async (io) => {
     if (!user?.socketId) continue; // Skip if socketId is not available
 
     activeUserIds.add(user._id.toString()); // Save active user IDs
-
+    console.log({ activeUserIds });
     // Format createdAt
     const { formattedDate, formattedTime } = formatISTDateTime(
       chatRoom.createdAt
@@ -699,9 +700,12 @@ export const checkChatRoomStatus = async (io) => {
         consultation_rate: astrologer.pricePerChatMinute,
       },
     };
+    if (user.socketId) {
+      console.log({ user });
+      io.to(user.socketId).emit("chatRoomStatusUpdate", response);
+    }
     // console.log({ response });
     // Emit chatRoomStatusUpdate event to users involved in chatRooms
-    io.to(user.socketId).emit("chatRoomStatusUpdate", response);
   }
 
   // 2. Find users who are NOT part of any active/pending chat rooms
@@ -711,6 +715,7 @@ export const checkChatRoomStatus = async (io) => {
   }).select("socketId");
 
   for (const user of usersWithoutChatRooms) {
+    console.log("User not in any chat room:", user._id);
     if (user.socketId) {
       // console.log(`Sending noChatResponse to socket: ${user.socketId}`);
       io.to(user.socketId).emit("noChatResponse", { response: false });
