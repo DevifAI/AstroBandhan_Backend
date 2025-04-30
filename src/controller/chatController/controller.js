@@ -6,10 +6,11 @@ import { endChat, startChat } from "./chatBilling.js";
 import { User } from "../../models/user.model.js";
 import Chat from "../../models/chatSchema.js";
 import sendPushNotification from "../../utils/One_Signal/onesignal.js";
+import { formatISTDateTime } from "../../utils/validate_Date_Time.js";
 
 // Define a regex pattern to detect phone numbers, emails, and social media links/keywords
 const SENSITIVE_INFO_REGEX =
-  /(\+?\d{10,15})|([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})|(facebook|fb|instagram|insta|twitter|tiktok|snapchat|linkedin|whatsapp|telegram|discord|youtube|t.me|wa.me|snap\.com|linkedin\.com|tiktok\.com|facebook\.com|instagram\.com|twitter\.com|youtube\.com)/gi;
+  /(\+?\d{10,15})|([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})|(facebook|fb|instagram|insta|twitter|tiktok|snapchat|linkedin|whatsapp|telegram|discord|youtube|t.me|wa.me|snap\.com|linkedin\.com|tiktok\.com|facebook\.com|instagram\.com|twitter\.com|youtube\.com)/;
 
 /**
  * Function to check waitlist and notify users when an astrologer is available.
@@ -41,6 +42,7 @@ export async function checkWaitlist(io, astrologerId) {
  */
 export async function handleChatRequest(io, userId, astrologerId, chatType) {
   console.log({ userId, astrologerId, chatType });
+
   try {
     const user = await User.findById(userId);
     const astrologer = await Astrologer.findById(astrologerId);
@@ -57,6 +59,17 @@ export async function handleChatRequest(io, userId, astrologerId, chatType) {
       return;
     }
 
+    console.log({ astrologerSocketId });
+
+    if (!astrologerSocketId) {
+      if (userSocketId) {
+        io.to(userSocketId).emit("chat_request_failed", {
+          message: "Astrologer is not accepting requests right now",
+        });
+      }
+      return;
+    }
+
     const userWallet = user.walletBalance;
 
     if (!userWallet || userWallet < astrologer.pricePerChatMinute) {
@@ -68,17 +81,23 @@ export async function handleChatRequest(io, userId, astrologerId, chatType) {
       return;
     }
 
-    // Check if a pending chat request already exists
     const existingChatRoom = await ChatRoom.findOne({
       user: userId,
       astrologer: astrologerId,
-      status: { $in: ["pending"] },
+      status: "pending",
     });
 
+    const onChatSession = await ChatRoom.findOne({
+      astrologer: astrologerId,
+      status: { $in: ["active", "confirmed"] },
+    });
+
+    // console.log({ existingChatRoom, onChatSession });
+
     if (existingChatRoom) {
-      console.log("Chat request already exists:", existingChatRoom._id);
+      console.log("Pending chat request exists:", existingChatRoom._id);
       if (userSocketId) {
-        io.to(userSocketId).emit("chat_request_already_sent", {
+        io.to(userSocketId).emit("chat_request_failed", {
           message:
             "You have already sent a request. The astrologer will connect with you soon.",
         });
@@ -86,47 +105,46 @@ export async function handleChatRequest(io, userId, astrologerId, chatType) {
       return;
     }
 
+    if (onChatSession) {
+      console.log("Astrologer is busy in session:", onChatSession._id);
+      if (userSocketId) {
+        io.to(userSocketId).emit("chat_request_failed", {
+          message:
+            "Astrologer is busy. We will let you know when they are available.",
+        });
+      }
+      return;
+    }
+
+    // Create new chat room
     const chatRoom = new ChatRoom({
       user: userId,
       astrologer: astrologerId,
       chatType,
       status: "pending",
     });
+
     await chatRoom.save();
 
-    // Notify astrologer
     if (astrologerSocketId) {
+      console.log("test");
       io.to(astrologerSocketId).emit("chat_request_received", {
-        userId,
-        chatRoomId: chatRoom._id,
-        chatType,
-        message: `New ${chatType} request received. Confirm to proceed.`,
+        message: "You have a new chat request. Please respond within 5 min.",
       });
     }
 
-    // Notify user
     if (userSocketId) {
-      io.to(userSocketId).emit("chat_request_pending", {
-        message: `Your chat request has been sent to the astrologer! `,
-        isNotificationSent: !user.isOnApp,
+      io.to(userSocketId).emit("chat_request_sent", {
+        message: "Request sent to astrologer. Please wait for the response.",
       });
-      if (!user.isOnApp) {
-        console.log("sdsadsadsadsad", user?.playerId);
-        const playerId = user?.playerId.toString();
-        sendPushNotification(
-          userId,
-          "📩 Chat Request Sent ✨",
-          "Your chat request has been sent to the astrologer! We'll notify you as soon as they accept it.",
-          playerId,
-        );
-      }
     }
 
-    // Start a timeout for 5 minutes (300,000 ms)
+    // Optional notifications can be added back here
+
+    // Start timeout
     setTimeout(async () => {
       const updatedChatRoom = await ChatRoom.findById(chatRoom._id);
       if (updatedChatRoom && updatedChatRoom.status === "pending") {
-        // Call handleAstrologerResponse with a timeout response
         await handleAstrologerResponse(
           io,
           chatRoom._id,
@@ -213,7 +231,7 @@ export async function handleAstrologerResponse(
           if (astrologerSocketId) {
             io.to(astrologerSocketId).emit("chat_request_cancelled", {
               message:
-                "The user did not respond to the chat request in time. The request has been cancelled.",
+                "The user did did not respond to the chat request in time. The request has been cancelled.",
             });
           }
         }
@@ -251,7 +269,7 @@ export async function handleAstrologerResponse(
       if (userSocketId) {
         io.to(userSocketId).emit("chat_request_cancelled", {
           message:
-            "The astrologer did not respond to your chat request in time.",
+            "The chat request has been automatically rejected due to inactivity.",
         });
       }
 
@@ -424,6 +442,16 @@ export const handleChatMessage = async (data, io) => {
     return { error: "Invalid parameters provided" };
   }
 
+  console.log({ messageType, message });
+
+  // Bypass sensitive info check for Cloudinary URLs
+  if (message.includes("https://res.cloudinary.com")) {
+    console.log(
+      "Message contains Cloudinary URL, skipping sensitive info check"
+    );
+    return processMessage(data, io); // Proceed to handle the message without blocking
+  }
+
   // Check for sensitive info
   if (SENSITIVE_INFO_REGEX.test(message)) {
     try {
@@ -451,6 +479,20 @@ export const handleChatMessage = async (data, io) => {
     }
   }
 
+  // If message doesn't contain sensitive info, continue processing it
+  return processMessage(data, io);
+};
+
+const processMessage = async (data, io) => {
+  const {
+    chatRoomId,
+    senderType,
+    senderId,
+    recipientId,
+    messageType,
+    message,
+  } = data;
+
   try {
     // Find or create chat
     let chat = await Chat.findOne({ chatRoomId });
@@ -474,6 +516,7 @@ export const handleChatMessage = async (data, io) => {
     const newMessage = {
       senderType,
       senderId: senderType === "system" ? undefined : senderId,
+      recipientId,
       messageType: messageType || "text",
       message,
       timestamp: moment().tz("Asia/Kolkata").toDate(),
@@ -519,12 +562,12 @@ export async function handleEndChat(
   roomId,
   userId,
   astrologerId,
-  chatType,
+
   sender
 ) {
   try {
     // Validate inputs
-    if (!roomId || !userId || !astrologerId || !chatType || !sender) {
+    if (!roomId || !userId || !astrologerId || !sender) {
       console.error("Missing required parameters in handleEndChat");
       io.to(roomId).emit("chat-error", {
         message: "Invalid parameters provided.",
@@ -533,7 +576,7 @@ export async function handleEndChat(
     }
 
     // Perform earnings, wallet deductions, logs etc.
-    await endChat(io, roomId, userId, astrologerId, chatType);
+    await endChat(io, roomId, userId, astrologerId);
 
     // Fetch the chat and chatRoom
     const chat = await Chat.findOne({ chatRoomId: roomId });
@@ -600,3 +643,135 @@ export async function handleEndChat(
     });
   }
 }
+
+export const checkChatRoomStatus = async (io) => {
+  // 1. Find all chat rooms with pending, active, or confirmed status
+  const chatRooms = await ChatRoom.find({
+    status: { $in: ["pending", "active", "confirmed"] },
+  })
+    .populate("user", "name socketId") // Get user name & socketId
+    .populate("astrologer", "name avatar pricePerChatMinute"); // Get astrologer details
+
+  const activeUserIds = new Set();
+
+  for (const chatRoom of chatRooms) {
+    const user = chatRoom.user;
+    const astrologer = chatRoom.astrologer;
+
+    // console.log({ chatRoom });
+
+    if (!user?.socketId) continue; // Skip if socketId is not available
+
+    activeUserIds.add(user._id.toString()); // Save active user IDs
+
+    // Format createdAt
+    const { formattedDate, formattedTime } = formatISTDateTime(
+      chatRoom.createdAt
+    );
+
+    // Safely format updatedAt with default values if it's missing
+    let formattedDate_updatedAt = "N/A";
+    let formattedTime_updatedAt = "N/A";
+
+    if (chatRoom.updatedAt) {
+      const updatedAt = formatISTDateTime(chatRoom.updatedAt);
+      formattedDate_updatedAt = updatedAt.formattedDate;
+      formattedTime_updatedAt = updatedAt.formattedTime;
+    }
+
+    const response = {
+      chatRoomId: chatRoom._id,
+      chatType: chatRoom.chatType,
+      createdAt: { date: formattedDate, time: formattedTime },
+      updatedAt: {
+        date: formattedDate_updatedAt,
+        time: formattedTime_updatedAt,
+      },
+      status: chatRoom.status,
+      user: {
+        _id: user._id,
+        name: user.name,
+      },
+      astrologer: {
+        _id: astrologer._id,
+        name: astrologer.name,
+        avatar: astrologer.avatar,
+        consultation_rate: astrologer.pricePerChatMinute,
+      },
+    };
+    // console.log({ response });
+    // Emit chatRoomStatusUpdate event to users involved in chatRooms
+    io.to(user.socketId).emit("chatRoomStatusUpdate", response);
+  }
+
+  // 2. Find users who are NOT part of any active/pending chat rooms
+  const usersWithoutChatRooms = await User.find({
+    _id: { $nin: Array.from(activeUserIds) },
+    socketId: { $exists: true, $ne: null },
+  }).select("socketId");
+
+  for (const user of usersWithoutChatRooms) {
+    if (user.socketId) {
+      // console.log(`Sending noChatResponse to socket: ${user.socketId}`);
+      io.to(user.socketId).emit("noChatResponse", { response: false });
+    }
+  }
+};
+
+export const getChatHistoryFromDatabase = async (
+  chatRoomId,
+  senderType,
+  astrologerId,
+  userId,
+  io
+) => {
+  try {
+    // Fetch chat history sorted by createdAt
+    const chatHistory = await Chat.find({ chatRoomId }).sort({ createdAt: -1 });
+
+    // If chatHistory is empty, return early
+    if (!chatHistory || chatHistory.length === 0) {
+      throw new Error("No chat history found");
+    }
+
+    // Extract messages from the first chat history object
+    let messagesArr = chatHistory[0].messages;
+    let duration = chatHistory[0].duration;
+
+    // Fetch socketIds for astrologer and user
+    const astrologer = await Astrologer.findById(astrologerId);
+    const user = await User.findById(userId);
+
+    if (!astrologer || !user) {
+      throw new Error("Astrologer or User not found");
+    }
+
+    const astrologerSocketId = astrologer.socketId;
+    const userSocketId = user.socketId;
+
+    // Add recipientId to each message if sender is astrologer
+    if (senderType === "astrologer") {
+      messagesArr = messagesArr.map((msg) => ({
+        ...(msg.toObject?.() ?? msg), // handle Mongoose documents
+        recipientId: userId,
+      }));
+
+      console.log({ messagesArr, chatHistory, astrologerSocketId });
+
+      io.to(astrologerSocketId).emit("chat_history", {
+        messagesArr,
+        chatRoomId,
+        duration,
+      });
+    } else {
+      io.to(userSocketId).emit("chat_history", {
+        messagesArr,
+        chatRoomId,
+        duration,
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching chat history:", error);
+    throw new Error("Could not fetch chat history");
+  }
+};

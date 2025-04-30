@@ -99,6 +99,8 @@ export const getActiveById = async (req, res) => {
           isUserJoined: 1,
           chatRoomId: 1,
           createdAt: 1,
+          updatedAt: 1,
+          rejectedBy: 1,
           isAstrologerJoined: 1,
           avatar: { $arrayElemAt: ["$userDetails.photo", 0] },
           username: {

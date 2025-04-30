@@ -72,8 +72,7 @@ export const getAstrologerById = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "Astrologer not found" });
     }
 
-console.log({astrologer})
-console.log({astrologerId})
+
 
     // Fetch reviews for this astrologer and populate the user's name
     const reviews = await Review.find({ astrologerId })

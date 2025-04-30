@@ -21,7 +21,7 @@ export const findWalletByUserId = async (req, res) => {
     } else {
       const result = await Wallet.find({
         astrologer_id: user_id,
-      });
+      }).sort({ created_at: -1 }); // -1 for descending (newest first)
 
       if (result.length === 0) {
         return res.status(404).json({ message: "No records found" });

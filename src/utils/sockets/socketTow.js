@@ -8,6 +8,8 @@ import {
   handleChatMessage,
   handleEndChat,
   handleAstrologerResponse,
+  checkChatRoomStatus,
+  getChatHistoryFromDatabase,
 } from "../../controller/chatController/controller.js";
 import sendPushNotification from "../One_Signal/onesignal.js";
 import {
@@ -19,7 +21,7 @@ import {
 export const setupSocketIO = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: "http://localhost:3000", // Replace with your frontend's URL
+      origin: "*", // Replace with your frontend's URL
       methods: ["GET", "POST", "PATCH", "DELETE"], // Allowed HTTP methods
       allowedHeaders: ["Content-Type"], // Allowed headers
       credentials: true, // Enable credentials
@@ -135,6 +137,7 @@ export const setupSocketIO = (server) => {
       "astrologer_response",
       async ({ chatRoomId, userId, astrologerId, response }) => {
         if (!chatRoomId || !userId || !astrologerId || !response) {
+          console.log({ chatRoomId, userId, astrologerId, response });
           console.error("Invalid data for astrologer_response");
           socket.emit("error", {
             message: "Invalid data for astrologer response",
@@ -168,13 +171,13 @@ export const setupSocketIO = (server) => {
           return;
         }
         try {
-          // console.log(
-          //   "User response:",
-          //   chatRoomId,
-          //   userId,
-          //   response,
-          //   astrologerId
-          // );
+          console.log(
+            "User response:",
+            chatRoomId,
+            userId,
+            response,
+            astrologerId
+          );
           await handleUserResponse(
             io,
             chatRoomId,
@@ -238,6 +241,27 @@ export const setupSocketIO = (server) => {
       }
     });
 
+    //fetch chat history for active chats
+    // Node.js with Socket.io
+    socket.on("getChatHistory", async (data) => {
+      const { chatRoomId, userId, astrologerId, senderType } = data;
+      console.log({ chatRoomId, userId, astrologerId, senderType });
+      try {
+        // Query your database for chat history based on chatRoomId
+        await getChatHistoryFromDatabase(
+          chatRoomId,
+          senderType,
+          astrologerId,
+          userId,
+          io
+        );
+      } catch (error) {
+        console.error("Error fetching chat history:", error);
+      }
+
+      // Emit the chat history back to the client
+    });
+
     // Handle astrologer availability
     socket.on("astrologer_available", async ({ astrologerId }) => {
       try {
@@ -250,7 +274,7 @@ export const setupSocketIO = (server) => {
     // Handle ending chat
     socket.on(
       "end_chat",
-      async ({ roomId, userId, astrologerId, chatType, sender }) => {
+      async ({ roomId, userId, astrologerId, sender }) => {
         // console.log(
         //   "End chat request:",
         //   roomId,
@@ -259,7 +283,7 @@ export const setupSocketIO = (server) => {
         //   chatType,
         //   sender
         // );
-        if (!roomId || !userId || !astrologerId || !chatType || !sender) {
+        if (!roomId || !userId || !astrologerId ||   !sender) {
           console.error("Invalid data for end_chat");
           socket.emit("chat-error", {
             message: "Invalid data for ending chat",
@@ -272,7 +296,7 @@ export const setupSocketIO = (server) => {
             roomId,
             userId,
             astrologerId,
-            chatType,
+            
             sender
           );
         } catch (error) {
@@ -293,6 +317,11 @@ export const setupSocketIO = (server) => {
       }
     });
   });
+
+  setInterval(() => {
+    console.log("hello");
+    checkChatRoomStatus(io);
+  }, 5000);
 
   return io;
 };
