@@ -132,11 +132,16 @@ export async function handleChatRequest(io, userId, astrologerId, chatType) {
         message: "You have a new chat request. Please respond within 5 min.",
       });
     }
-
+    const userPlayerId = user?.playerId;
     if (userSocketId) {
-      io.to(userSocketId).emit("chat_request_sent", {
-        message: "Request sent to astrologer. Please wait for the response.",
-      });
+      const title = "Chat Request Sent";
+      const message = "Your chat request has been sent successfully.";
+      await sendPushNotification(
+        userId,
+        title,
+        message,
+        userPlayerId // Ensure the playerId is passed for reliable delivery
+      );
     }
 
     // Optional notifications can be added back here
@@ -202,6 +207,15 @@ export async function handleAstrologerResponse(
 
       // Notify user
       if (userSocketId) {
+        const userPlayerId = user?.playerId;
+        const title = "Chat Request Accepted";
+        const message = "Your chat request has been Accepted.";
+        await sendPushNotification(
+          userId,
+          title,
+          message,
+          userPlayerId // Ensure the playerId is passed for reliable delivery
+        );
         io.to(userSocketId).emit("astrologer_confirmed", {
           chatRoomId,
           userId,

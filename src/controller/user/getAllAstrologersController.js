@@ -26,7 +26,7 @@ export const getAllAstrologers = asyncHandler(async (req, res) => {
 
     // Get the astrologers with pagination
     const astrologers = await Astrologer.find({
-      status: { $in: ["available", "busy"] }, // Only find astrologers with these statuses
+      status: { $in: ["available", "busy", "offline"] }, // Only find astrologers with these statuses
     })
       .skip((pageNumber - 1) * pageSize) // Skip the documents for the current page
       .limit(pageSize); // Limit the results to the page size
@@ -125,3 +125,63 @@ export const getActiveById = async (req, res) => {
       .json(new ApiResponse(500, {}, "Server error. Please try again later."));
   }
 };
+
+export const getAllAstrologersByCategory = asyncHandler(async (req, res) => {
+  const { categoryId } = req.body;
+
+  // Validate categoryId exists
+  if (!categoryId) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Category ID is required."));
+  }
+
+  // Validate categoryId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Invalid Category ID format."));
+  }
+
+  try {
+    // Find astrologers where the category array contains the requested categoryId
+    const astrologers = await Astrologer.find({
+      "category": new mongoose.Types.ObjectId(categoryId), // Updated to match your document structure
+    }).select("-password -refreshToken"); // Exclude sensitive fields
+
+    // If no astrologers are found
+    if (!astrologers || astrologers.length === 0) {
+      return res
+        .status(200) // Changed from 404 to 200 with empty array
+        .json(
+          new ApiResponse(
+            200,
+            { astrologers: [] },
+            "No astrologers found for this category."
+          )
+        );
+    }
+
+    // Respond with success and the filtered astrologers
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          astrologers, // Removed pagination fields since you don't need them
+        },
+        "Astrologers fetched successfully by category."
+      )
+    );
+  } catch (error) {
+    console.error("Error while fetching astrologers by category:", error);
+    return res
+      .status(500)
+      .json(
+        new ApiResponse(
+          500,
+          null,
+          "Server error while fetching astrologers by category."
+        )
+      );
+  }
+});

@@ -119,6 +119,7 @@ export const setupSocketIO = (server) => {
     // Handle user requesting a chat with an astrologer
     socket.on("request_chat", async ({ userId, astrologerId, chatType }) => {
       if (!userId || !astrologerId || !chatType) {
+        console.log({ userId, astrologerId, chatType });
         console.error("Invalid data for request_chat");
         socket.emit("error", { message: "Invalid data for chat request" });
         return;
@@ -272,39 +273,36 @@ export const setupSocketIO = (server) => {
     });
 
     // Handle ending chat
-    socket.on(
-      "end_chat",
-      async ({ roomId, userId, astrologerId, sender }) => {
-        // console.log(
-        //   "End chat request:",
-        //   roomId,
-        //   userId,
-        //   astrologerId,
-        //   chatType,
-        //   sender
-        // );
-        if (!roomId || !userId || !astrologerId ||   !sender) {
-          console.error("Invalid data for end_chat");
-          socket.emit("chat-error", {
-            message: "Invalid data for ending chat",
-          });
-          return;
-        }
-        try {
-          await handleEndChat(
-            io,
-            roomId,
-            userId,
-            astrologerId,
-            
-            sender
-          );
-        } catch (error) {
-          console.error("Error ending chat:", error);
-          socket.emit("chat-error", { message: "Failed to end chat session" });
-        }
+    socket.on("end_chat", async ({ roomId, userId, astrologerId, sender }) => {
+      // console.log(
+      //   "End chat request:",
+      //   roomId,
+      //   userId,
+      //   astrologerId,
+      //   chatType,
+      //   sender
+      // );
+      if (!roomId || !userId || !astrologerId || !sender) {
+        console.error("Invalid data for end_chat");
+        socket.emit("chat-error", {
+          message: "Invalid data for ending chat",
+        });
+        return;
       }
-    );
+      try {
+        await handleEndChat(
+          io,
+          roomId,
+          userId,
+          astrologerId,
+
+          sender
+        );
+      } catch (error) {
+        console.error("Error ending chat:", error);
+        socket.emit("chat-error", { message: "Failed to end chat session" });
+      }
+    });
 
     // Cleanup on disconnect
     socket.on("disconnect", async () => {

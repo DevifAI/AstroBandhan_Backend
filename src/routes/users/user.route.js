@@ -8,7 +8,7 @@ import {
   updateUserById,
 } from "../../controller/user/userController.js";
 import { addReview } from "../../controller/user/addReviewController.js";
-import { getAllAstrologers } from "../../controller/user/getAllAstrologersController.js";
+import { getAllAstrologers, getAllAstrologersByCategory } from "../../controller/user/getAllAstrologersController.js";
 import {
   forgetPassword,
   updatePassword_user,
@@ -75,6 +75,7 @@ router.route("/changepassword/:userId").post(changePassword);
 router.route("/login").post(userLogin);
 router.route("/addreview").post(addReview);
 router.route("/getAstrologer").get(getAllAstrologers);
+router.route("/getAstrologer/by/category").post(getAllAstrologersByCategory);
 router.route("/get/userDetails").get(getuserById);
 router.route("/update/user").patch(updateUserById);
 router.post("/send/otp", forgetPassword);
