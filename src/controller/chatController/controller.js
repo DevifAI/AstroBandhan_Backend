@@ -83,23 +83,37 @@ export async function handleChatRequest(io, userId, astrologerId, chatType) {
 
     const existingChatRoom = await ChatRoom.findOne({
       user: userId,
-      astrologer: astrologerId,
-      status: "pending",
+      status: { $in: ["confirmed", "pending"] },
+    });
+
+    const userOnChatRoom = await ChatRoom.findOne({
+      user: userId,
+      status: { $in: ["active"] },
     });
 
     const onChatSession = await ChatRoom.findOne({
       astrologer: astrologerId,
-      status: { $in: ["active", "confirmed"] },
+      status: { $in: ["active", "confirmed", "pending"] },
     });
 
     // console.log({ existingChatRoom, onChatSession });
 
+    if (userOnChatRoom) {
+      console.log("Pending chat request exists:", existingChatRoom._id);
+      if (userSocketId) {
+        io.to(userSocketId).emit("chat_request_failed", {
+          message:
+            "You are already in a consultation session. Please end the current session to start a new one.",
+        });
+      }
+      return;
+    }
     if (existingChatRoom) {
       console.log("Pending chat request exists:", existingChatRoom._id);
       if (userSocketId) {
         io.to(userSocketId).emit("chat_request_failed", {
           message:
-            "You have already sent a request. The astrologer will connect with you soon.",
+            "You have already sent a request. Please cancel the old request.",
         });
       }
       return;
@@ -734,8 +748,6 @@ export async function handleEndChat(
       chat.duration = `${durationMins} minutes`;
     }
 
-    await chat.save();
-
     // Set astrologer status
     const astrologer = await Astrologer.findById(astrologerId);
     if (!astrologer) {
@@ -753,10 +765,32 @@ export async function handleEndChat(
     chatRoom.endedBy = sender;
     await chatRoom.save();
 
+    const systemMessage = {
+      senderType: "system",
+      messageType: "text",
+      message: `${sender === "user" ? "The user" : "The astrologer"} has exited the chat.`,
+    };
+
+    if (chat) {
+      chat.messages.push(systemMessage, userIntroMessage);
+    } else {
+      const chatRoomId = chatRoom._id || roomId; // Use chatRoom._id if available
+      chat = new Chat({
+        chatRoomId,
+        participants: {
+          user: userId,
+          astrologer: astrologerId,
+        },
+        messages: [systemMessage],
+      });
+    }
+
+    await chat.save();
+
     // Get socket IDs
     const user = await User.findById(userId);
     const payload = {
-      message: "Chat session ended successfully.",
+      message: "Chat session ended .",
       endedBy: sender,
       duration: chat.duration || "Unknown",
     };
