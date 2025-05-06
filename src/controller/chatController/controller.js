@@ -225,6 +225,62 @@ export async function handleAstrologerResponse(
         });
       }
 
+      // Add system message to chat collection
+      const fullUser = await User.findById(userId).lean();
+      const name = fullUser?.name || "User";
+      const gender = fullUser?.gender;
+      const dateOfBirth = fullUser?.dateOfBirth;
+      const timeOfBirth = fullUser?.timeOfBirth;
+      const placeOfBirth = fullUser?.placeOfBirth;
+
+      // Build message only with available fields
+      let introMessage = `Hi, I am ${name}.`;
+
+      if (gender) {
+        introMessage += ` My gender is ${gender}.`;
+      }
+      if (dateOfBirth) {
+        const formattedDOB = moment(dateOfBirth).format("DD MMM YYYY");
+        introMessage += ` My date of birth is ${formattedDOB}.`;
+      }
+      if (timeOfBirth) {
+        introMessage += ` My time of birth is ${timeOfBirth}.`;
+      }
+      if (placeOfBirth) {
+        introMessage += ` My place of birth is ${placeOfBirth}.`;
+      }
+
+      // Create system message (astrologer joined)
+      const systemMessage = {
+        senderType: "system",
+        messageType: "text",
+        message: "Astrologer has joined the chat.",
+      };
+
+      // Create user introduction message
+      const userIntroMessage = {
+        senderType: "user",
+        senderId: userId.toString(),
+        messageType: "text",
+        message: introMessage,
+      };
+
+      let chat = await Chat.findOne({ chatRoomId });
+
+      if (chat) {
+        chat.messages.push(systemMessage, userIntroMessage);
+      } else {
+        chat = new Chat({
+          chatRoomId,
+          participants: {
+            user: userId,
+            astrologer: astrologerId,
+          },
+          messages: [systemMessage, userIntroMessage],
+        });
+      }
+
+      await chat.save();
       // Start a timeout for 1 minute (60,000 ms)
       setTimeout(async () => {
         const updatedChatRoom = await ChatRoom.findById(chatRoomId);
@@ -263,6 +319,16 @@ export async function handleAstrologerResponse(
       });
 
       if (userSocketId) {
+        const title = "Chat Request Rejected";
+        const message =
+          "Your chat request has been rejected by the astrologer. Please try again later.";
+        const userPlayerId = user?.playerId;
+        await sendPushNotification(
+          userId,
+          title,
+          message,
+          userPlayerId // Ensure the playerId is passed for reliable delivery
+        );
         io.to(userSocketId).emit("chat_request_cancelled", {
           message: "The astrologer has rejected your chat request.",
         });
@@ -377,6 +443,31 @@ export async function handleUserResponse(
         astrologer: astrologerId,
       });
 
+      const systemMessage = {
+        senderType: "system",
+        messageType: "text",
+        message: "User has joined the chat.",
+      };
+
+      // Create user introduction message
+
+      let chat = await Chat.findOne({ chatRoomId });
+
+      if (chat) {
+        chat.messages.push(systemMessage);
+      } else {
+        chat = new Chat({
+          chatRoomId,
+          participants: {
+            user: userId,
+            astrologer: astrologerId,
+          },
+          messages: [systemMessage],
+        });
+      }
+
+      await chat.save();
+
       // Notify both sides
       if (astrologerSocketId) {
         io.to(astrologerSocketId).emit("chat_started", {
@@ -385,12 +476,12 @@ export async function handleUserResponse(
         });
       }
 
-      if (userSocketId) {
-        io.to(userSocketId).emit("chat_accepted", {
-          chatRoomId,
-          message: "Chat started successfully.",
-        });
-      }
+      // if (userSocketId) {
+      //   io.to(userSocketId).emit("chat_accepted", {
+      //     chatRoomId,
+      //     message: "Chat started successfully.",
+      //   });
+      // }
 
       // Start the chat session
       await startChat(io, chatRoomId, chatRoom.chatType, userId, astrologerId);
@@ -550,13 +641,38 @@ const processMessage = async (data, io) => {
 
     // Get recipient socket
     let recipient;
+    // Ensure recipient is fetched correctly based on the type
+
     if (recipientType === "user") {
+      // Find user by ID
       recipient = await User.findById(resolvedRecipientId);
-    } else {
+
+      // Check if the user is not on the app
+      if (recipient && recipient.isOnApp === false) {
+        const title = "Message Received";
+        const message = "You have received a new message.";
+
+        // Ensure the recipient has a playerId for push notification
+        if (recipient.playerId) {
+          await sendPushNotification(
+            recipient._id,
+            title,
+            message,
+            recipient.playerId // Send push notification if playerId exists
+          );
+        } else {
+          console.log("User does not have a playerId for push notification.");
+        }
+      }
+    } else if (recipientType === "astrologer") {
+      // If recipientType is "astrologer", find the astrologer by ID
       recipient = await Astrologer.findById(resolvedRecipientId);
+    } else {
+      console.log("Invalid recipient type.");
     }
 
     if (recipient?.socketId) {
+      console.log("sending message to recipient socketId:", recipient.socketId);
       io.to(recipient.socketId).emit("received-message", {
         ...newMessage,
         chatRoomId,

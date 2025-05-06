@@ -274,14 +274,13 @@ export const setupSocketIO = (server) => {
 
     // Handle ending chat
     socket.on("end_chat", async ({ roomId, userId, astrologerId, sender }) => {
-      // console.log(
-      //   "End chat request:",
-      //   roomId,
-      //   userId,
-      //   astrologerId,
-      //   chatType,
-      //   sender
-      // );
+      console.log(
+        "End chat request:",
+        roomId,
+        userId,
+        astrologerId,
+        sender
+      );
       if (!roomId || !userId || !astrologerId || !sender) {
         console.error("Invalid data for end_chat");
         socket.emit("chat-error", {
