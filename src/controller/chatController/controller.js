@@ -206,6 +206,7 @@ export async function handleAstrologerResponse(
     }
 
     if (response === "confirm") {
+      console.log("response", response);
       if (chatRoom.status !== "pending") {
         if (astrologerSocketId) {
           io.to(astrologerSocketId).emit("chat_request_failed", {
@@ -231,6 +232,13 @@ export async function handleAstrologerResponse(
           userPlayerId // Ensure the playerId is passed for reliable delivery
         );
         io.to(userSocketId).emit("astrologer_confirmed", {
+          chatRoomId,
+          userId,
+          astrologerId,
+          message:
+            "Astrologer is ready to join. Do you want to start the chat?",
+        });
+        io.to(astrologerSocketId).emit("astrologer_confirmed", {
           chatRoomId,
           userId,
           astrologerId,
