@@ -1,5 +1,5 @@
 import express from 'express';
-import { astrologerLogin, changePassword, forgetPassword, updatePassword, validateOtp } from '../../controller/astrologer/astrologerAuthController.js';
+import { astrologerLogin, astrologerLogout, changePassword, forgetPassword, updatePassword, validateOtp } from '../../controller/astrologer/astrologerAuthController.js';
 import { editProfilePhoto } from '../../controller/admin/editAstrologerProfilePhoto.js';
 import { upload } from '../../middlewares/multer.middlewre.js';
 import { addPendingAstrologerRequest, deletePendingAstrologerRequestById } from '../../controller/astrologer/createPendingRequest.js';
@@ -7,12 +7,14 @@ import { update_availability } from '../../controller/astrologer/updateAvailabil
 import { getActiveById } from '../../controller/user/getAllAstrologersController.js';
 import { getAstrologerById, toggle_Offline_Online, updateAstrologerById } from '../../controller/astrologer/AstrologerController.js';
 import { createWithdrawalRequest, getAllWithdrawalRequests } from '../../controller/astrologer/withdrawl.js';
+import { authenticateAstrologer } from '../../middlewares/auth.middleware.js';
 
 
 const router = express.Router();
 
 
 router.post('/login', astrologerLogin);
+router.post('/logout', authenticateAstrologer, astrologerLogout);
 router.get('/profile/:astrologerId', getAstrologerById);
 router.patch('/update/profile/:astrologerId', updateAstrologerById);
 router.post('/changePassword/:astrologerId', changePassword);

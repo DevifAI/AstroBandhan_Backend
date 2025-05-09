@@ -57,7 +57,8 @@ const server = http.createServer(app);
 setupSocketIO(server); // This initializes the socket.io server
 
 // Start the server on port 6000
-const PORT = 8000; // Default to 6000 if not provided
+// const PORT = 8000;
+const PORT = 8080;
 server.listen(PORT, () => {
   const wsUrl = `ws://localhost:${PORT}`; // WebSocket URL for testing
   console.log(`AstroBandhan is running on http://localhost:${PORT}`);
