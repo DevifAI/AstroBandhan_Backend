@@ -34,7 +34,7 @@
     "geolib": "^3.3.4",
     "jsonwebtoken": "^9.0.2",
     "moment-timezone": "^0.5.46",
-    "mongoose": "^8.1.1",
+    "mongoose": "^8.9.5",
     "mongoose-aggregate-paginate-v2": "^1.0.7",
     "multer": "^1.4.5-lts.1",
     "onesignal-node": "^3.4.0",
