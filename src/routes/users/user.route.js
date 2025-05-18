@@ -6,9 +6,13 @@ import {
   validateloginOtp,
   getuserById,
   updateUserById,
+  starCall,
 } from "../../controller/user/userController.js";
 import { addReview } from "../../controller/user/addReviewController.js";
-import { getAllAstrologers, getAllAstrologersByCategory } from "../../controller/user/getAllAstrologersController.js";
+import {
+  getAllAstrologers,
+  getAllAstrologersByCategory,
+} from "../../controller/user/getAllAstrologersController.js";
 import {
   forgetPassword,
   updatePassword_user,
@@ -122,6 +126,7 @@ router.post("/get/video/history", findVideo_Call_Transaction_ByUserId);
 router.post("/get/call/history", findCall_Transaction_ByUserId);
 router.post("/get/chat/history", findChat_Transaction_ByUserId);
 router.post("/get/chatroom", fetchChatRoom_forUser);
+router.post("/agora-token", starCall);
 
 // new routes
 router.post("/send/gift", sendGift_To_Astrologer);

@@ -8,6 +8,8 @@ import { validateOTP } from "../../utils/validateOtp.js";
 import { Astrologer } from "../../models/astrologer.model.js";
 import { uploadOnCloudinary } from "../../middlewares/cloudinary.setup.js";
 import fs from "fs";
+import AgoraAccessToken from "agora-access-token";
+import { startCall } from "./callController.js";
 
 export const registerUser = asyncHandler(async (req, res) => {
   try {
@@ -587,6 +589,45 @@ export const updateUserById = async (req, res) => {
   } catch (error) {
     console.error(error);
     res
+      .status(500)
+      .json(new ApiResponse(500, {}, "Server error. Please try again later."));
+  }
+};
+
+export const starCall = async (req, res) => {
+  try {
+    const { channelName, uid, userId, astrologerId } = req.body;
+
+    if (!channelName || uid === undefined) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, {}, "channelName and uid are required."));
+    }
+    const user = await User.findById(userId);
+    const astrologer = await Astrologer.findById(astrologerId);
+    const role = AgoraAccessToken.RtcRole.PUBLISHER;
+    const expireTimeInSeconds = 3600;
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const privilegeExpiredTs = currentTimestamp + expireTimeInSeconds;
+    const AGORA_APP_ID = process.env.AGORAAPPID;
+    const AGORA_APP_CERTIFICATE = process.env.AGORACERTIFICATE;
+    const token = AgoraAccessToken.RtcTokenBuilder.buildTokenWithUid(
+      AGORA_APP_ID,
+      AGORA_APP_CERTIFICATE,
+      channelName,
+      parseInt(uid),
+      role,
+      privilegeExpiredTs
+    );
+    console.log({ token });
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, { token }, "Agora token generated successfully.")
+      );
+  } catch (error) {
+    console.error(error);
+    return res
       .status(500)
       .json(new ApiResponse(500, {}, "Server error. Please try again later."));
   }

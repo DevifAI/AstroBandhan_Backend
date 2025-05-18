@@ -10,6 +10,7 @@ import {
   handleAstrologerResponse,
   checkChatRoomStatus,
   getChatHistoryFromDatabase,
+  handleCallRequest,
 } from "../../controller/chatController/controller.js";
 import sendPushNotification from "../One_Signal/onesignal.js";
 import {
@@ -17,6 +18,7 @@ import {
   storePlayerIdForUser,
   updateUserActivityStatus,
 } from "../../controller/user/oneSignal/OneSignalController.js";
+import { startCall } from "../../controller/user/callController.js";
 
 export const setupSocketIO = (server) => {
   const io = new Server(server, {
@@ -274,13 +276,7 @@ export const setupSocketIO = (server) => {
 
     // Handle ending chat
     socket.on("end_chat", async ({ roomId, userId, astrologerId, sender }) => {
-      console.log(
-        "End chat request:",
-        roomId,
-        userId,
-        astrologerId,
-        sender
-      );
+      console.log("End chat request:", roomId, userId, astrologerId, sender);
       if (!roomId || !userId || !astrologerId || !sender) {
         console.error("Invalid data for end_chat");
         socket.emit("chat-error", {
@@ -301,6 +297,86 @@ export const setupSocketIO = (server) => {
         console.error("Error ending chat:", error);
         socket.emit("chat-error", { message: "Failed to end chat session" });
       }
+    });
+
+    //handle user initialize call
+    socket.on("call_initialize", async ({ userId, payload, token }) => {
+      try {
+        if (!payload?.userId || !payload?.astrologerId || !token) {
+          console.error("Missing userId, astrologerId, or token");
+          socket.emit("error", { message: "Missing required data" });
+          return;
+        }
+
+        // Fetch user
+        const user = await User.findById(payload?.userId);
+        if (!user) {
+          console.error(`User not found: ${payload?.userId}`);
+          socket.emit("error", { message: "User not found" });
+          return;
+        }
+
+        // Fetch astrologer
+        const astrologer = await Astrologer.findById(payload.astrologerId);
+        if (!astrologer) {
+          console.error(`Astrologer not found: ${payload.astrologerId}`);
+          socket.emit("error", { message: "Astrologer not found" });
+          return;
+        }
+
+        // Optional: Update astrologer's socket ID if not already updated
+
+        // Prepare call payload
+        const callData = {
+          channelName: payload.channelName.toString(),
+          token: token,
+          name: user.name,
+          userId: payload?.userId,
+          avatar: user.photo,
+          publisherUid: payload.uid,
+          astrologerId: payload.astrologerId,
+          callType: "audio",
+        };
+        const astrologerSocketId = astrologer.socketId;
+
+        handleCallRequest(callData, astrologerSocketId, io);
+
+        // Emit incoming call to astrologer's socket
+        // io.to(astrologer.socketId).emit("incoming_call", callData);
+        // io.to(astrologer.socketId).emit("startaudiocall", callData);
+        console.log(`Incoming call sent to astrologer ${astrologer._id}`);
+      } catch (error) {
+        console.error("Error handling call_initialize:", error);
+        socket.emit("error", {
+          message: "Failed to process call initialization",
+        });
+      }
+    });
+
+    socket.on("call_response_accept", async (data) => {
+      if (!data) {
+        console.error("Invalid data for call_response");
+        socket.emit("error", { message: "Invalid data for call response" });
+        return;
+      }
+      const {
+        channelName,
+        userId,
+        astrologerId,
+        publisherUid,
+        joinedId,
+        token,
+      } = data;
+      const res = startCall(
+        userId,
+        astrologerId,
+        channleid,
+        publisherUid,
+        JoinedId,
+        callType,
+        token
+      );
+      console.log({ res });
     });
 
     // Cleanup on disconnect

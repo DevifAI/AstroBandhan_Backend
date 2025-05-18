@@ -952,3 +952,33 @@ export const getChatHistoryFromDatabase = async (
     throw new Error("Could not fetch chat history");
   }
 };
+
+export async function handleCallRequest(callData, astrologerSocketId, io) {
+  console.log({ callData });
+
+  try {
+    // Ensure astrologerSocketId exists
+    if (astrologerSocketId) {
+      // Emit the 'incoming_call' event to the specified astrologer's socket ID
+      io.to(astrologerSocketId).emit(
+        "incoming_call",
+
+        callData,
+
+        (response) => {
+          console.log("✅ Event emitted successfully:", response);
+        }
+      );
+
+      console.log(
+        `✅ Sent incoming call to astrologer with socketId: ${astrologerSocketId}`
+      );
+    } else {
+      console.error(
+        "❌ No astrologerSocketId provided. Cannot send incoming call."
+      );
+    }
+  } catch (error) {
+    console.error("❌ Error in handleCallRequest:", error);
+  }
+}

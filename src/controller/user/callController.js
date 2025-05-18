@@ -238,7 +238,7 @@ const stopRecording = async (resourceId, sid, channelName, recordingUID) => {
 
 // Function to start the call and record it
 export const startCall = async (payload) => {
-  const { userId, astrologerId, channleid, publisherUid, JoinedId, callType } =
+  const { userId, astrologerId, channleid, publisherUid, JoinedId, callType, token } =
     payload;
 
   try {
@@ -279,7 +279,7 @@ export const startCall = async (payload) => {
     await adminUser.save();
 
     const uid = Math.floor(Math.random() * 100000); // Random unique UID for the recording bot
-    const token = generateAgoraToken(channleid, uid);
+    // const token = generateAgoraToken(channleid, uid);
     const { resourceId } = await acquireRecordingResource(channleid, uid);
 
     const resCall = await startRecording_video(
