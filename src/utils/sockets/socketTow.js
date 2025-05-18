@@ -392,7 +392,7 @@ export const setupSocketIO = (server) => {
   });
 
   setInterval(() => {
-    console.log("hello");
+    // console.log("hello");
     checkChatRoomStatus(io);
   }, 5000);
 

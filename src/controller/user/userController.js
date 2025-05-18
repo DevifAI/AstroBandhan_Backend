@@ -137,7 +137,7 @@ export const registerUser = asyncHandler(async (req, res) => {
 export const userLogin = async (req, res) => {
   try {
     const { phone, password } = req.body;
-    console.log({ phone, password });
+    // console.log({ phone, password });
     // Check if both fields are provided
     if (!phone || !password) {
       return res
@@ -180,6 +180,7 @@ export const userLogin = async (req, res) => {
     const refreshToken = user.generateRefreshToken();
 
     // Save the refresh token to the database (optional but recommended)
+    user.accessToken = accessToken;
     user.refreshToken = refreshToken;
     user.photo = "https://www.google.com/";
 
@@ -221,6 +222,35 @@ export const userLogin = async (req, res) => {
       .json(new ApiResponse(500, {}, "Server error. Please try again later."));
   }
 };
+
+export const userLogout = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+      });
+    }
+
+    user.refreshToken = null;
+    user.accessToken = null;
+    await user.save();
+
+    return res.status(200).json({
+      message: "Logout successful",
+      success: true,
+    });
+  } catch (error) {
+    console.error("Logout error:", error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      success: false,
+    });
+  }
+});
 
 export const changePassword = async (req, res) => {
   try {

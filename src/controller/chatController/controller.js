@@ -498,13 +498,6 @@ export async function handleUserResponse(
         });
       }
 
-      // if (userSocketId) {
-      //   io.to(userSocketId).emit("chat_accepted", {
-      //     chatRoomId,
-      //     message: "Chat started successfully.",
-      //   });
-      // }
-
       // Start the chat session
       await startChat(io, chatRoomId, chatRoom.chatType, userId, astrologerId);
     } else {

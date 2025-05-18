@@ -89,6 +89,7 @@ const astrologerSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Language",
     },
+    accessToken: { type: String },
     refreshToken: { type: String },
   },
   { timestamps: true }

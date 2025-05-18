@@ -7,6 +7,8 @@ import {
   getuserById,
   updateUserById,
   starCall,
+  userLogout,
+
 } from "../../controller/user/userController.js";
 import { addReview } from "../../controller/user/addReviewController.js";
 import {
@@ -71,12 +73,14 @@ import {
   findWalletByUserId,
 } from "../../controller/user/transaction_history.js";
 import { sendGift_To_Astrologer } from "../../controller/user/gift/send_gift.controller.js";
+import { authenticateUser } from "../../middlewares/auth.middleware.js";
 
 const router = Router();
 
 router.route("/signup").post(registerUser);
 router.route("/changepassword/:userId").post(changePassword);
 router.route("/login").post(userLogin);
+router.route("/logout").post(authenticateUser, userLogout);
 router.route("/addreview").post(addReview);
 router.route("/getAstrologer").get(getAllAstrologers);
 router.route("/getAstrologer/by/category").post(getAllAstrologersByCategory);
