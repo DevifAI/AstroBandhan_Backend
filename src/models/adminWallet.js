@@ -30,7 +30,7 @@ const adminWalletSchema = new mongoose.Schema({
     },
     credit_type: {
         type: String,
-        enum: ['service_commission', 'wallet_recharge', 'payout_astrologer', 'call', 'chat'],
+        enum: ['service_commission', 'wallet_recharge', 'payout_astrologer', 'call', 'chat', "audio"],
         required: function () {
             return this.transaction_type === 'credit';
         },

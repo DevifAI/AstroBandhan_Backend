@@ -2,29 +2,23 @@ import express from "express";
 import http from "http";
 import cors from "cors";
 import errorHandler from "../src/middlewares/error.middleware.js";
+import { initializeAgenda } from "./utils/call/agenda.js"; // <-- Import initializeAgenda here
 
 // Initialize Express app
 const app = express();
 
 // CORS configuration
 const corsOptions = {
-  origin: '*', // Allow all origins; you can replace '*' with specific domains if needed
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed HTTP methods
-  allowedHeaders: ['Content-Type', 'Authorization'] // Specify allowed headers
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
-app.use(cors(corsOptions)); // Apply CORS middleware
-
-
-
-
-
-// Other middleware and route setup
+app.use(cors(corsOptions));
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 
-// Home route
 app.get("/", (req, res) => {
   res.send("Welcome To AstroBandhan...");
 });
@@ -42,27 +36,30 @@ import { setupSocketIO } from "./utils/sockets/socketTow.js";
 app.use("/astrobandhan/v1/user", userRouter);
 app.use("/astrobandhan/v1/admin", adminRouter);
 app.use("/astrobandhan/v1/astrologer", astrologerRouter);
-
 app.use("/astrobandhan/v1/productCategory", productCategoryRoutes);
 app.use("/astrobandhan/v1/product", productRoutes);
 app.use("/astrobandhan/v1/order", orderRoutes);
 
-// Error handling middleware
 app.use(errorHandler);
 
-// Create the HTTP server
 const server = http.createServer(app);
+setupSocketIO(server);
 
-// Initialize socket
-setupSocketIO(server); // This initializes the socket.io server
-
-// Start the server on port 6000
-// const PORT = 8000;
 const PORT = 8080;
-server.listen(PORT, () => {
-  const wsUrl = `ws://localhost:${PORT}`; // WebSocket URL for testing
-  console.log(`AstroBandhan is running on http://localhost:${PORT}`);
-  console.log(`WebSocket server is running at: ${wsUrl}`);
-});
+
+(async () => {
+  try {
+    await initializeAgenda(); // <-- Initialize Agenda here before starting the server
+    server.listen(PORT, "0.0.0.0", () => {
+      const localIp = "192.168.31.156";
+      const wsUrl = `ws://${localIp}:${PORT}`;
+      console.log(`AstroBandhan is running on http://${localIp}:${PORT}`);
+      console.log(`WebSocket server is running at: ${wsUrl}`);
+    });
+  } catch (error) {
+    console.error("Failed to initialize Agenda:", error);
+    process.exit(1);
+  }
+})();
 
 export { app };

@@ -953,15 +953,7 @@ export async function handleCallRequest(callData, astrologerSocketId, io) {
     // Ensure astrologerSocketId exists
     if (astrologerSocketId) {
       // Emit the 'incoming_call' event to the specified astrologer's socket ID
-      io.to(astrologerSocketId).emit(
-        "incoming_call",
-
-        callData,
-
-        (response) => {
-          console.log("✅ Event emitted successfully:", response);
-        }
-      );
+      io.to(astrologerSocketId).emit("incoming_call", callData);
 
       console.log(
         `✅ Sent incoming call to astrologer with socketId: ${astrologerSocketId}`

@@ -1,6 +1,8 @@
 import { Server } from "socket.io";
 import { User } from "../../models/user.model.js";
 import { Astrologer } from "../../models/astrologer.model.js";
+import mongoose from "mongoose";
+
 import {
   handleChatRequest,
   handleUserResponse,
@@ -18,7 +20,12 @@ import {
   storePlayerIdForUser,
   updateUserActivityStatus,
 } from "../../controller/user/oneSignal/OneSignalController.js";
-import { startCall } from "../../controller/user/callController.js";
+import {
+  endCallAndLogTransaction,
+  startCall,
+} from "../../controller/user/callController.js";
+import { generateAgoraToken } from "../call/generateToken.js";
+import Call from "../../models/call.model.js";
 
 export const setupSocketIO = (server) => {
   const io = new Server(server, {
@@ -300,84 +307,290 @@ export const setupSocketIO = (server) => {
     });
 
     //handle user initialize call
-    socket.on("call_initialize", async ({ userId, payload, token }) => {
+    socket.on("call_initialize", async ({ payload, token }) => {
       try {
+        // Validate input
         if (!payload?.userId || !payload?.astrologerId || !token) {
-          console.error("Missing userId, astrologerId, or token");
-          socket.emit("error", { message: "Missing required data" });
-          return;
+          throw new Error("Missing required fields");
         }
 
-        // Fetch user
-        const user = await User.findById(payload?.userId);
-        if (!user) {
-          console.error(`User not found: ${payload?.userId}`);
-          socket.emit("error", { message: "User not found" });
-          return;
+        // Fetch participants
+        const [user, astrologer] = await Promise.all([
+          User.findById(payload.userId),
+          Astrologer.findById(payload.astrologerId),
+        ]);
+
+        if (!user || !astrologer) {
+          throw new Error("User or astrologer not found");
         }
 
-        // Fetch astrologer
-        const astrologer = await Astrologer.findById(payload.astrologerId);
-        if (!astrologer) {
-          console.error(`Astrologer not found: ${payload.astrologerId}`);
-          socket.emit("error", { message: "Astrologer not found" });
-          return;
+        // Verify astrologer is available
+        if (astrologer.status !== "available") {
+          throw new Error(`Astrologer is ${astrologer.status}`);
         }
 
-        // Optional: Update astrologer's socket ID if not already updated
-
-        // Prepare call payload
+        // Generate unique channel name if not provided
+        const channelName =
+          payload.channelName || `${user._id}_${astrologer._id}_${Date.now()}`;
+        const astrologerUid = Math.floor(Math.random() * 100000) + 100000; // Ensure different UID
+        const astrologerToken = generateAgoraToken(channelName, astrologerUid);
+        // Prepare call data
         const callData = {
-          channelName: payload.channelName.toString(),
-          token: token,
+          channelName,
+          astrologerToken,
+          astrologerUid,
+          token,
           name: user.name,
-          userId: payload?.userId,
+          userId: user._id,
           avatar: user.photo,
-          publisherUid: payload.uid,
-          astrologerId: payload.astrologerId,
+          publisherUid: payload.uid || Math.floor(Math.random() * 100000),
+          astrologerId: astrologer._id,
           callType: "audio",
+          timestamp: new Date(),
         };
-        const astrologerSocketId = astrologer.socketId;
+        console.log({ channelName });
+        // Mark astrologer as busy
+        astrologer.status = "busy";
+        await astrologer.save();
 
-        handleCallRequest(callData, astrologerSocketId, io);
+        // Emit to astrologer
+        if (astrologer.socketId) {
+          io.to(astrologer.socketId).emit("incoming_call", callData);
+          console.log(`Call initiated to astrologer ${astrologer._id}`);
+        } else {
+          throw new Error("Astrologer not connected");
+        }
 
-        // Emit incoming call to astrologer's socket
-        // io.to(astrologer.socketId).emit("incoming_call", callData);
-        // io.to(astrologer.socketId).emit("startaudiocall", callData);
-        console.log(`Incoming call sent to astrologer ${astrologer._id}`);
+        // Set timeout for no response
+        const timeoutId = setTimeout(async () => {
+          try {
+            const freshAstro = await Astrologer.findById(astrologer._id);
+            if (freshAstro && freshAstro.status === "busy") {
+              freshAstro.status = "available";
+              await freshAstro.save();
+
+              if (astrologer.socketId) {
+                io.to(astrologer.socketId).emit("call_timeout");
+              }
+            }
+          } catch (err) {
+            console.error("Error in call timeout handler:", err);
+          }
+        }, 30000);
+
+        // Store timeout ID so we can clear it if call is accepted
+        socket.timeoutIds = socket.timeoutIds || {};
+        socket.timeoutIds[astrologer._id] = timeoutId;
       } catch (error) {
-        console.error("Error handling call_initialize:", error);
-        socket.emit("error", {
-          message: "Failed to process call initialization",
+        console.error("Call initialization failed:", error);
+        socket.emit("call_error", {
+          message: error.message,
+          code: "INIT_FAILED",
         });
       }
     });
 
-    socket.on("call_response_accept", async (data) => {
-      if (!data) {
-        console.error("Invalid data for call_response");
-        socket.emit("error", { message: "Invalid data for call response" });
-        return;
+    // Handle call rejection from either user or astrologer
+    socket.on("call_rejected", async ({ astrologerId, userId, rejectedBy }) => {
+      console.log({ astrologerId, userId, rejectedBy });
+      console.log("SAdsadsadsadsadsa");
+      try {
+        // Validate input
+        if (!astrologerId || !rejectedBy) {
+          throw new Error("Missing required fields");
+        }
+
+        // Fetch astrologer
+        const astrologer = await Astrologer.findById(astrologerId);
+        if (!astrologer) {
+          throw new Error("Astrologer not found");
+        }
+
+        // Only update status if astrologer is busy
+        if (astrologer.status === "busy") {
+          astrologer.status = "available";
+          await astrologer.save();
+        }
+
+        // Clear the timeout if it exists
+        if (socket.timeoutIds && socket.timeoutIds[astrologerId]) {
+          clearTimeout(socket.timeoutIds[astrologerId]);
+          delete socket.timeoutIds[astrologerId];
+        }
+
+        // Notify the other party about the rejection
+        if (rejectedBy === "user" && astrologer.socketId) {
+          io.to(astrologer.socketId).emit("call_rejected_by_user", {
+            astrologerId,
+            userId,
+          });
+        } else if (rejectedBy === "astrologer" && userId) {
+          const user = await User.findById(userId);
+          if (user?.socketId) {
+            io.to(user.socketId).emit("call_rejected_by_astrologer", {
+              astrologerId,
+              userId,
+            });
+          }
+        }
+
+        console.log(`Call rejected by ${rejectedBy}`, { astrologerId, userId });
+      } catch (error) {
+        console.error("Error handling call rejection:", error);
       }
-      const {
-        channelName,
-        userId,
-        astrologerId,
-        publisherUid,
-        joinedId,
-        token,
-      } = data;
-      const res = startCall(
-        userId,
-        astrologerId,
-        channleid,
-        publisherUid,
-        JoinedId,
-        callType,
-        token
-      );
-      console.log({ res });
     });
+
+    socket.on("call_response_accept", async (data) => {
+      try {
+        // Validate input
+        const requiredFields = [
+          "channelName",
+          "userId",
+          "astrologerId",
+          "token",
+        ];
+        const missing = requiredFields.filter((field) => !data[field]);
+        if (missing.length > 0) {
+          throw new Error(`Missing fields: ${missing.join(", ")}`);
+        }
+
+        console.log(data);
+
+        // Start call without session
+        const callResult = await startCall({ ...data });
+
+        if (!callResult.success) {
+          throw new Error(callResult.message);
+        }
+
+        // Update astrologer's status to "busy"
+        await Astrologer.findByIdAndUpdate(data.astrologerId, {
+          status: "busy",
+        });
+
+        // Emit call ready events
+        io.to(data.userId).emit("call_accepted", {
+          channelName: data.channelName,
+          token: data.token,
+          uid: data.publisherUid,
+        });
+
+        io.to(data.astrologerId).emit("call_ready", {
+          channelName: data.channelName,
+          token: data.token,
+          uid: callResult.recordingUID,
+        });
+      } catch (error) {
+        console.error("Call acceptance failed:", error);
+        socket.emit("call_error", {
+          message: error.message,
+          code: "ACCEPT_FAILED",
+        });
+
+        // Optional: Emit rejection only if data.userId exists
+        if (data?.userId) {
+          io.to(data.userId).emit("call_rejected");
+        }
+      }
+    });
+
+    //terminate ongoing cvall call
+    socket.on("endaudiocall", async (data) => {
+      const { astrologerId, userId } = data;
+      console.log("ttttttt", astrologerId, userId);
+
+      try {
+        if (
+          !mongoose.Types.ObjectId.isValid(astrologerId) ||
+          !mongoose.Types.ObjectId.isValid(userId)
+        ) {
+          console.log("222222", astrologerId, userId);
+          console.error("Invalid ObjectId(s) provided");
+          return;
+        }
+
+        console.log({ astrologerId, userId });
+
+        const call = await Call.findOne({
+          astrologerId: new mongoose.Types.ObjectId(astrologerId),
+          userId: new mongoose.Types.ObjectId(userId),
+        });
+
+        if (!call) {
+          console.log("Call not found");
+          return;
+        }
+
+        const callId = call._id;
+        console.log("Call ended with ID:", callId);
+
+        const res = await endCallAndLogTransaction(callId);
+
+        if (res) {
+          // Update astrologer status
+          await Astrologer.findByIdAndUpdate(astrologerId, {
+            status: "available",
+          });
+          console.log("Astrologer status updated to available");
+
+          // Find user and emit event
+          const user = await User.findById(userId);
+          if (user && user.socketId) {
+            console.log("cal ended by astrologer");
+            io.to(user.socketId).emit("callEnded", {
+              astrologerId,
+              userId,
+            });
+            console.log("callEnded event emitted to user:", user.socketId);
+          } else {
+            console.log("User not found or no socketId available");
+          }
+        }
+      } catch (error) {
+        console.error("Error ending call:", error);
+      }
+    });
+
+    // System call end function
+    async function endCallSystem(callId, reason) {
+      const session = await mongoose.startSession();
+      try {
+        session.startTransaction();
+
+        const call = await Call.findById(callId).session(session);
+        if (!call || call.status === "ended") return;
+
+        // Stop billing
+        await agenda.cancel(`charge_call_${callId}`);
+
+        // Stop recording
+        await stopAgoraRecording(call.recording.sid, call.recording.resourceId);
+
+        // Update call record
+        call.endedAt = new Date();
+        call.status = "ended";
+        call.endReason = reason;
+        await call.save({ session });
+
+        // Mark astrologer available
+        await Astrologer.findByIdAndUpdate(
+          call.astrologerId,
+          { $set: { onCall: false } },
+          { session }
+        );
+
+        // Notify both parties
+        io.to(call.userId).emit("call_ended", { callId, reason });
+        io.to(call.astrologerId).emit("call_ended", { callId, reason });
+
+        await session.commitTransaction();
+      } catch (error) {
+        await session.abortTransaction();
+        console.error("Call end failed:", error);
+      } finally {
+        session.endSession();
+      }
+    }
 
     // Cleanup on disconnect
     socket.on("disconnect", async () => {

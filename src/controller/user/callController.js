@@ -9,7 +9,8 @@ import { Admin } from "../../models/adminModel.js";
 import { AdminWallet } from "../../models/adminWallet.js";
 import Notification from "../../models/notifications.model.js";
 import mongoose from "mongoose";
-
+import { agenda } from "../../utils/call/agenda.js";
+import { formatDateToTimeString } from "../../utils/call/generateToken.js";
 const { ObjectId } = mongoose.Types; // Import ObjectId from mongoose
 
 // key：608f211d904e4ee8bd7fa43571906fba
@@ -43,11 +44,13 @@ const acquireRecordingResource = async (channelName, uid) => {
   const acquireParams = {
     cname: channelName,
     uid: uid.toString(),
-    clientRequest: {},
+    clientRequest: {
+      resourceExpiredHour: 24,
+      scene: 0,
+    },
   };
 
-  // Encode the username and password to base64 for basic auth
-  const authHeader = "Basic " + btoa(AGORAKEY + ":" + AGORASECRET);
+  const authHeader = "Basic " + btoa(`${AGORAKEY}:${AGORASECRET}`);
 
   try {
     const response = await axios.post(
@@ -56,18 +59,20 @@ const acquireRecordingResource = async (channelName, uid) => {
       {
         headers: {
           "Content-Type": "application/json",
-          Authorization: authHeader, // Add the Authorization header
+          Authorization: authHeader,
         },
       }
     );
     console.log({ response });
-    return response.data; // Return resourceId and sid
+    return response.data;
   } catch (error) {
-    console.error("Error acquiring Agora recording resource:", error);
+    console.error(
+      "Error acquiring Agora recording resource:",
+      error.response?.data || error.message
+    );
     throw new Error("Failed to acquire recording resource");
   }
 };
-
 // API to start the recording
 const startRecording_video = async (
   resourceId,
@@ -83,7 +88,7 @@ const startRecording_video = async (
     clientRequest: {
       token: token,
       recordingConfig: {
-        maxIdleTime: 30, // Time in seconds to stop recording when no active streams
+        maxIdleTime: 120, // Wait 2 minutes before stopping when no active streams
         streamTypes: 2, // 2 = Record both audio and video
         streamMode: "default",
         audioProfile: 1, // Default audio profile (1 = high quality)
@@ -97,7 +102,8 @@ const startRecording_video = async (
           mixedVideoLayout: 1, // Layout for mixed video streams
           backgroundColor: "#FF0000", // Background color (Hex)
         },
-        subscribeAudioUids: [publisherUid.toString(), JoinedId.toString()],
+        // subscribeAudioUids: [publisherUid.toString(), JoinedId.toString()],
+        subscribeAudioUids: [],
         subscribeVideoUids: [publisherUid.toString(), JoinedId.toString()],
         subscribeUidGroup: 0, // Group for subscribing to the UIDs
       },
@@ -105,11 +111,12 @@ const startRecording_video = async (
         avFileType: ["hls", "mp4"],
       },
       storageConfig: {
-        vendor: 1, // Assume AWS for now
-        region: 14, // region AP_SOUTH_1
-        bucket: "rudraganga2.0", // Replace with actual bucket name
-        accessKey: ACCESSKEYID, // Replace with actual access key
-        secretKey: SECRETACCESSKEY, // Replace with actual secret key
+        vendor: 1,
+        region: 6, // india
+        bucket: "astrobandhan2025",
+        accessKey: ACCESSKEYID,
+        secretKey: SECRETACCESSKEY,
+        fileNamePrefix: ["recordings"], // Add this for better organization
       },
     },
   };
@@ -119,7 +126,7 @@ const startRecording_video = async (
 
   try {
     const response = await axios.post(
-      `https://api.agora.io/v1/apps/${appID}/cloud_recording/resourceid/${resourceId}/mode/mix/start`,
+      `https://api.sd-rtn.com/v1/apps/${appID}/cloud_recording/resourceid/${resourceId}/mode/mix/start`,
       startParams,
       {
         headers: {
@@ -128,6 +135,7 @@ const startRecording_video = async (
         },
       }
     );
+    console.log("call recording start");
     console.log({ response });
     return response.data; // Return recording start data
   } catch (error) {
@@ -138,51 +146,51 @@ const startRecording_video = async (
 
 const startRecording_audio = async (
   resourceId,
-  channleid,
+  channelId,
   uid,
   token,
-  publisherUid,
-  JoinedId
+  broadcasters
 ) => {
   const startParams = {
-    cname: channleid,
+    cname: channelId,
     uid: uid.toString(),
     clientRequest: {
       token: token,
       recordingConfig: {
-        maxIdleTime: 30, // Time in seconds to stop recording when no active streams
-        streamTypes: 1, // 2 = Record both audio and video
-        streamMode: "default",
-        audioProfile: 1, // Default audio profile (1 = high quality)
-        channelType: 0, // 0 = Communication channel
-        videoStreamType: 0, // 0 = High video quality
+        maxIdleTime: 120,
+        streamTypes: 2,
+        channelType: 0,
+        videoStreamType: 0,
+        streamMode: "standard", // use "standard" or "mix" only if you're mixing streams
+        audioProfile: 1,
         transcodingConfig: {
-          height: 640, // Height of the video in the transcoded file
-          width: 360, // Width of the video in the transcoded file
-          bitrate: 500, // Video bitrate in Kbps
-          fps: 15, // Frames per second
-          mixedVideoLayout: 1, // Layout for mixed video streams
-          backgroundColor: "#FF0000", // Background color (Hex)
+          width: 360,
+          height: 640,
+          fps: 15,
+          bitrate: 500,
+          mixedVideoLayout: 1,
+          backgroundColor: "#FFFFFF",
         },
-        subscribeAudioUids: [publisherUid.toString(), JoinedId.toString()],
         subscribeVideoUids: [],
-        subscribeUidGroup: 0, // Group for subscribing to the UIDs
+        subscribeAudioUids: broadcasters.map(String), // Important: convert to strings
+        subscribeUidGroup: 1,
       },
       recordingFileConfig: {
         avFileType: ["hls", "mp4"],
       },
       storageConfig: {
-        vendor: 1, // Assume AWS for now
-        region: 14, // region AP_SOUTH_1
-        bucket: "astrobandhan", // Replace with actual bucket name
-        accessKey: ACCESSKEYID, // Replace with actual access key
-        secretKey: SECRETACCESSKEY, // Replace with actual secret key
+        vendor: 1,
+        region: 5, // india
+        bucket: "astrobandhan2025",
+        accessKey: ACCESSKEYID,
+        secretKey: SECRETACCESSKEY,
+        fileNamePrefix: ["recordings"], // Add this for better organization
       },
     },
   };
 
-  // Encode the username and password to base64 for basic auth
-  const authHeader = "Basic " + btoa(AGORAKEY + ":" + AGORASECRET);
+  const authHeader =
+    "Basic " + Buffer.from(`${AGORAKEY}:${AGORASECRET}`).toString("base64");
 
   try {
     const response = await axios.post(
@@ -191,14 +199,17 @@ const startRecording_audio = async (
       {
         headers: {
           "Content-Type": "application/json",
-          Authorization: authHeader, // Add the Authorization header
+          Authorization: authHeader,
         },
       }
     );
-    console.log({ response });
-    return response.data; // Return recording start data
+    console.log("Recording started:", response.data);
+    return response.data;
   } catch (error) {
-    console.error("Error starting Agora recording:", error);
+    console.error(
+      "Error starting Agora recording:",
+      error.response?.data || error.message
+    );
     throw new Error("Failed to start recording");
   }
 };
@@ -208,12 +219,12 @@ const stopRecording = async (resourceId, sid, channelName, recordingUID) => {
   const stopParams = {
     cname: channelName,
     uid: recordingUID.toString(),
-    clientRequest: {
-      async_stop: false,
-    },
+    clientRequest: {},
   };
-  // Encode the username and password to base64 for basic auth
-  const authHeader = "Basic " + btoa(AGORAKEY + ":" + AGORASECRET);
+
+  const authHeader =
+    "Basic " + Buffer.from(`${AGORAKEY}:${AGORASECRET}`).toString("base64");
+
   try {
     const response = await axios.post(
       `https://api.agora.io/v1/apps/${appID}/cloud_recording/resourceid/${resourceId}/sid/${sid}/mode/mix/stop`,
@@ -221,285 +232,381 @@ const stopRecording = async (resourceId, sid, channelName, recordingUID) => {
       {
         headers: {
           "Content-Type": "application/json",
-          Authorization: authHeader, // Add the Authorization header
+          Authorization: authHeader,
         },
       }
     );
-    console.log({ response });
-    return response.data; // Return stop recording data
+    console.log("Recording stopped:", response.data);
+    return response.data;
   } catch (error) {
-    console.log(
+    console.error(
+      "STOP API URL:",
       `https://api.agora.io/v1/apps/${appID}/cloud_recording/resourceid/${resourceId}/sid/${sid}/mode/mix/stop`
     );
-    console.log({ stopParams });
-    console.error("Error stopping Agora recording:", error);
+    console.error("Params:", stopParams);
+    console.error(
+      "Error stopping Agora recording:",
+      error.response?.data || error.message
+    );
+    return null;
   }
 };
 
-// Function to start the call and record it
-export const startCall = async (payload) => {
-  const { userId, astrologerId, channleid, publisherUid, JoinedId, callType, token } =
-    payload;
+const queryRecording_audio = async (resourceId, sid, channelId) => {
+  const authHeader =
+    "Basic " + Buffer.from(`${AGORAKEY}:${AGORASECRET}`).toString("base64");
 
   try {
+    const response = await axios.get(
+      `https://api.agora.io/v1/apps/${appID}/cloud_recording/resourceid/${resourceId}/sid/${sid}/mode/mix/query`,
+      {
+        headers: {
+          Authorization: authHeader,
+        },
+      }
+    );
+
+    console.log("Agora recording query response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error(
+      "Error querying Agora recording:",
+      error.response?.data || error.message
+    );
+    throw new Error("Failed to query recording status");
+  }
+};
+
+export const startCall = async (payload) => {
+  const { userId, astrologerId, channelName, callType = "audio" } = payload;
+
+  try {
+    // Fetch participants from DB
     const user = await User.findById(userId);
     const astrologer = await Astrologer.findById(astrologerId);
+    const allAdmins = await Admin.find();
+    const admin = allAdmins[0];
 
-    if (!user || !astrologer) {
-      return { success: false, message: "User or Astrologer not found" };
+    if (!user || !astrologer || !admin) {
+      throw new Error("Participants not found");
     }
 
+    // Get pricing details
     const pricePerMinute =
       callType === "audio"
         ? astrologer.pricePerCallMinute
         : astrologer.pricePerVideoCallMinute;
-    const commissionPerMinute =
+
+    const commission =
       callType === "audio"
         ? astrologer.callCommission
         : astrologer.videoCallCommission;
 
-    // Check if user has enough balance to start the call
+    // Ensure user has enough balance
     if (user.walletBalance < pricePerMinute) {
-      return { success: false, message: "Insufficient wallet balance" };
+      throw new Error("Insufficient balance");
     }
 
-    // Deduct first minute from user's wallet and credit astrologer
+    // Deduct 1 minute of balance
     user.walletBalance -= pricePerMinute;
-    astrologer.walletBalance += pricePerMinute - commissionPerMinute;
+    astrologer.walletBalance += pricePerMinute - commission;
+    admin.walletBalance += commission;
 
-    const admins = await Admin.find({});
-    if (admins.length === 0) {
-      return { success: false, message: "No admins found" };
-    }
+    // Step 1: Check channel for active broadcasters
 
-    const adminUser = admins[0]; // Taking the first admin user
+    const authHeader =
+      "Basic " + Buffer.from(`${AGORAKEY}:${AGORASECRET}`).toString("base64");
 
-    await user.save();
-    await astrologer.save();
-    await adminUser.save();
-
-    const uid = Math.floor(Math.random() * 100000); // Random unique UID for the recording bot
-    // const token = generateAgoraToken(channleid, uid);
-    const { resourceId } = await acquireRecordingResource(channleid, uid);
-
-    const resCall = await startRecording_video(
-      resourceId,
-      channleid,
-      uid,
-      token,
-      publisherUid,
-      JoinedId
+    const channelStatus = await axios.get(
+      `https://api.agora.io/dev/v1/channel/user/${appID}/${channelName}`,
+      {
+        headers: {
+          Authorization: authHeader,
+        },
+      }
     );
 
+    const broadcasters = channelStatus?.data?.data?.broadcasters ?? [];
+    console.log({ broadcasters });
+
+    if (broadcasters.length === 0) {
+      throw new Error("No active publishers found in channel");
+    }
+
+    // Step 2: Start Recording
+    const recordingUID = Math.floor(Math.random() * 100000);
+    const { resourceId } = await acquireRecordingResource(
+      channelName,
+      recordingUID
+    );
+    console.log({ resourceId });
+
+    const newToken = generateAgoraToken(channelName, recordingUID);
+
+    const recording = await startRecording_audio(
+      resourceId,
+      channelName,
+      recordingUID,
+      newToken,
+      broadcasters
+    );
+
+    console.log({ recording });
+
+    const { sid } = recording;
+
+    let pollInterval;
+
+    // const startPolling = () => {
+    //   pollInterval = setInterval(async () => {
+    //     try {
+    //       const queryResult = await queryRecording_audio(
+    //         resourceId,
+    //         sid,
+    //         channelName
+    //       );
+    //       const status = queryResult?.serverResponse?.status;
+
+    //       console.log("Polling status:", queryResult);
+
+    //       // if (status === 1) {
+    //       //   // Success status
+    //       //   clearInterval(pollInterval);
+    //       //   console.log("Recording processing completed.");
+    //       //   // Proceed with further logic here
+    //       // } else if ([2, 3].includes(status)) {
+    //       //   // Failed or no file
+    //       //   clearInterval(pollInterval);
+    //       //   console.warn("Processing failed or no file found.");
+    //       //   // Handle error accordingly
+    //       // }
+    //       // Else, continue polling (status 4 or 5)
+    //     } catch (error) {
+    //       clearInterval(pollInterval);
+    //       console.error("Polling failed with error:", error);
+    //     }
+    //   }, 5000); // 5 seconds
+    // };
+
+    // Call this function to start polling
+    // startPolling();
+
+    // Step 3: Save call
     const newCall = new Call({
       userId,
       astrologerId,
-      channelName: resCall["cname"],
-      startedAt: new Date(),
-      totalAmount: pricePerMinute,
-      sid: resCall["sid"],
+      channelName,
+      startedAt: formatDateToTimeString(new Date()),
       resourceId,
-      recordingUID: uid.toString(),
-      recordingToken: token,
-      recordingStarted: true,
+      sid,
+      recordingUID,
+      recordingToken: newToken,
       callType,
+      recordingStarted: true,
+      totalAmount: pricePerMinute,
     });
 
-    await newCall.save();
-    console.log({ newCall });
+    await Promise.all([
+      user.save(),
+      astrologer.save(),
+      admin.save(),
+      newCall.save(),
+    ]);
 
-    // Start a timer to deduct money every minute
-    const intervalId = setInterval(async () => {
-      try {
-        const updatedUser = await User.findById(userId);
-
-        if (updatedUser.walletBalance < pricePerMinute) {
-          clearInterval(intervalId);
-          const payload = { callId: newCall._id };
-          await endCallAndLogTransaction(payload);
-        } else {
-          updatedUser.walletBalance -= pricePerMinute;
-          astrologer.walletBalance += pricePerMinute - commissionPerMinute;
-          newCall.totalAmount += pricePerMinute;
-          await updatedUser.save();
-          await newCall.save();
-          await astrologer.save();
-          await adminUser.save();
-        }
-      } catch (error) {
-        console.error("Error during per-minute deduction:", error);
-        clearInterval(intervalId);
-      }
-    }, 60000);
-
-    newCall.intervalId = intervalId;
-    await newCall.save();
+    // Step 4: Schedule billing
+    agenda.every("1 minute", `charge_call_${newCall._id}`, {
+      callId: newCall._id,
+      userId,
+      astrologerId,
+    });
 
     return {
       success: true,
-      message: "Call started successfully",
+      recordingUID,
       callId: newCall._id,
-      token,
-      channelName: channleid,
-      resourceId,
-      resCall,
+      initialCharge: pricePerMinute,
     };
   } catch (error) {
-    console.error("Error in startCall:", error.message);
-    return { success: false, message: `Error: ${error.message}` };
+    console.error("Call start failed:", error.message);
+    throw error;
   }
 };
 
 // Set to track processed callIds
 const processedCallIds = new Set();
 
+// Helper function to parse your custom date string format
+// Convert to a parseable ISO-like string:
 export const endCallAndLogTransaction = async (callId) => {
+  console.log(
+    "call ending soon.....EMITTING ENDING CALL>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+  );
+
   try {
-    // Check if the callId has already been processed
+    // Avoid processing the same call multiple times
     if (processedCallIds.has(callId)) {
       console.log(
         `Call ${callId} has already been processed. Skipping execution.`
       );
       return { message: "Call already processed" };
     }
-
-    // Add the callId to the Set to mark it as processed
     processedCallIds.add(callId);
 
+    // Fetch the call with populated user and astrologer
     const call = await Call.findById(callId).populate("userId astrologerId");
-    if (!call || !call.startedAt) return;
     console.log({ call });
-
-    // Stop recording
-    const { resourceId, sid, recordingUID, channelName, userId, astrologerId } =
-      call;
-    let recordingData;
-
-    try {
-      recordingData = await stopRecording(
-        resourceId,
-        sid,
-        channelName,
-        recordingUID
-      );
-    } catch (stopRecordingError) {
-      console.error("Error stopping recording:", stopRecordingError);
-      // Handle the error (e.g., log it, notify the user, etc.)
-      // You can decide whether to proceed or throw the error
-      // throw new Error("Failed to stop recording");
+    if (!call || !call.startedAt) {
+      console.log("Call or startedAt not found");
+      return { error: "Call or startedAt not found" };
     }
 
-    // Update the call with recording URL
-    call.endedAt = new Date();
-    call.duration = Math.ceil((call.endedAt - call.startedAt) / 1000);
-    call.recordingData = recordingData; // Store the recording URL
+    // Get current time
+    const now = new Date();
 
-    console.log({ recordingData });
+    // Convert both times to IST for display purposes
+    const startedAtIST = new Date(call.createdAt).toLocaleString("en-US", {
+      timeZone: "Asia/Kolkata",
+    });
 
-    // Stop the interval
+    const endedAtIST = now.toLocaleString("en-US", {
+      timeZone: "Asia/Kolkata",
+    });
+
+    // Store IST-formatted end time
+    call.endedAt = formatDateToTimeString(now);
+
+    // Calculate duration in seconds using actual Date objects
+    const startedAt = new Date(call.createdAt);
+    const endedAt = now;
+    const durationSeconds = Math.floor((endedAt - startedAt) / 1000);
+
+    // Apply billing logic:
+    // If less than 60 seconds: charge for 1 minute (60 seconds)
+    // If 60-119 seconds: charge for 2 minutes (120 seconds)
+    // If 120-179 seconds: charge for 3 minutes (180 seconds)
+    // Always round up to the next minute
+    let chargedDurationSeconds;
+    let chargedMinutes;
+
+    if (durationSeconds < 60) {
+      chargedMinutes = 1;
+      chargedDurationSeconds = 60;
+    } else {
+      chargedMinutes = Math.ceil(durationSeconds / 60);
+      chargedDurationSeconds = chargedMinutes * 60;
+    }
+
+    // Store the charged duration
+    call.duration = chargedDurationSeconds;
+
+    console.log("Started At (IST):", startedAtIST);
+    console.log("Ended At (IST):", endedAtIST);
+    console.log("Actual Duration (seconds):", durationSeconds);
+    console.log("Charged Duration (seconds):", chargedDurationSeconds);
+    console.log("Charged Minutes:", chargedMinutes);
+
+    // Calculate total amount based on price per minute
+    const pricePerMinute = call.astrologerId.pricePerCallMinute || 10; // Default if not set
+    const totalAmount = chargedMinutes * pricePerMinute;
+    call.totalAmount = totalAmount;
+
+    // Calculate commissions
+    const adminCommissionAmount = Math.ceil(
+      chargedMinutes * call.astrologerId.callCommission
+    );
+    const astrologerCreditAmount = totalAmount - adminCommissionAmount;
+
+    console.log("Total Amount:", totalAmount);
+    console.log("Admin Commission:", adminCommissionAmount);
+    console.log("Astrologer Credit:", astrologerCreditAmount);
+
+    // Save call changes
+    await call.save();
+    // Clear any call interval if present
     if (call.intervalId) {
       clearInterval(call.intervalId);
     }
 
-    const user = await User.findById(userId);
-    const astrologer = await Astrologer.findById(astrologerId);
+    const user = await User.findById(call.userId);
+    const astrologer = await Astrologer.findById(call.astrologerId);
+    const admins = await Admin.find({});
 
-    const admins = await Admin.find({}); // Fetch all admins
-
-    if (admins.length === 0) {
-      throw new Error("No Admin found");
-    }
-
-    if (!user || !astrologer) {
+    if (admins.length === 0) throw new Error("No Admin found");
+    if (!user || !astrologer)
       throw new Error("User or Astrologer not found during call end");
-    }
 
-    console.log("duration", call.duration);
-    console.log(
-      "admin",
-      Math.ceil((call.duration / 60) * astrologer.callCommission)
-    );
-    console.log(
-      "astrologer",
-      Math.ceil(astrologer.callCommission * (call.duration / 60))
-    );
-
-    // Create Admin Wallet transaction
+    // Create Admin Wallet transaction (credit)
     await AdminWallet.create({
-      amount: Math.ceil((call.duration / 60) * astrologer.callCommission), // Convert duration to minutes and round off
+      amount: adminCommissionAmount,
       transaction_id: `ADMIN_TXN_${Date.now()}`,
       transaction_type: "credit",
-      credit_type: "call",
+      credit_type: "audio",
       service_id: call._id,
-      userId,
+      userId: call.userId,
     });
 
-    // Create User Debit transaction
-    const userDebit = await Wallet.create({
+    // Create User Wallet transaction (debit)
+    await Wallet.create({
       user_id: call.userId,
       amount: call.totalAmount,
       transaction_id: `CALL-${call._id}+${Date.now()}`,
       transaction_type: "debit",
-      debit_type: "call",
+      debit_type: "audio",
       service_reference_id: call._id,
     });
 
-    // Create Astrologer Credit transaction
-    const astrologerCredit = await Wallet.create({
+    // Create Astrologer Wallet transaction (credit)
+    await Wallet.create({
       astrologer_id: call.astrologerId,
-      amount:
-        call.totalAmount -
-        Math.ceil(astrologer.callCommission * (call.duration / 60)),
+      amount: astrologerCreditAmount,
       transaction_id: `CALL-${call._id}+${Date.now()}`,
       transaction_type: "credit",
-      credit_type: "call",
+      credit_type: "audio",
       service_reference_id: call._id,
     });
 
-    // Update the call record
-    await call.save();
-
-    // Create notifications for the user and astrologer
-    const astrologerAcc = await Astrologer.findById(call.astrologerId);
-    const userAcc = await User.findById(call.userId);
-
-    const newNotification = new Notification({
+    // Create Notifications for User and Astrologer
+    await new Notification({
       userId: call.userId,
       message: [
         {
           title: "Coin Deducted",
-          desc: `${call.totalAmount} has been deducted from your wallet for the call with ${astrologerAcc.name}`,
+          desc: `${call.totalAmount} has been deducted from your wallet for the call with ${astrologer.name}`,
         },
       ],
-    });
+    }).save();
 
-    await newNotification.save();
-
-    const newNotificationAstrologer = new Notification({
+    await new Notification({
       userId: call.astrologerId,
       message: [
         {
           title: "Coin Credited",
-          desc: `${call.totalAmount - Math.ceil(astrologer.callCommission * (call.duration / 60))} has been credited to your wallet for the call with ${userAcc.name}`,
+          desc: `${astrologerCreditAmount} has been credited to your wallet for the call with ${user.name}`,
         },
       ],
-    });
-
-    await newNotificationAstrologer.save();
+    }).save();
 
     console.log(
-      `Call ended. Total duration: ${call.duration} seconds. Total amount: ${call.totalAmount}`
+      `Call ended. Total duration: ${call.duration} seconds. Charged minutes: ${chargedMinutes}. Total amount: ${call.totalAmount}`
     );
 
     return {
       message: "Call ended successfully",
-      astrologerCredit,
-      userDebit,
     };
   } catch (error) {
     console.error("Error ending the call:", error);
-    throw error; // Propagate error if necessary
+    throw error;
   }
 };
+
+// Helper function to parse your custom date string
+function parseCustomDate(dateString) {
+  // Example: "May 23, 2025 at 1:53 AM"
+  const parts = dateString.split(" at ");
+  const datePart = parts[0]; // "May 23, 2025"
+  const timePart = parts[1]; // "1:53 AM"
+
+  return new Date(`${datePart} ${timePart} GMT+0530`);
+}
 
 // Function to stop the recording and log the transaction
