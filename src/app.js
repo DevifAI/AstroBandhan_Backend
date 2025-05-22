@@ -51,10 +51,12 @@ const PORT = 8080;
   try {
     await initializeAgenda(); // <-- Initialize Agenda here before starting the server
     server.listen(PORT, "0.0.0.0", () => {
-      const localIp = "192.168.31.156";
-      const wsUrl = `ws://${localIp}:${PORT}`;
-      console.log(`AstroBandhan is running on http://${localIp}:${PORT}`);
-      console.log(`WebSocket server is running at: ${wsUrl}`);
+      console.log(`AstroBandhan is running on http://localhost:${PORT}`);
+      console.log(`WebSocket server is running at: ws://localhost:${PORT}`);
+      // const localIp = "192.168.31.156";
+      // const wsUrl = `ws://${localIp}:${PORT}`;
+      // console.log(`AstroBandhan is running on http://${localIp}:${PORT}`);
+      // console.log(`WebSocket server is running at: ${wsUrl}`);
     });
   } catch (error) {
     console.error("Failed to initialize Agenda:", error);
