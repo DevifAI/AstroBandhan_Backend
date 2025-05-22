@@ -1,6 +1,6 @@
 import { Astrologer } from "../../../models/astrologer.model.js";
 import { User } from "../../../models/user.model.js";
-import uuid from "uuid"; // default import in version 3.x
+import { v4 as uuidv4 } from 'uuid';
 import { Wallet } from "../../../models/walletSchema.model.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 
@@ -35,7 +35,7 @@ export const sendGift_To_Astrologer = asyncHandler(async (req, res) => {
     await Wallet.create({
       user_id: user._id,
       amount: amount,
-      transaction_id: uuid.v4(),
+      transaction_id: uuidv4(),
       transaction_type: "debit",
       debit_type: "gifting",
     });
@@ -44,7 +44,7 @@ export const sendGift_To_Astrologer = asyncHandler(async (req, res) => {
     await Wallet.create({
       astrologer_id: astrologer._id,
       amount: amount,
-      transaction_id: uuid.v4(),
+      transaction_id: uuidv4(),
       transaction_type: "credit",
       credit_type: "gifting",
     });
