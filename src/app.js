@@ -45,7 +45,7 @@ app.use(errorHandler);
 const server = http.createServer(app);
 setupSocketIO(server);
 
-const PORT = 8080;
+const PORT = 8000;
 
 (async () => {
   try {
