@@ -11,5 +11,3 @@ connectDB()
   .catch((err) => {
     console.log("MONGO DB CONNECTION FAILED !!!111", err);
   });
-
-
