@@ -9,6 +9,7 @@ const errorHandler = (err, req, res, next) => {
 
   // Handle ApiError instances
   if (err instanceof ApiError) {
+    console.log("t")
     return res.status(err.statusCode).json({
       success: err.success,
       message: err.message,
