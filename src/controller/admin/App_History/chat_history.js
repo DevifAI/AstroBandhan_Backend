@@ -2,47 +2,117 @@ import ChatRoom from "../../../models/chatRoomSchema.js";
 import Chat from "../../../models/chatSchema.js"; // Assuming 'Chat' is the model for chats
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 
-export const getChatRoom_History = asyncHandler(async (req, res) => {
-  try {
-    // Fetch chat rooms and populate user and astrologer fields
-    const chatRooms = await ChatRoom.find({})
-      .populate("user") // Populate user field
-      .populate("astrologer") // Populate astrologer field
-      .lean(); // To get plain JavaScript objects for easier manipulation
+// export const getChatRoom_History = asyncHandler(async (req, res) => {
+//   console.log("Fetching chat room history...");
+//   try {
+//     // Fetch chat rooms and populate user and astrologer fields
+//     const chatRooms = await ChatRoom.find({})
+//       .populate("user") // Populate user field
+//       .populate("astrologer") // Populate astrologer field
+//       .lean(); // To get plain JavaScript objects for easier manipulation
 
-    // Map through each chat room to gather the necessary details
+//     // Map through each chat room to gather the necessary details
+//     const chatHistory = await Promise.all(
+//       chatRooms.map(async (chatRoom) => {
+//         console.log("Processing chat room:", chatRoom);
+//         // Get the chat document based on chatRoomId
+//         const chat = await Chat.findOne({ chatRoomId: chatRoom.chatRoomId });
+
+//         // Calculate total amount based on astrologer's price per minute and commission
+//         let totalAmount = 0;
+//         let durationInMinutes = 0;
+
+//         if (chat) {
+//           // Calculate the duration in minutes
+//           const startTime = chat.createdAt;
+//           const endTime = chat.updatedAt;
+
+//           // Calculate the difference in milliseconds
+//           const durationInMilliseconds = endTime - startTime;
+
+//           // Convert milliseconds to minutes
+//           durationInMinutes = Math.ceil(durationInMilliseconds / 60000); // Round up to the nearest minute
+
+//           // If duration is less than 1 minute, we treat it as 1 minute
+//           if (durationInMinutes < 1) {
+//             durationInMinutes = 1;
+//           }
+
+//           // Calculate total amount by astrologer's price and commission
+//           totalAmount =
+//             durationInMinutes * chatRoom.astrologer.pricePerChatMinute -
+//             durationInMinutes * chatRoom.astrologer.chatCommission;
+//         }
+
+//         // Format start and end time to show only the time portion (HH:mm:ss)
+//         const startedTime = chatRoom.createdAt.toLocaleTimeString("en-US", {
+//           hour12: false,
+//         });
+//         const endedTime = chatRoom.updatedAt.toLocaleTimeString("en-US", {
+//           hour12: false,
+//         });
+
+//         // Format and return the data
+//         return {
+//           astrologerName: chatRoom.astrologer.name, // Astrologer name
+//           userName: chatRoom.user.name, // User name
+//           chatDuration: durationInMinutes, // Chat Duration in minutes
+//           startedTime: startedTime, // Started Time (formatted)
+//           endedTime: endedTime, // Ended Time (formatted)
+//           chatRoomId: chatRoom.chatRoomId, // Chat Room ID
+//           totalAmount: totalAmount, // Total Amount after commission
+//         };
+//       })
+//     );
+
+//     // Return the chat history data as a JSON response
+//     return res.status(200).json(chatHistory);
+//   } catch (error) {
+//     // Error handling
+//     console.error("Error fetching chat history:", error);
+//     return res.status(500).json({ message: "Internal Server Error" });
+//   }
+// });
+
+export const getChatRoom_History = asyncHandler(async (req, res) => {
+  console.log("Fetching chat room history...");
+  try {
+    const chatRooms = await ChatRoom.find({})
+      .populate("user")
+      .populate("astrologer")
+      .lean();
+
     const chatHistory = await Promise.all(
       chatRooms.map(async (chatRoom) => {
-        // Get the chat document based on chatRoomId
-        const chat = await Chat.findOne({ chatRoomId: chatRoom.chatRoomId });
+        console.log("Processing chat room:", chatRoom);
 
-        // Calculate total amount based on astrologer's price per minute and commission
+        // Defensive check for missing user or astrologer
+        if (!chatRoom.user || !chatRoom.astrologer) {
+          console.warn(
+            `Missing user or astrologer in chatRoom ID: ${chatRoom._id}`
+          );
+          return null; // Skip this entry
+        }
+
+        // Match Chat using chatRoom._id
+        const chat = await Chat.findOne({ chatRoomId: chatRoom._id });
+
         let totalAmount = 0;
         let durationInMinutes = 0;
 
         if (chat) {
-          // Calculate the duration in minutes
           const startTime = chat.createdAt;
           const endTime = chat.updatedAt;
-
-          // Calculate the difference in milliseconds
           const durationInMilliseconds = endTime - startTime;
+          durationInMinutes = Math.ceil(durationInMilliseconds / 60000);
 
-          // Convert milliseconds to minutes
-          durationInMinutes = Math.ceil(durationInMilliseconds / 60000); // Round up to the nearest minute
+          if (durationInMinutes < 1) durationInMinutes = 1;
 
-          // If duration is less than 1 minute, we treat it as 1 minute
-          if (durationInMinutes < 1) {
-            durationInMinutes = 1;
-          }
-
-          // Calculate total amount by astrologer's price and commission
           totalAmount =
             durationInMinutes * chatRoom.astrologer.pricePerChatMinute -
             durationInMinutes * chatRoom.astrologer.chatCommission;
         }
 
-        // Format start and end time to show only the time portion (HH:mm:ss)
         const startedTime = chatRoom.createdAt.toLocaleTimeString("en-US", {
           hour12: false,
         });
@@ -50,23 +120,23 @@ export const getChatRoom_History = asyncHandler(async (req, res) => {
           hour12: false,
         });
 
-        // Format and return the data
         return {
-          astrologerName: chatRoom.astrologer.name, // Astrologer name
-          userName: chatRoom.user.name, // User name
-          chatDuration: durationInMinutes, // Chat Duration in minutes
-          startedTime: startedTime, // Started Time (formatted)
-          endedTime: endedTime, // Ended Time (formatted)
-          chatRoomId: chatRoom.chatRoomId, // Chat Room ID
-          totalAmount: totalAmount, // Total Amount after commission
+          astrologerName: chatRoom.astrologer.name,
+          userName: chatRoom.user.name,
+          chatDuration: durationInMinutes,
+          startedTime,
+          endedTime,
+          chatRoomId: chatRoom._id, // Use _id here
+          totalAmount,
         };
       })
     );
 
-    // Return the chat history data as a JSON response
-    return res.status(200).json(chatHistory);
+    // Remove nulls (in case of missing user/astrologer)
+    const filteredHistory = chatHistory.filter((entry) => entry !== null);
+
+    return res.status(200).json(filteredHistory);
   } catch (error) {
-    // Error handling
     console.error("Error fetching chat history:", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
@@ -80,12 +150,10 @@ export const getChatRoomHistoryByDateRange = asyncHandler(async (req, res) => {
       !/^\d{2}-\d{2}-\d{4}$/.test(newFromDate) ||
       !/^\d{2}-\d{2}-\d{4}$/.test(newToDate)
     ) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Invalid date format. Use dd-mm-yyyy for both 'from' and 'to' dates.",
-        });
+      return res.status(400).json({
+        message:
+          "Invalid date format. Use dd-mm-yyyy for both 'from' and 'to' dates.",
+      });
     }
 
     // Convert the input dates (dd-mm-yyyy) to JavaScript Date objects

@@ -45,7 +45,7 @@ app.use(errorHandler);
 const server = http.createServer(app);
 setupSocketIO(server);
 
-const PORT = 8000;
+const PORT = 8080;
 console.log("Starting server initialization...");
 
 async function startServer() {

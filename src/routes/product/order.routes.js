@@ -13,7 +13,7 @@ import {
 const router = Router();
 
 router.route("/createOrder").post(createOrder);
-router.route("/").post(getAllOrders);
+router.route("/").get(getAllOrders);
 router.route("/:id").get(getOrderById);
 router.route("/user/:id").get(getOrdersByUserId);
 router.route("/update/:id").patch(updateOrderById);
