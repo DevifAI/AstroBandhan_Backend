@@ -124,6 +124,74 @@ export const setupSocketIO = (server) => {
         socket.emit("error", { message: "Failed to register astrologer" });
       }
     });
+    //make astrologer offline
+    socket.on("unregister_astrologer", async ({ astrologerId }) => {
+      if (!astrologerId) {
+        console.error("Invalid astrologerId provided for register_astrologer");
+        socket.emit("error", { message: "Invalid astrologerId" });
+        return;
+      }
+
+      try {
+        console.log({ astrologerId });
+        // Check if the astrologer exists
+        const astrologer = await Astrologer.findById(astrologerId);
+        // console.log({ astrologer });
+        if (!astrologer) {
+          console.error(`Astrologer not found: ${astrologerId}`);
+          socket.emit("error", { message: "Astrologer not found" });
+          return;
+        }
+
+        // Update the astrologer's socketId
+        astrologer.socketId = null;
+        await astrologer.save();
+
+        console.log(`Astrologer unregistered: ${astrologerId} -> ${socket.id}`);
+        socket.emit("success", {
+          message: "Astrologer unregistered successfully",
+        });
+      } catch (error) {
+        console.error("Error registering astrologer socketId:", error);
+        socket.emit("error", { message: "Failed to register astrologer" });
+      }
+    });
+
+    socket.on("check_status_astrologer", async ({ astrologerId }) => {
+      console.log("sadsadsadsa");
+      console.log("as");
+      if (!astrologerId) {
+        console.error("Invalid astrologerId provided for register_astrologer");
+        socket.emit("error", { message: "Invalid astrologerId" });
+        return;
+      }
+
+      try {
+        console.log({ astrologerId });
+        // Check if the astrologer exists
+        const astrologer = await Astrologer.findById(astrologerId);
+        // console.log({ astrologer });
+        if (!astrologer) {
+          console.error(`Astrologer not found: ${astrologerId}`);
+          socket.emit("error", { message: "Astrologer not found" });
+          return;
+        }
+        let isConnected = false;
+        if (astrologer.socketId) {
+          isConnected = true;
+        } else {
+          isConnected = false;
+        }
+
+        socket.emit("success", {
+          isConnected: isConnected,
+          message: "Astrologer registered successfully",
+        });
+      } catch (error) {
+        console.error("Error registering astrologer socketId:", error);
+        socket.emit("error", { message: "Failed to register astrologer" });
+      }
+    });
 
     // Handle user requesting a chat with an astrologer
     socket.on("request_chat", async ({ userId, astrologerId, chatType }) => {
@@ -496,8 +564,8 @@ export const setupSocketIO = (server) => {
 
     //terminate ongoing cvall call
     socket.on("endaudiocall", async (data) => {
-      const { astrologerId, userId } = data;
-      console.log("ttttttt", astrologerId, userId);
+      const { astrologerId, userId, callType } = data;
+      console.log("ttttttt", astrologerId, userId, callType);
 
       try {
         if (
@@ -524,7 +592,7 @@ export const setupSocketIO = (server) => {
         const callId = call._id;
         console.log("Call ended with ID:", callId);
 
-        const res = await endCallAndLogTransaction(callId);
+        const res = await endCallAndLogTransaction(callId, callType);
 
         if (res) {
           // Update astrologer status
@@ -548,6 +616,90 @@ export const setupSocketIO = (server) => {
         }
       } catch (error) {
         console.error("Error ending call:", error);
+      }
+    });
+
+    //video call request
+    socket.on("videoCall_initialize", async ({ payload, token }) => {
+      try {
+        // Validate input
+        if (!payload?.userId || !payload?.astrologerId || !token) {
+          throw new Error("Missing required fields");
+        }
+
+        // Fetch participants
+        const [user, astrologer] = await Promise.all([
+          User.findById(payload.userId),
+          Astrologer.findById(payload.astrologerId),
+        ]);
+
+        if (!user || !astrologer) {
+          throw new Error("User or astrologer not found");
+        }
+
+        // Verify astrologer is available
+        if (astrologer.status !== "available") {
+          throw new Error(`Astrologer is ${astrologer.status}`);
+        }
+
+        // Generate unique channel name if not provided
+        const channelName =
+          payload.channelName || `${user._id}_${astrologer._id}_${Date.now()}`;
+        const astrologerUid = Math.floor(Math.random() * 100000) + 100000; // Ensure different UID
+        const astrologerToken = generateAgoraToken(channelName, astrologerUid);
+        // Prepare call data
+        const callData = {
+          channelName,
+          astrologerToken,
+          astrologerUid,
+          token,
+          name: user.name,
+          userId: user._id,
+          avatar: user.photo,
+          publisherUid: payload.uid || Math.floor(Math.random() * 100000),
+          astrologerId: astrologer._id,
+          callType: "video",
+          timestamp: new Date(),
+        };
+        console.log({ channelName });
+        // Mark astrologer as busy
+        astrologer.status = "busy";
+        await astrologer.save();
+
+        // Emit to astrologer
+        if (astrologer.socketId) {
+          io.to(astrologer.socketId).emit("incoming_call", callData);
+          console.log(`Call initiated to astrologer ${astrologer._id}`);
+        } else {
+          throw new Error("Astrologer not connected");
+        }
+
+        // Set timeout for no response
+        const timeoutId = setTimeout(async () => {
+          try {
+            const freshAstro = await Astrologer.findById(astrologer._id);
+            if (freshAstro && freshAstro.status === "busy") {
+              freshAstro.status = "available";
+              await freshAstro.save();
+
+              if (astrologer.socketId) {
+                io.to(astrologer.socketId).emit("call_timeout");
+              }
+            }
+          } catch (err) {
+            console.error("Error in call timeout handler:", err);
+          }
+        }, 30000);
+
+        // Store timeout ID so we can clear it if call is accepted
+        socket.timeoutIds = socket.timeoutIds || {};
+        socket.timeoutIds[astrologer._id] = timeoutId;
+      } catch (error) {
+        console.error("Call initialization failed:", error);
+        socket.emit("call_error", {
+          message: error.message,
+          code: "INIT_FAILED",
+        });
       }
     });
 

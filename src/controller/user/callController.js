@@ -79,9 +79,9 @@ const startRecording_video = async (
   channleid,
   uid,
   token,
-  publisherUid,
-  JoinedId
+  broadcasters
 ) => {
+  console.log("Starting video recording with broadcasters:", broadcasters);
   const startParams = {
     cname: channleid,
     uid: uid.toString(),
@@ -104,7 +104,7 @@ const startRecording_video = async (
         },
         // subscribeAudioUids: [publisherUid.toString(), JoinedId.toString()],
         subscribeAudioUids: [],
-        subscribeVideoUids: [publisherUid.toString(), JoinedId.toString()],
+        subscribeVideoUids: broadcasters.map(String),
         subscribeUidGroup: 0, // Group for subscribing to the UIDs
       },
       recordingFileConfig: {
@@ -325,7 +325,8 @@ export const startCall = async (payload) => {
         },
       }
     );
-
+    console.log({ channelStatus });
+    console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
     const broadcasters = channelStatus?.data?.data?.broadcasters ?? [];
     console.log({ broadcasters });
 
@@ -342,14 +343,24 @@ export const startCall = async (payload) => {
     console.log({ resourceId });
 
     const newToken = generateAgoraToken(channelName, recordingUID);
-
-    const recording = await startRecording_audio(
-      resourceId,
-      channelName,
-      recordingUID,
-      newToken,
-      broadcasters
-    );
+    let recording;
+    if (callType === "audio") {
+      recording = await startRecording_audio(
+        resourceId,
+        channelName,
+        recordingUID,
+        newToken,
+        broadcasters
+      );
+    } else {
+      recording = await startRecording_video(
+        resourceId,
+        channelName,
+        recordingUID,
+        newToken,
+        broadcasters
+      );
+    }
 
     console.log({ recording });
 
@@ -437,57 +448,32 @@ const processedCallIds = new Set();
 
 // Helper function to parse your custom date string format
 // Convert to a parseable ISO-like string:
-export const endCallAndLogTransaction = async (callId) => {
-  console.log(
-    "call ending soon.....EMITTING ENDING CALL>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-  );
+export const endCallAndLogTransaction = async (callId, calltype) => {
+  console.log("📞 Ending call...");
 
   try {
-    // Avoid processing the same call multiple times
     if (processedCallIds.has(callId)) {
-      console.log(
-        `Call ${callId} has already been processed. Skipping execution.`
-      );
+      console.log(`Call ${callId} already processed. Skipping.`);
       return { message: "Call already processed" };
     }
     processedCallIds.add(callId);
 
-    // Fetch the call with populated user and astrologer
     const call = await Call.findById(callId).populate("userId astrologerId");
-    console.log({ call });
     if (!call || !call.startedAt) {
-      console.log("Call or startedAt not found");
       return { error: "Call or startedAt not found" };
     }
 
-    // Get current time
     const now = new Date();
 
-    // Convert both times to IST for display purposes
-    const startedAtIST = new Date(call.createdAt).toLocaleString("en-US", {
-      timeZone: "Asia/Kolkata",
-    });
-
-    const endedAtIST = now.toLocaleString("en-US", {
-      timeZone: "Asia/Kolkata",
-    });
-
-    // Store IST-formatted end time
-    call.endedAt = formatDateToTimeString(now);
-
-    // Calculate duration in seconds using actual Date objects
+    // Use raw UTC values for calculations
     const startedAt = new Date(call.createdAt);
     const endedAt = now;
+
+    // Calculate duration
     const durationSeconds = Math.floor((endedAt - startedAt) / 1000);
 
-    // Apply billing logic:
-    // If less than 60 seconds: charge for 1 minute (60 seconds)
-    // If 60-119 seconds: charge for 2 minutes (120 seconds)
-    // If 120-179 seconds: charge for 3 minutes (180 seconds)
-    // Always round up to the next minute
-    let chargedDurationSeconds;
-    let chargedMinutes;
-
+    // Calculate billing
+    let chargedMinutes, chargedDurationSeconds;
     if (durationSeconds < 60) {
       chargedMinutes = 1;
       chargedDurationSeconds = 60;
@@ -496,82 +482,90 @@ export const endCallAndLogTransaction = async (callId) => {
       chargedDurationSeconds = chargedMinutes * 60;
     }
 
-    // Store the charged duration
+    // Set values
+    call.endedAt = formatDateToTimeString(now); // for UI display
     call.duration = chargedDurationSeconds;
 
-    console.log("Started At (IST):", startedAtIST);
-    console.log("Ended At (IST):", endedAtIST);
-    console.log("Actual Duration (seconds):", durationSeconds);
-    console.log("Charged Duration (seconds):", chargedDurationSeconds);
-    console.log("Charged Minutes:", chargedMinutes);
+    console.log({
+      startedAt,
+      endedAt,
+      durationSeconds,
+      chargedMinutes,
+      chargedDurationSeconds,
+    });
 
-    // Calculate total amount based on price per minute
-    const pricePerMinute = call.astrologerId.pricePerCallMinute || 10; // Default if not set
+    // Price calculation based on call type
+    console.log("11111111111111111111111111111111111111");
+    console.log({ calltype });
+    console.log("11111111111111111111111111111111111111");
+    const pricePerMinute =
+      calltype === "video"
+        ? call.astrologerId.pricePerVideoCallMinute || 15
+        : call.astrologerId.pricePerCallMinute || 10;
+
     const totalAmount = chargedMinutes * pricePerMinute;
     call.totalAmount = totalAmount;
 
-    // Calculate commissions
-    const adminCommissionAmount = Math.ceil(
-      chargedMinutes * call.astrologerId.callCommission
-    );
+    const adminCommissionAmount =
+      calltype === "video"
+        ? Math.ceil(chargedMinutes * call.astrologerId.videoCallCommission)
+        : Math.ceil(chargedMinutes * call.astrologerId.callCommission);
     const astrologerCreditAmount = totalAmount - adminCommissionAmount;
 
-    console.log("Total Amount:", totalAmount);
-    console.log("Admin Commission:", adminCommissionAmount);
-    console.log("Astrologer Credit:", astrologerCreditAmount);
-
-    // Save call changes
     await call.save();
-    // Clear any call interval if present
-    if (call.intervalId) {
-      clearInterval(call.intervalId);
-    }
+    if (call.intervalId) clearInterval(call.intervalId);
 
     const user = await User.findById(call.userId);
     const astrologer = await Astrologer.findById(call.astrologerId);
     const admins = await Admin.find({});
+    if (!user || !astrologer || admins.length === 0)
+      throw new Error("User/Astrologer/Admin not found");
 
-    if (admins.length === 0) throw new Error("No Admin found");
-    if (!user || !astrologer)
-      throw new Error("User or Astrologer not found during call end");
+    // Wallet entries based on call type
+    const walletType = calltype === "video" ? "video" : "audio";
 
-    // Create Admin Wallet transaction (credit)
     await AdminWallet.create({
       amount: adminCommissionAmount,
       transaction_id: `ADMIN_TXN_${Date.now()}`,
       transaction_type: "credit",
-      credit_type: "audio",
+      credit_type: walletType,
       service_id: call._id,
       userId: call.userId,
     });
+    const lastAdmin = admins[admins.length - 1];
 
-    // Create User Wallet transaction (debit)
+    if (lastAdmin) {
+      await Admin.findByIdAndUpdate(lastAdmin._id, {
+        $inc: { adminWalletBalance: adminCommissionAmount },
+      });
+    } else {
+      console.warn("⚠️ No admin found to update wallet balance.");
+    }
+
     await Wallet.create({
       user_id: call.userId,
-      amount: call.totalAmount,
+      amount: totalAmount,
       transaction_id: `CALL-${call._id}+${Date.now()}`,
       transaction_type: "debit",
-      debit_type: "audio",
+      debit_type: walletType,
       service_reference_id: call._id,
     });
 
-    // Create Astrologer Wallet transaction (credit)
     await Wallet.create({
       astrologer_id: call.astrologerId,
       amount: astrologerCreditAmount,
       transaction_id: `CALL-${call._id}+${Date.now()}`,
       transaction_type: "credit",
-      credit_type: "audio",
+      credit_type: walletType,
       service_reference_id: call._id,
     });
 
-    // Create Notifications for User and Astrologer
     await new Notification({
       userId: call.userId,
       message: [
         {
           title: "Coin Deducted",
-          desc: `${call.totalAmount} has been deducted from your wallet for the call with ${astrologer.name}`,
+          desc: `${totalAmount} has been deducted from your wallet for the call with ${astrologer.name}`,
         },
       ],
     }).save();
@@ -587,14 +581,12 @@ export const endCallAndLogTransaction = async (callId) => {
     }).save();
 
     console.log(
-      `Call ended. Total duration: ${call.duration} seconds. Charged minutes: ${chargedMinutes}. Total amount: ${call.totalAmount}`
+      `✅ Call ended. Duration: ${chargedDurationSeconds}s | Charged: ${chargedMinutes} min | Amount: ₹${totalAmount}`
     );
 
-    return {
-      message: "Call ended successfully",
-    };
+    return { message: "Call ended successfully" };
   } catch (error) {
-    console.error("Error ending the call:", error);
+    console.error("❌ Error ending the call:", error);
     throw error;
   }
 };

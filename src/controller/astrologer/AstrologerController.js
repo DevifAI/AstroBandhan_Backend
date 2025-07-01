@@ -6,7 +6,7 @@ import ChatRoom from "../../models/chatRoomSchema.js";
 export const toggle_Offline_Online = asyncHandler(async (req, res) => {
   try {
     const { astrologerId, available_status } = req.body;
-
+    console.log({ astrologerId, available_status });
     // Find the astrologer by astrologerId
     const astrologer = await Astrologer.findById(astrologerId);
     if (!astrologer) {
@@ -72,8 +72,6 @@ export const getAstrologerById = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "Astrologer not found" });
     }
 
-
-
     // Fetch reviews for this astrologer and populate the user's name
     const reviews = await Review.find({ astrologerId })
       .populate({
@@ -128,5 +126,41 @@ export const updateAstrologerById = asyncHandler(async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+//check status
+export const checkAstrologerSocketStatus = asyncHandler(async (req, res) => {
+  try {
+    const { astrologerId } = req.body;
+
+    if (!astrologerId) {
+      return res.status(400).json({ message: "Astrologer ID is required" });
+    }
+
+    // Find the astrologer by ID and only select the socketId field
+    const astrologer =
+      await Astrologer.findById(astrologerId).select("socketId");
+
+    if (!astrologer) {
+      return res.status(404).json({ message: "Astrologer not found" });
+    }
+
+    // Check if socketId exists and is not empty
+    const isPresent = !!astrologer.socketId;
+
+    res.status(200).json({
+      success: true,
+      isPresent,
+      message: isPresent
+        ? "Astrologer has active socket connection"
+        : "Astrologer has no active socket connection",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
   }
 });
