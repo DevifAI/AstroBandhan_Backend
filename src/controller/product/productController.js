@@ -23,12 +23,13 @@ export const createProduct = asyncHandler(async (req, res) => {
       isTrending,
       height,
       width,
+      image,
       contains,
-      imageUrl
     } = req.body;
 
-console.log(req.body)
-    // Validate required fields
+    console.log("Request Body:", req.body);
+    console.log("Uploaded File:", req.file);
+
     const requiredFields = [
       "productName",
       "productDescription",
@@ -36,7 +37,9 @@ console.log(req.body)
       "brand",
       "originalPrice",
       "displayPrice",
+      "image"
     ];
+
     for (const field of requiredFields) {
       if (!req.body[field]) {
         return res
@@ -45,9 +48,9 @@ console.log(req.body)
       }
     }
 
-    // Check if the product already exists
-    const availableProduct = await Product.findOne({ productName });
-    if (availableProduct) {
+    // Check duplicate product
+    const existingProduct = await Product.findOne({ productName });
+    if (existingProduct) {
       return res
         .status(409)
         .json(
@@ -59,24 +62,25 @@ console.log(req.body)
         );
     }
 
-    // Check if the category exists
-    const availableCategory = await ProductCategory.findById(category);
-    if (!availableCategory) {
+    // Check valid category
+    const categoryExists = await ProductCategory.findById(category);
+    if (!categoryExists) {
       return res
         .status(404)
         .json(
           new ApiResponse(
             404,
             null,
-            "Category not found, please add the category"
+            "Category not found. Please add category first."
           )
         );
     }
 
-    // // Create new product object with Cloudinary image URL
+
+    // Save product
     const newProduct = new Product({
       productName,
-      image: imageUrl, // Store Cloudinary image URL here
+      image,
       productDescription,
       category,
       rating,
@@ -91,16 +95,13 @@ console.log(req.body)
       contains,
     });
 
-    // // Save the product to the database
     await newProduct.save();
 
-    // // Respond with success
     return res
       .status(201)
       .json(new ApiResponse(201, newProduct, "Product created successfully"));
   } catch (error) {
-    // Handle unexpected errors
-    console.error("Error creating product:", error.message);
+    console.error("Product Creation Error:", error);
     return res
       .status(500)
       .json(new ApiResponse(500, null, "An unexpected error occurred"));
@@ -271,51 +272,77 @@ export const updateProductById = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const {
       productName,
-      image,
       productDescription,
       category,
       rating,
       brand,
       weight,
+      material,
       originalPrice,
       displayPrice,
       in_stock,
       isTrending,
-      material
     } = req.body;
 
-    const updatedProduct = await Product.findByIdAndUpdate(
-      id,
-      {
-        productName,
-        image,
-        productDescription,
-        category,
-        rating,
-        brand,
-        weight,
-        originalPrice,
-        displayPrice,
-        in_stock,
-        isTrending,
-        material
-      },
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedProduct) {
+    // Check if product exists
+    const existingProduct = await Product.findById(id);
+    if (!existingProduct) {
       return res
         .status(404)
         .json(new ApiResponse(404, null, "Product not found"));
     }
 
+    // Check if new category exists (if category is being changed)
+    if (category && category !== existingProduct.category.toString()) {
+      const categoryExists = await ProductCategory.findById(category);
+      if (!categoryExists) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, null, "Provided category does not exist"));
+      }
+    }
+
+    // Handle new image upload if provided
+    let updatedImageUrl = existingProduct.image; // Default to current
+    if (req.file && req.file.path) {
+      try {
+        const uploadResult = await uploadOnCloudinary(req.file.path);
+        updatedImageUrl = uploadResult?.url || updatedImageUrl;
+        fs.unlinkSync(req.file.path); // Remove local file
+      } catch (uploadErr) {
+        console.error("Cloudinary Upload Failed:", uploadErr);
+        return res
+          .status(500)
+          .json(new ApiResponse(500, null, "Image upload failed"));
+      }
+    }
+
+    // Update product fields
+    existingProduct.productName = productName ?? existingProduct.productName;
+    existingProduct.productDescription =
+      productDescription ?? existingProduct.productDescription;
+    existingProduct.category = category ?? existingProduct.category;
+    existingProduct.rating = rating ?? existingProduct.rating;
+    existingProduct.brand = brand ?? existingProduct.brand;
+    existingProduct.weight = weight ?? existingProduct.weight;
+    existingProduct.material = material ?? existingProduct.material;
+    existingProduct.originalPrice =
+      originalPrice ?? existingProduct.originalPrice;
+    existingProduct.displayPrice = displayPrice ?? existingProduct.displayPrice;
+    existingProduct.in_stock = in_stock ?? existingProduct.in_stock;
+    existingProduct.isTrending = isTrending ?? existingProduct.isTrending;
+    existingProduct.image = updatedImageUrl;
+
+    await existingProduct.save();
+
     return res
       .status(200)
       .json(
-        new ApiResponse(200, updatedProduct, "Product updated successfully")
+        new ApiResponse(200, existingProduct, "Product updated successfully")
       );
   } catch (error) {
-    throw new ApiError(500, error.message);
+    console.error("Product Update Error:", error);
+    throw new ApiError(500, error.message || "Internal Server Error");
   }
 });
 

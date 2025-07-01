@@ -2,7 +2,6 @@ import Order from "../../models/product/order.model.js";
 import Product from "../../models/product/product.model.js";
 import { Wallet } from "../../models/walletSchema.model.js";
 import { User } from "../../models/user.model.js";
-import { ApiError } from "../../utils/apiError.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { AdminWallet } from "../../models/adminWallet.js";
@@ -142,29 +141,26 @@ export const createOrder = asyncHandler(async (req, res) => {
 });
 
 // Get All Orders
+// Get All Orders with Optional Date Range Filtering
 export const getAllOrders = asyncHandler(async (req, res) => {
   try {
-    const { fromDate, toDate } = req.body;
+    const { fromDate, toDate } = req.query;
 
-    // Initialize query filter
     let dateFilter = {};
 
-    // Only proceed if both fromDate and toDate are provided
     if (fromDate && toDate) {
       const from = new Date(fromDate);
-      const to = new Date(toDate);
-
-      // Set to the end of the day for toDate (23:59:59) to include the full day
+      const to = new Date(toDate );
       to.setHours(23, 59, 59, 999);
 
-      // If both fromDate and toDate are provided, filter orders based on the range
-      dateFilter.createdAt = {
-        $gte: from, // Date greater than or equal to fromDate
-        $lte: to,   // Date less than or equal to toDate
+      dateFilter = {
+        createdAt: {
+          $gte: from,
+          $lte: to,
+        },
       };
     }
 
-    // Query to fetch orders, adding the date filter if available
     const orders = await Order.find(dateFilter)
       .populate("order_details")
       .populate("userId");
@@ -172,18 +168,20 @@ export const getAllOrders = asyncHandler(async (req, res) => {
     if (!orders || orders.length === 0) {
       return res
         .status(200)
-        .json(new ApiResponse(200, null, "No orders found"));
+        .json(new ApiResponse(200, [], "No orders found"));
     }
 
     return res
       .status(200)
       .json(new ApiResponse(200, orders, "Orders retrieved successfully"));
   } catch (error) {
+    console.error("Error in getAllOrders:", error);
     return res
       .status(500)
       .json(new ApiResponse(500, null, "Something went wrong"));
   }
 });
+
 
 
 // Get Order by ID

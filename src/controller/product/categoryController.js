@@ -9,36 +9,42 @@ import fs from "fs";
 // Create Product Category
 export const createProductCategory = asyncHandler(async (req, res) => {
   try {
-    const { category_name, image, imageUrl } = req.body;
+    const { category_name, imageUrl } = req.body;
 
-    // Validate input
+    console.log("Request body:", req.body);
+    console.log("Uploaded file:", req.file);
+
     if (!category_name) {
       throw new ApiError(400, "Category name is required");
     }
 
-    // Use imageUrl or fallback to image
-    const finalImageUrl = imageUrl || image;
-    if (!finalImageUrl) {
-      throw new ApiError(400, "Category image is required");
-    }
-
-    // Check if the category already exists
+    // Check for existing category
     const existingCategory = await ProductCategory.findOne({ category_name });
-
     if (existingCategory) {
       return res
         .status(400)
         .json(new ApiResponse(400, null, "Product category already exists"));
     }
 
-    // Create a new category
-    const newCategory = new ProductCategory({
+    let finalImageUrl = imageUrl;
+
+    // If file is uploaded (via multipart/form-data), upload to Cloudinary
+    if (req.file) {
+      const cloudinaryResult = await uploadOnCloudinary(req.file.path);
+      if (!cloudinaryResult?.secure_url) {
+        throw new ApiError(500, "Cloudinary upload failed");
+      }
+      finalImageUrl = cloudinaryResult.secure_url;
+    }
+
+    if (!finalImageUrl) {
+      throw new ApiError(400, "Category image is required");
+    }
+
+    const newCategory = await ProductCategory.create({
       category_name,
       imageUrl: finalImageUrl,
     });
-
-    // Save the new category
-    await newCategory.save();
 
     const savedCategory = await ProductCategory.findById(
       newCategory._id
@@ -54,7 +60,7 @@ export const createProductCategory = asyncHandler(async (req, res) => {
         )
       );
   } catch (error) {
-    throw new ApiError(500, error.message);
+    throw new ApiError(500, error.message || "Internal server error");
   }
 });
 
@@ -133,27 +139,33 @@ export const getCategoryById = asyncHandler(async (req, res) => {
 export const updateCategoryById = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
-    const { category_name, image } = req.body;
+    const { category_name, imageUrl } = req.body;
 
-    // Validate category_name
     if (!category_name) {
       throw new ApiError(400, "Category name is required");
     }
 
-    // Find the existing category
     const existingCategory = await ProductCategory.findById(id);
-
     if (!existingCategory) {
       return res
         .status(404)
         .json(new ApiResponse(404, null, "Product category not found"));
     }
 
+    let finalImageUrl = imageUrl || existingCategory.imageUrl;
 
-    // Update the category
+    // If a new file is uploaded via multipart/form-data
+    if (req.file) {
+      const cloudinaryResult = await uploadOnCloudinary(req.file.path);
+      if (!cloudinaryResult?.secure_url) {
+        throw new ApiError(500, "Cloudinary upload failed");
+      }
+      finalImageUrl = cloudinaryResult.secure_url;
+    }
+
     const updatedCategory = await ProductCategory.findByIdAndUpdate(
       id,
-      { category_name, imageUrl: image }, // Ensure `imageUrl` is updated properly
+      { category_name, imageUrl: finalImageUrl },
       { new: true, runValidators: true }
     );
 
@@ -167,7 +179,7 @@ export const updateCategoryById = asyncHandler(async (req, res) => {
         )
       );
   } catch (error) {
-    throw new ApiError(500, error.message);
+    throw new ApiError(500, error.message || "Internal server error");
   }
 });
 

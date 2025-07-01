@@ -1,13 +1,14 @@
 import { Router } from "express";
 import { createProductCategory, deleteCategory, fetchTotalProductByCategory, getAllCategories, getCategoryById, updateCategoryById } from "../../controller/product/categoryController.js";
+import { upload } from "../../middlewares/multer.middlewre.js";
 
 
 const router = Router();
 
-router.route("/createProductCategory/").post(createProductCategory);
+router.post("/create", upload.single("image"), createProductCategory);
+router.put("/update/:id", upload.single("image"), updateCategoryById);
 router.route("/").get(getAllCategories);
 router.route("/:id").get(getCategoryById);
-router.route("/update/:id").patch(updateCategoryById);
 router.route("/totalProducts/:id").get(fetchTotalProductByCategory);
 router.route("/delete/:id").delete(deleteCategory);
 
