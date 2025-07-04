@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 
@@ -10,13 +11,13 @@ const userSchema = new mongoose.Schema(
     },
     email: { type: String, required: true, unique: true },
     dateOfBirth: { type: String, required: true },
-    password: { type: String, required: true },
+    password: { type: String },
     timeOfBirth: { type: String, required: true },
     placeOfBirth: { type: String, required: true },
     gender: { type: String, required: true },
     phone: { type: String, required: true, unique: true },
     walletBalance: { type: Number, default: 0 },
-    photo: { type: String, required: true },
+    photo: { type: String },
     playerId: { type: String, default: null },
     isOnApp: { type: Boolean, default: false },
     Free_Chat_Available: { type: Boolean, default: true },
