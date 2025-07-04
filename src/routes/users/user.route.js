@@ -135,4 +135,8 @@ router.post("/agora-token", starCall);
 // new routes
 router.post("/send/gift", sendGift_To_Astrologer);
 router.post("/orders", get_orders_by_user);
+
+router.route("/update/:userId").patch(updateUserById);
+router.delete("/delete/:userId", deleteUserById);
+
 export default router;
