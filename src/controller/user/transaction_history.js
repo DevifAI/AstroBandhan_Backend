@@ -42,8 +42,8 @@ export const findCall_Transaction_ByUserId = async (req, res) => {
     console.log({ user_id });
     let query =
       type === "user"
-        ? { userId: user_id, callType: "audio" }
-        : { astrologerId: user_id, callType: "audio" };
+        ? { userId: user_id, callType: { $in: ["audio", "video"] } }
+        : { astrologerId: user_id, callType: { $in: ["audio", "video"] } };
 
     const result = await Call.find(query)
       .populate({
@@ -54,7 +54,7 @@ export const findCall_Transaction_ByUserId = async (req, res) => {
         path: "astrologerId",
         select: "name avatar pricePerCallMinute",
       });
-
+    console.log({ result });
     if (result.length === 0) {
       return res.status(200).json({ message: "No records found" });
     }
@@ -110,15 +110,53 @@ export const findChat_Transaction_ByUserId = asyncHandler(async (req, res) => {
         ? { "messages.senderId": user_id, "messages.senderType": "user" }
         : { "messages.senderId": user_id, "messages.senderType": "astrologer" };
 
-    const result = await Chat.find(query)
-      .populate({ path: "messages.senderId", select: "name photo" })
-      .populate({ path: "chatRoomId" });
+    const chats = await Chat.find(query)
+      .populate({ path: "participants.user", select: "name photo" })
+      .populate({ path: "participants.astrologer", select: "name avatar" });
 
-    if (result.length === 0) {
+    if (chats.length === 0) {
       return res.status(404).json({ message: "No chat transactions found" });
     }
 
-    return res.status(200).json(result);
+    const result = await Promise.all(
+      chats.map(async (chat) => {
+        const walletTx = await Wallet.findOne({
+          service_reference_id: chat.chatRoomId,
+          user_id,
+          transaction_type: "debit",
+          debit_type: "text",
+        });
+
+        const createdAt = new Date(chat.createdAt);
+        const updatedAt = new Date(chat.updatedAt);
+        const durationMs = updatedAt - createdAt;
+
+        // Convert duration to hh:mm:ss format
+        const totalSeconds = Math.floor(durationMs / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        const duration =
+          hours > 0
+            ? `${hours.toString().padStart(2, "0")}:${minutes
+                .toString()
+                .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
+            : `${minutes.toString().padStart(2, "0")}:${seconds
+                .toString()
+                .padStart(2, "0")}`;
+
+        return {
+          user: chat.participants.user,
+          astrologer: chat.participants.astrologer,
+          amount: walletTx?.amount ?? 0,
+          createdAt: chat.createdAt,
+          duration,
+        };
+      })
+    );
+    console.log({ result });
+    return res.status(200).json({ result });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server error" });

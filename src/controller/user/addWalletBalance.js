@@ -6,6 +6,7 @@ import { activeUsers, io } from "../../utils/sockets/socket.js";
 import { AdminWallet } from "../../models/adminWallet.js";
 import Notification from "../../models/notifications.model.js";
 import { Admin } from "../../models/adminModel.js";
+import Order from "../../models/product/order.model.js";
 
 export const add_wallet_balance = asyncHandler(async (req, res) => {
   try {
@@ -105,7 +106,6 @@ export const add_wallet_balance = asyncHandler(async (req, res) => {
 export const find_transaction_history_by_category = asyncHandler(
   async (req, res) => {
     try {
-      console.log("NITIN");
       const { userId, debit_type, amount_type } = req.body;
 
       console.log({ userId, debit_type, amount_type });
@@ -181,3 +181,38 @@ export const find_transaction_history_by_category = asyncHandler(
     }
   }
 );
+
+export const get_orders_by_user = asyncHandler(async (req, res) => {
+  try {
+    const { userId } = req.body;
+    console.log(">>>>>>>>>>>>>>>>>>>");
+    console.log({ userId });
+    console.log(">>>>>>>>>>>>>>>>>>>");
+    // Validate userId
+    if (!userId) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, {}, "User ID is required."));
+    }
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json(new ApiResponse(404, {}, "User not found."));
+    }
+
+    // Find all orders for this user, sorted by newest first
+    const orders = await Order.find({ userId }).sort({ createdAt: -1 }).exec();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, orders, "Orders retrieved successfully."));
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json(
+        new ApiResponse(500, {}, "An error occurred while fetching orders.")
+      );
+  }
+});

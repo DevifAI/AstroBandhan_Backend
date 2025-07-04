@@ -8,7 +8,6 @@ import {
   updateUserById,
   starCall,
   userLogout,
-
 } from "../../controller/user/userController.js";
 import { addReview } from "../../controller/user/addReviewController.js";
 import {
@@ -29,6 +28,7 @@ import { getAllLanguages } from "../../controller/admin/LanguageController.js";
 import {
   add_wallet_balance,
   find_transaction_history_by_category,
+  get_orders_by_user,
 } from "../../controller/user/addWalletBalance.js";
 import {
   deleteNotifications,
@@ -134,4 +134,5 @@ router.post("/agora-token", starCall);
 
 // new routes
 router.post("/send/gift", sendGift_To_Astrologer);
+router.post("/orders", get_orders_by_user);
 export default router;
