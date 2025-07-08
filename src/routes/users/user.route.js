@@ -8,6 +8,7 @@ import {
   updateUserById,
   starCall,
   userLogout,
+  deleteUserById,
 } from "../../controller/user/userController.js";
 import { addReview } from "../../controller/user/addReviewController.js";
 import {

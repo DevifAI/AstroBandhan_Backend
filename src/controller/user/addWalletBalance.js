@@ -186,7 +186,7 @@ export const get_orders_by_user = asyncHandler(async (req, res) => {
   try {
     const { userId } = req.body;
     console.log(">>>>>>>>>>>>>>>>>>>");
-    console.log({ userId });
+    // console.log({ userId });
     console.log(">>>>>>>>>>>>>>>>>>>");
     // Validate userId
     if (!userId) {
