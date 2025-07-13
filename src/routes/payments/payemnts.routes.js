@@ -6,12 +6,12 @@ import {
 
 const router = express.Router();
 
-router.get(
+router.post(
   "/payu-success",
   express.urlencoded({ extended: true }),
   payuSuccess
 );
-router.get(
+router.post(
   "/payu-failure",
   express.urlencoded({ extended: true }),
   payuFailure
