@@ -31,7 +31,12 @@ export const payuSuccess = asyncHandler(async (req, res) => {
 export const payuFailure = asyncHandler(async (req, res) => {
   console.log("❌ Payment Failure Payload:", req.body);
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, null, "Payment failure received"));
+  return res.status(200).set("Cache-Control", "no-store").send(`
+    <html>
+      <body style="text-align:center; margin-top:100px;">
+        <h2>❌ Payment Failed!</h2>
+        
+      </body>
+    </html>
+  `);
 });
