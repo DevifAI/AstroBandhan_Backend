@@ -133,7 +133,6 @@ export const registerUser = asyncHandler(async (req, res) => {
   }
 });
 
-
 export const userLogin = async (req, res) => {
   try {
     const { phone, password } = req.body;
@@ -426,11 +425,22 @@ export const validateloginOtp = asyncHandler(async (req, res) => {
             accessToken,
             refreshToken,
             user: {
-              id: user._id,
+              _id: user._id,
               name: user.name,
+              email: user.email,
+              dateOfBirth: user.dateOfBirth,
+              timeOfBirth: user.timeOfBirth,
+              placeOfBirth: user.placeOfBirth,
+              gender: user.gender,
               phone: user.phone,
+              walletBalance: user.walletBalance,
               Free_Chat_Available: user.Free_Chat_Available,
-              // Include other public details if necessary
+              followed_astrologers: user.followed_astrologers,
+              consultations: user.consultations,
+              createdAt: user.createdAt,
+              updatedAt: user.updatedAt,
+              __v: user.__v,
+              photo: user.photo,
             },
           },
           "User Login Successfully"
@@ -623,7 +633,6 @@ export const updateUserById = async (req, res) => {
       .json(new ApiResponse(500, {}, "Server error. Please try again later."));
   }
 };
-
 
 export const starCall = async (req, res) => {
   try {

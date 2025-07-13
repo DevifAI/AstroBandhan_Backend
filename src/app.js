@@ -7,6 +7,7 @@ import { initializeAgenda } from "./utils/call/agenda.js"; // <-- Import initial
 // Initialize Express app
 const app = express();
 
+
 // CORS configuration
 const corsOptions = {
   origin: "*",
@@ -16,7 +17,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json({ limit: "16kb" }));
-app.use(express.urlencoded({ extended: true, limit: "16kb" }));
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 app.get("/", (req, res) => {
@@ -30,6 +31,7 @@ import astrologerRouter from "../src/routes/astrologer/astrologer.route.js";
 import productCategoryRoutes from "../src/routes/product/productcategory.routes.js";
 import productRoutes from "../src/routes/product/product.routes.js";
 import orderRoutes from "../src/routes/product/order.routes.js";
+import paymentRoutes from "../src/routes/payments/payemnts.routes.js"; // <-- Import payment routes
 import { setupSocketIO } from "./utils/sockets/socketTow.js";
 
 // API routes
@@ -39,6 +41,7 @@ app.use("/astrobandhan/v1/astrologer", astrologerRouter);
 app.use("/astrobandhan/v1/productCategory", productCategoryRoutes);
 app.use("/astrobandhan/v1/product", productRoutes);
 app.use("/astrobandhan/v1/order", orderRoutes);
+app.use("/astrobandhan/v1/payment", paymentRoutes);
 
 app.use(errorHandler);
 
