@@ -1,4 +1,5 @@
 // import { User } from "../../models/user.model.js"; // Uncomment and adjust model name/path accordingly
+import axios from "axios";
 import { Admin } from "../../models/adminModel.js";
 import { AdminWallet } from "../../models/adminWallet.js";
 import { User } from "../../models/user.model.js";
@@ -8,6 +9,7 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 
 export const payuSuccess = asyncHandler(async (req, res) => {
   const {
+    key,
     txnid,
     amount,
     status,
@@ -23,7 +25,7 @@ export const payuSuccess = asyncHandler(async (req, res) => {
 
   try {
     // 1. Verify the payment with PayU
-    const verificationResponse = await verifyPayuPayment(txnid, hash);
+    const verificationResponse = await verifyPayuPayment(txnid, hash, key);
 
     if (verificationResponse.status !== "success") {
       throw new Error("Payment verification failed");
@@ -135,9 +137,9 @@ export const payuFailure = asyncHandler(async (req, res) => {
 
 //helper function to verify payment with PayU
 // PayU Verification Function
-async function verifyPayuPayment(txnid, hash) {
+async function verifyPayuPayment(txnid, hash, key) {
   const verificationParams = {
-    key: process.env.PAYU_MERCHANT_KEY,
+    key: key,
     command: "verify_payment",
     var1: txnid,
     hash: hash,
