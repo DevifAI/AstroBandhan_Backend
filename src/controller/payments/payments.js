@@ -29,7 +29,7 @@ export const payuSuccess = asyncHandler(async (req, res) => {
     const verificationResponse = await verifyPayuPayment(
       txnid,
       key,
-      salt,
+      hash,
       false
     ); // true = test env
 
