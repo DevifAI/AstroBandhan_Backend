@@ -54,60 +54,52 @@ export const payuSuccess = asyncHandler(async (req, res) => {
 
     // 4. Send success response with redirect
     return res.status(200).set("Cache-Control", "no-store").send(`
-      <html>
-        <head>
-          <title>Payment Success</title>
-          <meta http-equiv="refresh" content="5;url=${deepLink}">
-          <script>
-            let countdown = 5;
-            const interval = setInterval(() => {
-              document.getElementById("timer").innerText = countdown;
-              countdown--;
-              if (countdown < 0) {
-                clearInterval(interval);
-                window.location.href = "${deepLink}";
-              }
-            }, 1000);
-            
-            // Immediate redirect for mobile apps that can handle it
-            if (navigator.userAgent.match(/(Android|iPhone|iPad|iPod)/i)) {
-              window.location.href = "${deepLink}";
-            }
-          </script>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              text-align: center;
-              margin-top: 100px;
-              background-color: #f0fff4;
-            }
-            h2 { color: green; }
-            .loader {
-              border: 5px solid #f3f3f3;
-              border-top: 5px solid #34d399;
-              border-radius: 50%;
-              width: 50px;
-              height: 50px;
-              animation: spin 1s linear infinite;
-              margin: 20px auto;
-            }
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="loader"></div>
-          <h2>✅ Payment Successful!</h2>
-          <p>Transaction ID: <b>${txnid}</b></p>
-          <p>Amount: <b>₹${amount}</b></p>
-          <p>Status: <b>Verified</b></p>
-          <p>Redirecting to app in <span id="timer">5</span> seconds...</p>
-          <p><a href="${deepLink}">Click here if not redirected</a></p>
-        </body>
-      </html>
-    `);
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <title>Payment Success</title>
+      <meta charset="UTF-8" />
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          text-align: center;
+          margin-top: 100px;
+          background-color: #f0fff4;
+        }
+        h2 {
+          color: #22c55e;
+        }
+        .loader {
+          border: 5px solid #f3f3f3;
+          border-top: 5px solid #22c55e;
+          border-radius: 50%;
+          width: 50px;
+          height: 50px;
+          animation: spin 1s linear infinite;
+          margin: 20px auto;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        .info {
+          font-size: 16px;
+          margin-top: 10px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="loader"></div>
+      <h2>✅ Payment Successful!</h2>
+      <div class="info">
+        <p><strong>Transaction ID:</strong> ${txnid}</p>
+        <p><strong>Amount:</strong> ₹${amount}</p>
+        <p><strong>Status:</strong> Verified</p>
+        <p>Thank you for your payment.</p>
+      </div>
+    </body>
+  </html>
+`);
   } catch (error) {
     console.error("Payment processing error:", error);
 
