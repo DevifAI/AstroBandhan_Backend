@@ -233,7 +233,7 @@ const addWalletBalance = async (
   // Create admin wallet record
   const adminWalletDoc = new AdminWallet({
     service_id: transaction_id,
-    user_id: user._id,
+    userId: user._id,
     amount,
     transaction_id,
     transaction_type: amount_type,
