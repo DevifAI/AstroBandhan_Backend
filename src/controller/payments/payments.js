@@ -33,9 +33,12 @@ export const payuSuccess = asyncHandler(async (req, res) => {
       false
     ); // true = test env
 
-    if (verificationResponse.status !== "success") {
+    const txnDetails = verificationResponse?.transaction_details?.[txnid];
+
+    if (!txnDetails || txnDetails.status !== "success") {
       throw new Error("Payment verification failed");
     }
+    
 
     // 2. Update user wallet (using your existing function)
     await addWalletBalance({
