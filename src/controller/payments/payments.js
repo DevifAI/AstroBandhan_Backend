@@ -1,5 +1,6 @@
 // import { User } from "../../models/user.model.js"; // Uncomment and adjust model name/path accordingly
 import axios from "axios";
+import crypto from "crypto";
 import { Admin } from "../../models/adminModel.js";
 import { AdminWallet } from "../../models/adminWallet.js";
 import { User } from "../../models/user.model.js";
@@ -25,7 +26,12 @@ export const payuSuccess = asyncHandler(async (req, res) => {
 
   try {
     // 1. Verify the payment with PayU
-    const verificationResponse = await verifyPayuPayment(txnid, hash, key);
+    const verificationResponse = await verifyPayuPayment(
+      txnid,
+      key,
+      salt,
+      false
+    ); // true = test env
 
     if (verificationResponse.status !== "success") {
       throw new Error("Payment verification failed");
@@ -147,26 +153,35 @@ export const payuFailure = asyncHandler(async (req, res) => {
 
 //helper function to verify payment with PayU
 // PayU Verification Function
-async function verifyPayuPayment(txnid, hash, key) {
-  const verificationParams = {
-    key: key,
-    command: "verify_payment",
-    var1: txnid,
-    hash: hash,
-  };
+const verifyPayuPayment = async (txnid, key, salt, isTestEnv = false) => {
+  const command = "verify_payment";
+  const hashString = `${key}|${command}|${txnid}|${salt}`;
+  const hash = crypto.createHash("sha512").update(hashString).digest("hex");
 
-  const response = await axios.post(
-    "https://info.payu.in/merchant/postservice.php",
-    verificationParams,
-    {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    }
-  );
+  const url = isTestEnv
+    ? "https://test.payu.in/merchant/postservice.php?form=2"
+    : "https://info.payu.in/merchant/postservice.php?form=2";
 
-  return response.data;
-}
+  const formData = new URLSearchParams();
+  formData.append("key", key);
+  formData.append("command", command);
+  formData.append("var1", txnid);
+  formData.append("hash", hash);
+
+  try {
+    const response = await axios.post(url, formData.toString(), {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    });
+
+    return response.data; // You can drill into response as needed
+  } catch (error) {
+    console.error(
+      "❌ PayU verification failed:",
+      error.response?.data || error.message
+    );
+    throw new Error("PayU verification failed");
+  }
+};
 
 //helper function to add wallet balance
 // utils/walletService.js
