@@ -23,13 +23,13 @@ export const payuSuccess = asyncHandler(async (req, res) => {
   } = req.body;
 
   console.log("✅ Payment Success Payload:", req.body);
-
+  const salt = "be69FGy54g7iLgRmOo0aWr89AoYSFZuF";
   try {
     // 1. Verify the payment with PayU
     const verificationResponse = await verifyPayuPayment(
       txnid,
       key,
-      hash,
+      salt,
       false
     ); // true = test env
 
@@ -155,8 +155,8 @@ export const payuFailure = asyncHandler(async (req, res) => {
 // PayU Verification Function
 const verifyPayuPayment = async (txnid, key, salt, isTestEnv = false) => {
   const command = "verify_payment";
-  const hashString = `${key}|${command}|${txnid}|${salt}`;
-  const hash = crypto.createHash("sha512").update(hashString).digest("hex");
+  const stringToHash = `${key}|${command}|${txnid}|${salt}`;
+  const hash = crypto.createHash("sha512").update(stringToHash).digest("hex");
 
   const url = isTestEnv
     ? "https://test.payu.in/merchant/postservice.php?form=2"
