@@ -205,7 +205,7 @@ const addWalletBalance = async (
   }
 
   // Check if user exists
-  const user = await User.find({ phone });
+  const user = await User.findOne({ phone });
   if (!user) {
     throw new Error("User not found");
   }
