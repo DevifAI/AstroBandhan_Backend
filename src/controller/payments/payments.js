@@ -54,7 +54,6 @@ export const payuSuccess = asyncHandler(async (req, res) => {
 
     // 4. Send success response with redirect
     return res.status(200).set("Cache-Control", "no-store").send(`
-      <!DOCTYPE html>
       <html>
         <head>
           <title>Payment Success</title>
