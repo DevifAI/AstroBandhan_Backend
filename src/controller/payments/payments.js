@@ -127,9 +127,19 @@ export const payuFailure = asyncHandler(async (req, res) => {
 
   return res.status(200).set("Cache-Control", "no-store").send(`
     <html>
-      <body style="text-align:center; margin-top:100px;">
+      <head>
+        <title>Payment Failed</title>
+        <meta charset="utf-8" />
+        <script>
+          // Redirect to app after 2 seconds
+          setTimeout(function() {
+            window.location.href = "astrobandhan://payment-failure";
+          }, 2000);
+        </script>
+      </head>
+      <body style="text-align:center; margin-top:100px; font-family:Arial;">
         <h2>❌ Payment Failed!</h2>
-        
+        <p>Redirecting you back to the app...</p>
       </body>
     </html>
   `);
