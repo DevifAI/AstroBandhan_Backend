@@ -7,6 +7,7 @@ import { User } from "../../models/user.model.js";
 import { Wallet } from "../../models/walletSchema.model.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
+import Notification from "../../models/notifications.model.js";
 
 export const payuSuccess = asyncHandler(async (req, res) => {
   const {
