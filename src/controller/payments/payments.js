@@ -218,7 +218,7 @@ const addWalletBalance = async (
 
   // Update user wallet if credit
   if (amount_type === "credit") {
-    await User.findByIdAndUpdate(userId, { $inc: { walletBalance: amount } });
+    await User.findByIdAndUpdate(user._id, { $inc: { walletBalance: amount } });
   }
 
   // Create wallet transaction record
@@ -249,16 +249,16 @@ const addWalletBalance = async (
   // Save both documents
   await Promise.all([walletDoc.save(), adminWalletDoc.save()]);
 
-  // Send realtime notification if socket is available
-  const userSocketId = activeUsers[user._id];
-  if (io && userSocketId) {
-    const message = `Your wallet has been ${amount_type === "credit" ? "credited" : "debited"} with ${amount}.`;
-    io.to(userSocketId).emit("notification", { message });
-  }
+  // // Send realtime notification if socket is available
+  // const userSocketId = activeUsers[user._id];
+  // if (io && userSocketId) {
+  //   const message = `Your wallet has been ${amount_type === "credit" ? "credited" : "debited"} with ${amount}.`;
+  //   io.to(userSocketId).emit("notification", { message });
+  // }
 
   // Create and save notification
   const notification = new Notification({
-    userId,
+    userId: user._id,
     message: [
       {
         title: amount_type === "credit" ? "Coin Credited" : "Coin Debited",
