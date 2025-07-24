@@ -598,9 +598,9 @@ export const getuserById = async (req, res) => {
 
 export const updateUserById = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { userId } = req.body;
     const updates = req.body;
-
+    console.log({ updates, userId });
     // Check if userId is provided
     if (!userId) {
       return res.status(400).json({ message: "userId is required." });
@@ -702,3 +702,104 @@ export const deleteUserById = asyncHandler(async (req, res) => {
       );
   }
 }); // this will modify in future
+
+// new flow changing
+
+// controllers/otpController.js
+
+export const handleSendOTP = async (req, res) => {
+  const { phoneNumber } = req.body;
+
+  if (!phoneNumber) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Phone number is required" });
+  }
+
+  try {
+    // Check if the user already exists with this phone number
+    const existingUser = await User.findOne({ phone: phoneNumber });
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: "User already registered with this phone number",
+      });
+    }
+
+    // If not registered, proceed to send OTP
+    const result = await sendOTP(phoneNumber);
+    return res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error("OTP send error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const handleValidateOTPAndRegister = async (req, res) => {
+  const { phoneNumber, verificationId, code } = req.body;
+
+  if (!phoneNumber || !verificationId || !code) {
+    return res
+      .status(400)
+      .json({ success: false, message: "All fields are required" });
+  }
+
+  try {
+    const result = await validateOTP(phoneNumber, verificationId, code);
+
+    if (!result.success) {
+      return res.status(401).json(result);
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ phone: phoneNumber });
+    if (existingUser) {
+      return res
+        .status(409)
+        .json({ success: false, message: "Phone number already registered" });
+    }
+
+    // Register new user with phone number only
+    const newUser = await User.create({
+      phone: phoneNumber,
+    });
+
+    // Generate tokens
+    const accessToken = newUser.generateAccessToken();
+    const refreshToken = newUser.generateRefreshToken();
+
+    // Save refresh token
+    newUser.refreshToken = refreshToken;
+    await newUser.save();
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          accessToken,
+          refreshToken,
+          user: {
+            _id: newUser._id,
+            phone: newUser.phone,
+            walletBalance: newUser.walletBalance,
+            Free_Chat_Available: newUser.Free_Chat_Available,
+            followed_astrologers: newUser.followed_astrologers,
+            consultations: newUser.consultations,
+            createdAt: newUser.createdAt,
+            updatedAt: newUser.updatedAt,
+            __v: newUser.__v,
+            photo: newUser.photo || "",
+          },
+        },
+        "User registered successfully."
+      )
+    );
+  } catch (error) {
+    console.error("OTP Validation or User Creation Error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal Server Error" });
+  }
+};

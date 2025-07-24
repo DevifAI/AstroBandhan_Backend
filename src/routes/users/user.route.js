@@ -9,6 +9,8 @@ import {
   starCall,
   userLogout,
   deleteUserById,
+  handleSendOTP,
+  handleValidateOTPAndRegister,
 } from "../../controller/user/userController.js";
 import { addReview } from "../../controller/user/addReviewController.js";
 import {
@@ -86,7 +88,7 @@ router.route("/addreview").post(addReview);
 router.route("/getAstrologer").get(getAllAstrologers);
 router.route("/getAstrologer/by/category").post(getAllAstrologersByCategory);
 router.route("/get/userDetails").get(getuserById);
-router.route("/update/user").patch(updateUserById);
+router.route("/update/profile").post(updateUserById);
 router.post("/send/otp", forgetPassword);
 router.post("/validate/otp", validateOtp);
 router.post("/validate/loginotp", validateloginOtp);
@@ -139,5 +141,9 @@ router.post("/orders", get_orders_by_user);
 
 router.route("/update/:userId").patch(updateUserById);
 router.delete("/delete/:userId", deleteUserById);
+
+// New Flow
+router.post("/send-otp", handleSendOTP);
+router.post("/validate-otp", handleValidateOTPAndRegister);
 
 export default router;
